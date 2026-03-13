@@ -1,8 +1,7 @@
-from typing import Dict
+from typing import Any
 
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework import status
 
 from core.messages import ERROR_MESSAGES
 from core.pagination import BasePagination
@@ -10,42 +9,50 @@ from core.pagination import BasePagination
 
 class BaseAPIViewSet(viewsets.GenericViewSet):
     """
-    The BaseAPIViewSet class does not provide any actions by default,
-    but does include the base set of generic view behavior, such as
-    the `get_object` and `get_queryset` methods.
+    Base ViewSet with unified API response template.
     """
 
     @staticmethod
-    def response(data: Dict = None, status_code=status.HTTP_200_OK) -> Response:
+    def build_response(
+        data: Any = None,
+        message: str = None,
+        success: bool = True,
+        status_code=status.HTTP_200_OK,
+    ) -> Response:
         """
-        Custom response for ViewSet.
-        """
-
-        return Response(data=data, status=status_code)
-
-    @staticmethod
-    def response_ok(data: Dict = None) -> Response:
-        """
-        Custom default response OK for ViewSet.
+        Build standardized API response.
         """
 
-        return Response(data=data, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "status": status_code,
+                "success": success,
+                "message": message,
+                "data": data,
+            },
+            status=status_code,
+        )
 
-    @staticmethod
-    def response_error(msg_key: str, status_code=status.HTTP_401_UNAUTHORIZED):
-        """
-        Custom default response error for ViewSet.
-        """
+    @classmethod
+    def response(cls, data=None, status_code=status.HTTP_200_OK):
+        return cls.build_response(data=data, status_code=status_code)
 
-        return Response(data={"message": ERROR_MESSAGES[msg_key]}, status=status_code)
+    @classmethod
+    def response_ok(cls, data=None):
+        return cls.build_response(data=data)
 
-    @staticmethod
-    def response_created(data: Dict = None) -> Response:
-        """
-        Custom default response created for ViewSet.
-        """
+    @classmethod
+    def response_created(cls, data=None):
+        return cls.build_response(data=data, status_code=status.HTTP_201_CREATED)
 
-        return Response(data=data, status=status.HTTP_201_CREATED)
+    @classmethod
+    def response_error(cls, msg_key: str, status_code=status.HTTP_401_UNAUTHORIZED):
+        return cls.build_response(
+            data=None,
+            message=ERROR_MESSAGES[msg_key],
+            success=False,
+            status_code=status_code,
+        )
 
     def response_pagination(
         self,
@@ -53,24 +60,12 @@ class BaseAPIViewSet(viewsets.GenericViewSet):
         queryset,
         serializer,
         pagination_class=BasePagination,
-        extra_context: dict = None,
+        extra_context=None,
     ):
         """
         Custom paginated response.
-
-        Args:
-            request (Request): The HTTP request.
-            queryset (Queryset): The queryset.
-            serializer (Serializer): The serializer.
-            pagination_class (BasePagination, optional): The pagination class.
-            Defaults to BasePagination.
-            extra_context (dict, optional): The extra context params.
-
-        Returns:
-            Any: The response after paginated based on class.
         """
 
-        # Config pagination
         self.pagination_class = pagination_class
         page = self.paginate_queryset(queryset)
 
