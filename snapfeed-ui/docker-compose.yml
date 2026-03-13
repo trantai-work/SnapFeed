@@ -1,0 +1,10 @@
+name: snapfeed-fe
+
+services:
+
+  ui:
+    build:
+      context: .
+    container_name: snapfeed-ui
+    ports:
+      - "${MAPPING_UI_PORT}:80"
