@@ -4,7 +4,7 @@ from rest_framework.response import Response
 
 class BasePagination(PageNumberPagination):
     """
-    The custom of page number pagination.
+    Custom page number pagination.
     """
 
     page_size_query_param = "page_size"
@@ -14,11 +14,21 @@ class BasePagination(PageNumberPagination):
         Get the paginated response.
         """
 
-        response_data = {
+        pagination_data = {
             "count": self.page.paginator.count,
             "has_next": self.page.has_next(),
             "num_pages": self.page.paginator.num_pages,
             "results": data,
         }
-        response_data.update(kwargs)
-        return Response(response_data)
+
+        pagination_data.update(kwargs)
+
+        return Response(
+            {
+                "status": 200,
+                "success": True,
+                "message": None,
+                "data": pagination_data,
+            },
+            status=200,
+        )

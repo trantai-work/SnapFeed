@@ -4,6 +4,7 @@ from django.conf import settings
 _ERROR_MESSAGES = {
     "en": {
         "common": {
+            "internal_error": "Internal server error.",
             "invalid_token": "Invalid token.",
             "invalid_basic_auth": "Invalid basic authentication credentials.",
             "account_disabled": "Account disabled.",
@@ -14,6 +15,7 @@ _ERROR_MESSAGES = {
     },
     "vi": {
         "common": {
+            "internal_error": "Máy chủ gặp lỗi.",
             "invalid_token": "Token không hợp lệ.",
             "invalid_basic_auth": "Thông tin xác thực cơ bản không hợp lệ.",
             "account_disabled": "Tài khoản đã bị vô hiệu hóa.",
