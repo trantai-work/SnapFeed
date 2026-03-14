@@ -31,6 +31,7 @@ class User(AbstractUser, BaseModel):
     )
     objects = SoftDeleteUserManager()
     all_objects = UserManager()
+    # Implement avatar field later (S3)
 
     class Meta:
         db_table = "users"

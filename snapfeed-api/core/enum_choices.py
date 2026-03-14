@@ -31,6 +31,7 @@ class EnumChoices(Enum):
         """
         Returns a list of all enum member names.
         """
+
         return [choice.name for choice in cls]
 
     @classmethod
@@ -38,4 +39,5 @@ class EnumChoices(Enum):
         """
         Returns a list of all enum member values.
         """
+
         return [choice.value for choice in cls]

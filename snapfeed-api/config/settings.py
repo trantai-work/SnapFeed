@@ -55,6 +55,11 @@ INSTALLED_APPS = [
     "corsheaders",
     "apps.users",
     "apps.permissions",
+    "apps.videos",
+    "apps.comments",
+    "apps.recommendation",
+    "apps.notifications",
+    "apps.chats",
 ]
 
 MIDDLEWARE = [
