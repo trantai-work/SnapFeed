@@ -17,7 +17,9 @@ inflection==0.5.1
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 nodeenv==1.10.0
+numpy==2.4.3
 packaging==26.0
+pgvector==0.4.2
 platformdirs==4.9.4
 psycopg2-binary==2.9.11
 PyJWT==2.11.0

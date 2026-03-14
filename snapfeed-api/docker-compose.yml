@@ -19,7 +19,7 @@ services:
         condition: service_healthy
 
   db:
-    image: postgres:15
+    image: pgvector/pgvector:pg15
     container_name: snapfeed_postgres
     restart: unless-stopped
     environment:
