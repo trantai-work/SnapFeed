@@ -25,7 +25,11 @@ class User(AbstractUser, BaseModel):
     Custom user model extending Django's AbstractUser and BaseModel.
     """
 
-    email = models.EmailField(unique=True)
+    email = models.EmailField(
+        unique=True,
+        null=True,
+        blank=False,
+    )
     exclude_permissions = models.ManyToManyField(
         Permission, db_table="user_exclude_permissions", related_name="exclude_users"
     )

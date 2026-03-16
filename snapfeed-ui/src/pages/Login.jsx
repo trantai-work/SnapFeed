@@ -1,4 +1,5 @@
 const GOOGLE_CLIENT_ID = "944363268636-kj1hef52s8jelgujjtn4fafa2kebu44i.apps.googleusercontent.com";
+const FACEBOOK_APP_ID = "1595664528375760";
 
 function loginWithGoogle() {
   const redirectUri = "http://localhost:8000/api/v1/auth/google/callback";
@@ -13,6 +14,18 @@ function loginWithGoogle() {
   window.location.href = url;
 }
 
+function loginWithFacebook() {
+  const redirectUri = "http://localhost:8000/api/v1/auth/facebook/callback";
+
+  const url =
+    "https://www.facebook.com/v18.0/dialog/oauth" +
+    `?client_id=${FACEBOOK_APP_ID}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&scope=email`;
+
+  window.location.href = url;
+}
+
 export default function LoginPage() {
   return (
     <div>
@@ -20,6 +33,9 @@ export default function LoginPage() {
 
       <button onClick={loginWithGoogle}>
         Login with Google
+      </button>
+      <button onClick={loginWithFacebook} style={{ marginLeft: "10px" }}>
+        Login with Facebook
       </button>
     </div>
   );

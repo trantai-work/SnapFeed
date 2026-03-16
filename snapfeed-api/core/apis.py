@@ -1,6 +1,6 @@
 from rest_framework import viewsets, status
 
-from core.apis.api_builder import build_response
+from utils.api_builder import build_response
 from core.messages import ERROR_MESSAGES
 from core.pagination import BasePagination
 

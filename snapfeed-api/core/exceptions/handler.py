@@ -16,7 +16,7 @@ from rest_framework_simplejwt.exceptions import InvalidToken
 
 from core.exceptions.base import BaseAPIException
 from core.messages import ERROR_MESSAGES
-from core.apis.api_builder import build_response, build_response_body
+from utils import api_builder
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ def custom_exception_handler(exc, context):
     if isinstance(exc, BaseAPIException):
         message = ERROR_MESSAGES.get(exc.message_key, exc.message_key)
 
-        return build_response(
+        return api_builder.build_response(
             message=message, status_code=exc.status_code, success=False
         )
 
@@ -76,7 +76,7 @@ def custom_exception_handler(exc, context):
                 result = handler(exc, response)
 
                 # Keep original response headers (important for auth headers)
-                response.data = build_response_body(
+                response.data = api_builder.build_response_body(
                     message=result.get("message"),
                     data=result.get("data"),
                     success=False,
@@ -86,7 +86,7 @@ def custom_exception_handler(exc, context):
                 return response
 
         # Fallback for other DRF exceptions
-        response.data = build_response_body(
+        response.data = api_builder.build_response_body(
             message=str(response.data), success=False, status_code=response.status_code
         )
 
@@ -100,7 +100,7 @@ def custom_exception_handler(exc, context):
         return None
 
     # Production fallback
-    return build_response(
+    return api_builder.build_response(
         message=ERROR_MESSAGES["common"]["internal_error"],
         success=False,
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

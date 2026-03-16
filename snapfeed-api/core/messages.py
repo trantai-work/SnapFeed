@@ -14,6 +14,7 @@ _ERROR_MESSAGES = {
         },
         "missing_google_exchange_code": "Missing Google Exchange Code.",
         "verify_google_oauth2_token_fail": "Verify Google OAuth2 token failed.",
+        "missing_facebook_exchange_code": "Missing Facebook Exchange Code.",
     },
     "vi": {
         "common": {
@@ -27,6 +28,7 @@ _ERROR_MESSAGES = {
         },
         "missing_google_exchange_code": "Thiếu Google code.",
         "verify_google_oauth2_token_fail": "Xác minh Google OAuth2 token thất bại.",
+        "missing_facebook_exchange_code": "Thiếu Facebook code.",
     },
 }
 

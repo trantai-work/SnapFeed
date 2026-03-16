@@ -1,5 +1,5 @@
 from rest_framework.pagination import PageNumberPagination
-from core.apis.api_builder import build_response
+from utils.api_builder import build_response
 
 
 class BasePagination(PageNumberPagination):

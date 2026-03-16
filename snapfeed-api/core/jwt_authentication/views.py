@@ -1,7 +1,6 @@
-from django.conf import settings
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from core.apis.api_builder import build_response
+from utils import http, api_builder
 
 
 class CookieTokenObtainPairView(TokenObtainPairView):
@@ -11,24 +10,8 @@ class CookieTokenObtainPairView(TokenObtainPairView):
         access = response.data.get("access")
         refresh = response.data.get("refresh")
 
-        res = build_response()
+        res = api_builder.build_response()
 
-        res.set_cookie(
-            key="accessToken",
-            value=access,
-            httponly=True,
-            samesite="Lax",
-            secure=not settings.DEBUG,
-            path="/",
-        )
-
-        res.set_cookie(
-            key="refreshToken",
-            value=refresh,
-            httponly=True,
-            samesite="Lax",
-            secure=not settings.DEBUG,
-            path="/",
-        )
+        http.set_auth_cookies(res, access, refresh)
 
         return res
