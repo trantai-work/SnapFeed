@@ -3,7 +3,6 @@ import logging
 from django.conf import settings
 
 from rest_framework.views import exception_handler
-from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import (
     ParseError,
@@ -17,20 +16,9 @@ from rest_framework_simplejwt.exceptions import InvalidToken
 
 from core.exceptions.base import BaseAPIException
 from core.messages import ERROR_MESSAGES
+from core.apis.api_builder import build_response, build_response_body
 
 logger = logging.getLogger(__name__)
-
-
-def build_error_response(message: str, status_code: int, data=None):
-    """
-    Build standardized API error response.
-    """
-    return {
-        "data": data,
-        "message": message,
-        "success": False,
-        "status_code": status_code,
-    }
 
 
 FRAMEWORK_EXCEPTION_MESSAGES = {
@@ -77,12 +65,8 @@ def custom_exception_handler(exc, context):
     if isinstance(exc, BaseAPIException):
         message = ERROR_MESSAGES.get(exc.message_key, exc.message_key)
 
-        return Response(
-            build_error_response(
-                message=message,
-                status_code=exc.status_code,
-            ),
-            status=exc.status_code,
+        return build_response(
+            message=message, status_code=exc.status_code, success=False
         )
 
     # Handle DRF / framework exceptions
@@ -92,18 +76,18 @@ def custom_exception_handler(exc, context):
                 result = handler(exc, response)
 
                 # Keep original response headers (important for auth headers)
-                response.data = build_error_response(
+                response.data = build_response_body(
                     message=result.get("message"),
                     data=result.get("data"),
+                    success=False,
                     status_code=response.status_code,
                 )
 
                 return response
 
         # Fallback for other DRF exceptions
-        response.data = build_error_response(
-            message=str(response.data),
-            status_code=response.status_code,
+        response.data = build_response_body(
+            message=str(response.data), success=False, status_code=response.status_code
         )
 
         return response
@@ -116,10 +100,8 @@ def custom_exception_handler(exc, context):
         return None
 
     # Production fallback
-    return Response(
-        build_error_response(
-            message=ERROR_MESSAGES["common"]["internal_error"],
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        ),
-        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    return build_response(
+        message=ERROR_MESSAGES["common"]["internal_error"],
+        success=False,
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )

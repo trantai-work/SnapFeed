@@ -11,7 +11,9 @@ _ERROR_MESSAGES = {
             "not_authenticated": "Not authenticated.",
             "permission_denied": "Permission denied.",
             "validation_error": "Validation failed.",
-        }
+        },
+        "missing_google_exchange_code": "Missing Google Exchange Code.",
+        "verify_google_oauth2_token_fail": "Verify Google OAuth2 token failed.",
     },
     "vi": {
         "common": {
@@ -22,7 +24,9 @@ _ERROR_MESSAGES = {
             "not_authenticated": "Chưa xác thực.",
             "permission_denied": "Không có quyền truy cập.",
             "validation_error": "Kiểm tra dữ liệu thất bại.",
-        }
+        },
+        "missing_google_exchange_code": "Thiếu Google code.",
+        "verify_google_oauth2_token_fail": "Xác minh Google OAuth2 token thất bại.",
     },
 }
 

@@ -5,25 +5,19 @@ from drf_spectacular.views import (
     SpectacularRedocView,
 )
 from config import routes
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenBlacklistView,
-)
+
+from core.jwt_authentication.views import CookieTokenObtainPairView
 
 urlpatterns = [
-    path(
-        "api/v1/auth/login",
-        TokenObtainPairView.as_view(),
-        name="token_obtain_pair",
-    ),
-    path(
-        "api/v1/auth/refresh",
-        TokenRefreshView.as_view(),
-        name="token_refresh",
-    ),
-    path("api/v1/auth/logout", TokenBlacklistView.as_view(), name="logout"),
-    path("api/v1/users/", include(routes)),
+    path("api/v1/auth/login", CookieTokenObtainPairView.as_view(), name="login"),
+    # Implement later (Cookie)
+    # path(
+    #     "api/v1/auth/refresh",
+    #     TokenRefreshView.as_view(),
+    #     name="token_refresh",
+    # ),
+    # path("api/v1/auth/logout", TokenBlacklistView.as_view(), name="logout"),
+    path("api/v1/", include(routes)),
 ]
 
 

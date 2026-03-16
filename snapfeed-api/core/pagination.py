@@ -1,5 +1,5 @@
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
+from core.apis.api_builder import build_response
 
 
 class BasePagination(PageNumberPagination):
@@ -23,12 +23,6 @@ class BasePagination(PageNumberPagination):
 
         pagination_data.update(kwargs)
 
-        return Response(
-            {
-                "status": 200,
-                "success": True,
-                "message": None,
-                "data": pagination_data,
-            },
-            status=200,
+        return build_response(
+            data=pagination_data,
         )
