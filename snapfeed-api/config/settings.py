@@ -32,10 +32,9 @@ DEBUG = env("DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
 
-if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
-else:
-    CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
+
+CORS_ALLOW_CREDENTIALS = True
 
 
 # Application definition
@@ -60,6 +59,7 @@ INSTALLED_APPS = [
     "apps.recommendation",
     "apps.notifications",
     "apps.chats",
+    "apps.oauth",
 ]
 
 MIDDLEWARE = [
@@ -164,7 +164,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.AllowAny",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "core.jwt_authentication.authentication.CookieJWTAuthentication",
     ],
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
@@ -211,15 +211,26 @@ SPECTACULAR_SETTINGS = {
     "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAuthenticated"],
     "SERVE_AUTHENTICATION": ["core.swagger_authentication.SwaggerBasicAuthentication"],
     "COMPONENT_SPLIT_REQUEST": True,
-    "APPEND_COMPONENTS": {
-        "securitySchemes": {
-            "jwtAuth": {
-                "type": "http",
-                "scheme": "bearer",
-                "bearerFormat": "JWT",
-            }
-        }
-    },
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Google OAuth2
+GOOGLE_CLIENT_ID = env("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = env("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = env("GOOGLE_REDIRECT_URI")
+GOOGLE_TOKEN_URL = env("GOOGLE_TOKEN_URL")
+
+# Facebook OAuth2
+FACEBOOK_APP_ID = env("FACEBOOK_APP_ID")
+FACEBOOK_APP_SECRET = env("FACEBOOK_APP_SECRET")
+FACEBOOK_REDIRECT_URI = env("FACEBOOK_REDIRECT_URI")
+FACEBOOK_TOKEN_URL = env("FACEBOOK_TOKEN_URL")
+FACEBOOK_USERINFO_URL = env("FACEBOOK_USERINFO_URL")
+
+# Super admin account
+SUPER_ADMIN_USERNAME = env("SUPER_ADMIN_USERNAME")
+SUPER_ADMIN_PASSWORD = env("SUPER_ADMIN_PASSWORD")
+
+# Client
+CLIENT_HOMEPAGE_URL = env("CLIENT_HOMEPAGE_URL")

@@ -1,8 +1,6 @@
-from typing import Any
-
 from rest_framework import viewsets, status
-from rest_framework.response import Response
 
+from utils.api_builder import build_response
 from core.messages import ERROR_MESSAGES
 from core.pagination import BasePagination
 
@@ -12,44 +10,28 @@ class BaseAPIViewSet(viewsets.GenericViewSet):
     Base ViewSet with unified API response template.
     """
 
-    @staticmethod
-    def build_response(
-        data: Any = None,
-        message: str = None,
-        success: bool = True,
-        status_code=status.HTTP_200_OK,
-    ) -> Response:
-        """
-        Build standardized API response.
-        """
+    def response(self, data=None, status_code=status.HTTP_200_OK):  # noqa
+        return build_response(data=data, status_code=status_code)
 
-        return Response(
-            {
-                "status": status_code,
-                "success": success,
-                "message": message,
-                "data": data,
-            },
-            status=status_code,
-        )
+    def response_ok(self, data=None):  # noqa
+        return build_response(data=data)
 
-    @classmethod
-    def response(cls, data=None, status_code=status.HTTP_200_OK):
-        return cls.build_response(data=data, status_code=status_code)
+    def response_created(self, data=None):  # noqa
+        return build_response(data=data, status_code=status.HTTP_201_CREATED)
 
-    @classmethod
-    def response_ok(cls, data=None):
-        return cls.build_response(data=data)
+    def response_no_content(self):  # noqa
+        return build_response(data=None, status_code=status.HTTP_204_NO_CONTENT)
 
-    @classmethod
-    def response_created(cls, data=None):
-        return cls.build_response(data=data, status_code=status.HTTP_201_CREATED)
+    def response_error(  # noqa
+        self,
+        msg_key=None,
+        status_code=status.HTTP_401_UNAUTHORIZED,
+    ):
+        message = ERROR_MESSAGES.get(msg_key) if msg_key else None
 
-    @classmethod
-    def response_error(cls, msg_key: str, status_code=status.HTTP_401_UNAUTHORIZED):
-        return cls.build_response(
+        return build_response(
             data=None,
-            message=ERROR_MESSAGES[msg_key],
+            message=message,
             success=False,
             status_code=status_code,
         )
@@ -58,7 +40,7 @@ class BaseAPIViewSet(viewsets.GenericViewSet):
         self,
         request,
         queryset,
-        serializer,
+        serializer_class,
         pagination_class=BasePagination,
         extra_context=None,
     ):
@@ -66,14 +48,14 @@ class BaseAPIViewSet(viewsets.GenericViewSet):
         Custom paginated response.
         """
 
-        self.pagination_class = pagination_class
-        page = self.paginate_queryset(queryset)
+        paginator = pagination_class()
+        page = paginator.paginate_queryset(queryset, request, view=self)
 
-        if extra_context is None:
-            extra_context = {}
+        context = {"request": request}
 
-        context = {"request": request, **extra_context}
+        if extra_context:
+            context.update(extra_context)
 
-        serializer = serializer(page, many=True, context=context)
+        serializer = serializer_class(page, many=True, context=context)
 
-        return self.get_paginated_response(serializer.data)
+        return paginator.get_paginated_response(serializer.data)
