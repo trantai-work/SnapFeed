@@ -178,9 +178,15 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "core.exceptions.handler.custom_exception_handler",
 }
 
+# SIMPLE_JWT = {
+#     "ACCESS_TOKEN_LIFETIME": timedelta(days=7),
+#     "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+#     "UPDATE_LAST_LOGIN": True,
+# }
+
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=7),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+    "ACCESS_TOKEN_LIFETIME": timedelta(seconds=10),
+    "REFRESH_TOKEN_LIFETIME": timedelta(seconds=20),
     "UPDATE_LAST_LOGIN": True,
 }
 

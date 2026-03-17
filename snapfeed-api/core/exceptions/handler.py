@@ -25,26 +25,32 @@ FRAMEWORK_EXCEPTION_MESSAGES = {
     ParseError: lambda exc, resp: {
         "message": str(exc),
         "data": None,
+        "status_code": status.HTTP_400_BAD_REQUEST,
     },
     ValidationError: lambda exc, resp: {
         "message": ERROR_MESSAGES["common"]["validation_error"],
         "data": resp.data,
+        "status_code": status.HTTP_400_BAD_REQUEST,
     },
-    InvalidToken: lambda exc, resp: {
+    InvalidToken: lambda exc, resp: {  # Use for both access and refresh token
         "message": ERROR_MESSAGES["common"]["invalid_token"],
         "data": None,
+        "status_code": status.HTTP_401_UNAUTHORIZED,
     },
     AuthenticationFailed: lambda exc, resp: {
         "message": ERROR_MESSAGES["common"]["invalid_basic_auth"],
         "data": None,
+        "status_code": status.HTTP_401_UNAUTHORIZED,
     },
     NotAuthenticated: lambda exc, resp: {
         "message": ERROR_MESSAGES["common"]["not_authenticated"],
         "data": None,
+        "status_code": status.HTTP_401_UNAUTHORIZED,
     },
     PermissionDenied: lambda exc, resp: {
         "message": ERROR_MESSAGES["common"]["permission_denied"],
         "data": None,
+        "status_code": status.HTTP_403_FORBIDDEN,
     },
 }
 
@@ -75,12 +81,15 @@ def custom_exception_handler(exc, context):
             if isinstance(exc, exception_class):
                 result = handler(exc, response)
 
-                # Keep original response headers (important for auth headers)
+                status_code = result.get("status_code", response.status_code)
+
+                response.status_code = status_code
+
                 response.data = api_builder.build_response_body(
                     message=result.get("message"),
                     data=result.get("data"),
                     success=False,
-                    status_code=response.status_code,
+                    status_code=status_code,
                 )
 
                 return response

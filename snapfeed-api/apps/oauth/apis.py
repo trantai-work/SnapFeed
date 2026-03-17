@@ -8,6 +8,7 @@ import requests
 from apps.oauth.services import oauth_services
 from apps.users.services import user_services
 from core.apis import BaseAPIViewSet
+from core.messages import ERROR_MESSAGES
 from core.serializers import EmptySerializer
 from apps.oauth.constants import OAuth2Providers
 from google.oauth2 import id_token
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 @extend_schema(tags=["auth"])
 class OAuthViewSet(BaseAPIViewSet):
+    authentication_classes = []
     serializer_class = EmptySerializer
 
     @transaction.atomic()
@@ -29,7 +31,7 @@ class OAuthViewSet(BaseAPIViewSet):
 
         if not code:
             return self.response_error(
-                msg_key="missing_google_exchange_code",
+                message=ERROR_MESSAGES["missing_google_exchange_code"],
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -59,6 +61,7 @@ class OAuthViewSet(BaseAPIViewSet):
             provider_user_id,
             payload.get("given_name") or "",
             payload.get("family_name") or "",
+            payload.get("picture") or None,
         )
 
         return oauth_services.build_oauth_login_response(user)
@@ -70,7 +73,7 @@ class OAuthViewSet(BaseAPIViewSet):
 
         if not code:
             return self.response_error(
-                msg_key="missing_facebook_exchange_code",
+                message=ERROR_MESSAGES["missing_facebook_exchange_code"],
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -89,18 +92,21 @@ class OAuthViewSet(BaseAPIViewSet):
         user_response = requests.get(
             settings.FACEBOOK_USERINFO_URL,
             params={
-                "fields": "id,first_name,last_name",
+                "fields": "id,first_name,last_name,picture",
                 "access_token": access_token,
             },
         )
 
         user_data = user_response.json()
 
+        avatar_url = user_data.get("picture", {}).get("data", {}).get("url")
+
         user = user_services.get_or_create_user_by_social_account(
             OAuth2Providers.FACEBOOK.value,
             user_data.get("id"),
             user_data.get("first_name") or "",
             user_data.get("last_name") or "",
+            avatar_url,
         )
 
         return oauth_services.build_oauth_login_response(user)

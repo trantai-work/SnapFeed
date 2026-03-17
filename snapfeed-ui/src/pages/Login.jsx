@@ -37,6 +37,10 @@ export default function LoginPage() {
       <button onClick={loginWithFacebook} style={{ marginLeft: "10px" }}>
         Login with Facebook
       </button>
+      <h1 className="text-3xl font-bold underline">
+        Hello world!
+      </h1>
+      
     </div>
   );
 }

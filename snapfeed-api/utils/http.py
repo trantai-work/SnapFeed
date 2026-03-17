@@ -1,7 +1,8 @@
 from django.conf import settings
+from rest_framework.response import Response
 
 
-def set_auth_cookies(response, access_token: str, refresh_token: str) -> None:
+def set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
     """
     Attach authentication tokens to the response cookies.
 
@@ -29,4 +30,17 @@ def set_auth_cookies(response, access_token: str, refresh_token: str) -> None:
         secure=not settings.DEBUG,
         samesite="Lax",
         path="/",
+    )
+
+
+def clear_auth_cookies(response: Response) -> None:
+    response.delete_cookie(
+        "accessToken",
+        path="/",
+        samesite="Lax",
+    )
+    response.delete_cookie(
+        "refreshToken",
+        path="/",
+        samesite="Lax",
     )
