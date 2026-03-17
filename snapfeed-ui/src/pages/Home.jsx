@@ -1,30 +1,20 @@
-import { useState } from "react";
+import Sidebar from "../components/Sidebar"
+import TopbarAction from "../components/TopbarAction"
 
-function Home() {
-  const [result, setResult] = useState(null);
-
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch("http://localhost:8000/api/v1/users", {
-        method: "GET",
-        credentials: "include",
-      });
-      const data = await response.json();
-      setResult(JSON.stringify(data, null, 2));
-    } catch (error) {
-      setResult("Error: " + error.toString());
-    }
-  };
-
+export default function Home() {
   return (
-    <div>
-      <h1>Home</h1>
-      <button onClick={fetchUsers}>Call /api/v1/users</button>
-      {result && (
-        <pre>{result}</pre>
-      )}
-    </div>
-  );
-}
+    <div className="flex bg-black min-h-screen text-white">
 
-export default Home;
+      {/* Sidebar */}
+      <Sidebar />
+
+      {/* Feed */}
+      <div className="flex-1 p-6">
+     
+      </div>
+      {/* Top Right Actions */}
+      <TopbarAction />
+
+    </div>
+  )
+}

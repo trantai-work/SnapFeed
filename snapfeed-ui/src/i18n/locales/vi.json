@@ -1,0 +1,8 @@
+{
+    "errors": {
+      "default": "Có lỗi xảy ra.",
+      "network": "Không thể kết nối tới máy chủ.",
+      "server": "Máy chủ gặp lỗi.",
+      "unauthorized": "Chưa xác thực."
+    }
+}

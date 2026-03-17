@@ -1,0 +1,8 @@
+{
+    "errors": {
+      "default": "Something went wrong.",
+      "network": "Cannot connect to server.",
+      "server": "Server error.",
+      "unauthorized": "Unauthorized."
+    }
+}

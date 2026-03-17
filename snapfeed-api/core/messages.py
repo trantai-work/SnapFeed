@@ -11,6 +11,7 @@ _ERROR_MESSAGES = {
             "not_authenticated": "Not authenticated.",
             "permission_denied": "Permission denied.",
             "validation_error": "Validation failed.",
+            "no_refresh_token_found": "No refresh token found.",
         },
         "missing_google_exchange_code": "Missing Google Exchange Code.",
         "verify_google_oauth2_token_fail": "Verify Google OAuth2 token failed.",
@@ -25,6 +26,7 @@ _ERROR_MESSAGES = {
             "not_authenticated": "Chưa xác thực.",
             "permission_denied": "Không có quyền truy cập.",
             "validation_error": "Kiểm tra dữ liệu thất bại.",
+            "no_refresh_token_found": "Không tìm thấy refresh token.",
         },
         "missing_google_exchange_code": "Thiếu Google code.",
         "verify_google_oauth2_token_fail": "Xác minh Google OAuth2 token thất bại.",
@@ -32,4 +34,22 @@ _ERROR_MESSAGES = {
     },
 }
 
+_SUCCESS_MESSAGES = {
+    "en": {
+        "common": {
+            "login_success": "Login successful.",
+            "logout_success": "Logout successful.",
+            "token_refreshed": "Token refreshed.",
+        }
+    },
+    "vi": {
+        "common": {
+            "login_success": "Đăng nhập thành công.",
+            "logout_success": "Đăng xuất thành công.",
+            "token_refreshed": "Refresh token thành công.",
+        }
+    },
+}
+
+SUCCESS_MESSAGES = _SUCCESS_MESSAGES[settings.LANGUAGE_CODE]
 ERROR_MESSAGES = _ERROR_MESSAGES[settings.LANGUAGE_CODE]

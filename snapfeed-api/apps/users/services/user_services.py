@@ -15,6 +15,7 @@ def create_user(
     email: Optional[str],
     first_name: str,
     last_name: str,
+    avatar_url: Optional[str] = None,
 ) -> User:
 
     user = User(
@@ -22,6 +23,7 @@ def create_user(
         email=email,
         first_name=first_name,
         last_name=last_name,
+        avatar_url=avatar_url,
     )
 
     if password:
@@ -39,6 +41,7 @@ def get_or_create_user_by_social_account(
     provider_user_id: str,
     first_name: str = "",
     last_name: str = "",
+    avatar_url: Optional[str] = None,
 ) -> User:
     """
     Return the user linked to the given social account,
@@ -59,6 +62,7 @@ def get_or_create_user_by_social_account(
         email=None,
         first_name=first_name,
         last_name=last_name,
+        avatar_url=avatar_url,
     )
 
     social_account_services.create_social_account(
