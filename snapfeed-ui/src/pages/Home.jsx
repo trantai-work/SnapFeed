@@ -1,5 +1,5 @@
 import Sidebar from "../components/Sidebar"
-import TopbarAction from "../components/TopbarAction"
+import TopbarAction from "../components/Topbar/TopbarAction"
 
 export default function Home() {
   return (
