@@ -21,6 +21,34 @@ from utils import api_builder
 logger = logging.getLogger(__name__)
 
 
+def extract_validation_messages(error_data):
+    """
+    Format DRF ValidationError into a string.
+
+    Example:
+    Input: {"title": ["Required"], "thumbnail": ["Invalid", "Too large"]}
+    Output:
+    Title: Required
+    Thumbnail: Invalid, Too large
+    """
+
+    messages = []
+
+    if isinstance(error_data, dict):
+        for field, errs in error_data.items():
+            if isinstance(errs, list):
+                field_message = ", ".join(str(e) for e in errs)
+            else:
+                field_message = str(errs)
+            messages.append(f"{field.capitalize()}: {field_message}")
+    elif isinstance(error_data, list):
+        messages.append(", ".join(str(e) for e in error_data))
+    else:
+        messages.append(str(error_data))
+
+    return "\n".join(messages)
+
+
 FRAMEWORK_EXCEPTION_MESSAGES = {
     ParseError: lambda exc, resp: {
         "message": str(exc),
@@ -28,8 +56,8 @@ FRAMEWORK_EXCEPTION_MESSAGES = {
         "status_code": status.HTTP_400_BAD_REQUEST,
     },
     ValidationError: lambda exc, resp: {
-        "message": ERROR_MESSAGES["common"]["validation_error"],
-        "data": resp.data,
+        "message": extract_validation_messages(resp.data),
+        "data": None,
         "status_code": status.HTTP_400_BAD_REQUEST,
     },
     InvalidToken: lambda exc, resp: {  # Use for both access and refresh token

@@ -1,3 +1,4 @@
+from django.core.validators import FileExtensionValidator
 from django.db import models
 
 from apps.videos.constants import Reactions
@@ -7,10 +8,14 @@ from apps.users.models import User
 
 class Video(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="videos")
-    title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    video_url = models.CharField(max_length=255)
-    thumbnail_url = models.CharField(max_length=255)
+    video_key = models.CharField(max_length=255, unique=True)
+    thumbnail = models.ImageField(
+        upload_to="thumbnails/",
+        null=True,
+        blank=True,
+        validators=[FileExtensionValidator(["jpg", "jpeg", "png"])],
+    )
     duration = models.PositiveIntegerField(help_text="Video duration in seconds")
     view_count = models.PositiveIntegerField(default=0)
     comment_count = models.PositiveIntegerField(default=0)

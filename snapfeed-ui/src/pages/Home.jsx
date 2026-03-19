@@ -1,5 +1,6 @@
 import Sidebar from "../components/Sidebar"
 import TopbarAction from "../components/Topbar/TopbarAction"
+import { Outlet } from "react-router-dom";
 
 export default function Home() {
   return (
@@ -8,9 +9,9 @@ export default function Home() {
       {/* Sidebar */}
       <Sidebar />
 
-      {/* Feed */}
+      {/* Main content */}
       <div className="flex-1 p-6">
-     
+        <Outlet />
       </div>
       {/* Top Right Actions */}
       <TopbarAction />

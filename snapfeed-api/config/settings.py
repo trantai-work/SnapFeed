@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "safedelete",
     "corsheaders",
+    "storages",
     "apps.users",
     "apps.permissions",
     "apps.videos",
@@ -129,8 +130,6 @@ AUTHENTICATION_BACKENDS = [
     "core.permissions.ExcludePermissionModelBackend",
 ]
 
-STATIC_URL = "static/"
-
 
 LANGUAGE_CODE = "vi"
 
@@ -178,15 +177,9 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "core.exceptions.handler.custom_exception_handler",
 }
 
-# SIMPLE_JWT = {
-#     "ACCESS_TOKEN_LIFETIME": timedelta(days=7),
-#     "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
-#     "UPDATE_LAST_LOGIN": True,
-# }
-
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(seconds=10),
-    "REFRESH_TOKEN_LIFETIME": timedelta(seconds=20),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "UPDATE_LAST_LOGIN": True,
 }
 
@@ -240,3 +233,35 @@ SUPER_ADMIN_PASSWORD = env("SUPER_ADMIN_PASSWORD")
 
 # Client
 CLIENT_HOMEPAGE_URL = env("CLIENT_HOMEPAGE_URL")
+
+# AWS S3
+AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME")
+AWS_S3_FILE_OVERWRITE = False
+AWS_QUERYSTRING_AUTH = False  # Public video -> False, if video is private, use True
+
+STORAGES = {
+    "default": {
+        # All media files will be stored under "media/" folder on S3
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "OPTIONS": {"location": "media"},
+    },
+    "staticfiles": {
+        # All static files will be stored under "static/" folder on S3
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "OPTIONS": {"location": "static"},
+    },
+}
+
+MEDIA_URL = (
+    f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/media/"
+)
+
+if DEBUG:
+    STATIC_URL = "/static/"
+    # Django will search these folders when running collectstatic -> push it to S3 in configuration above
+    STATICFILES_DIRS = [BASE_DIR / "static"]
+else:
+    STATIC_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/static/"
