@@ -4,11 +4,17 @@ import { BrowserRouter } from "react-router-dom";
 import "./index.css";
 import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
+import { MessageBoxProvider } from "./components/MessageBox";
+import { UploadDraftProvider } from "./context/UploadDraftContext";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <BrowserRouter>
     <AuthProvider>
-      <App />
+      <MessageBoxProvider>
+        <UploadDraftProvider>
+          <App />
+        </UploadDraftProvider>
+      </MessageBoxProvider>
     </AuthProvider>
   </BrowserRouter>
 );

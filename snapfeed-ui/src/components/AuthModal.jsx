@@ -1,22 +1,34 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect } from "react";
 import { X } from "lucide-react";
+import googleLogo from "../assets/google_logo.svg";
+import facebookLogo from "../assets/facebook_logo.svg";
 
 function classNames(...xs) {
   return xs.filter(Boolean).join(" ");
 }
 
 function ProviderIcon({ provider }) {
-  if (provider === "facebook") {
+  if (provider === "google") {
     return (
-      <span className="grid size-7 place-items-center rounded-full bg-[#1877F2] text-white font-extrabold leading-none">
-        f
+      <span className="grid size-7 place-items-center rounded-full bg-white">
+        <img
+          src={googleLogo}
+          alt="Google"
+          className="h-[22px] w-[22px]"
+          draggable="false"
+        />
       </span>
     );
   }
-  if (provider === "google") {
+  if (provider === "facebook") {
     return (
-      <span className="grid size-7 place-items-center rounded-full bg-white text-black font-extrabold leading-none">
-        G
+      <span className="grid size-7 place-items-center rounded-full bg-white">
+        <img
+          src={facebookLogo}
+          alt="Facebook"
+          className="h-[22px] w-[22px]"
+          draggable="false"
+        />
       </span>
     );
   }
@@ -65,13 +77,8 @@ export default function AuthModal({
   onClose,
   onLoginGoogle,
   onLoginFacebook,
-  recentProvider,
   countryLabel = "Việt Nam",
 }) {
-  const googleBadge = useMemo(() => {
-    if (recentProvider === "google") return "Dùng gần đây";
-    return null;
-  }, [recentProvider]);
 
   useEffect(() => {
     if (!open) return;
@@ -139,17 +146,16 @@ export default function AuthModal({
           <div className="px-6 pt-6 pb-4">
             <div className="space-y-3">
               <ProviderButton
+                icon={<ProviderIcon provider="google" />}
+                label="Tiếp tục với Google"
+                onClick={onLoginGoogle}
+                disabled={!onLoginGoogle}
+              />
+              <ProviderButton
                 icon={<ProviderIcon provider="facebook" />}
                 label="Tiếp tục với Facebook"
                 onClick={onLoginFacebook}
                 disabled={!onLoginFacebook}
-              />
-              <ProviderButton
-                icon={<ProviderIcon provider="google" />}
-                label="Tiếp tục với Google"
-                badge={googleBadge}
-                onClick={onLoginGoogle}
-                disabled={!onLoginGoogle}
               />
             </div>
 
