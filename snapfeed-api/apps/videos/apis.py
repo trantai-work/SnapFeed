@@ -12,7 +12,7 @@ from core.apis import BaseAPIViewSet
 from utils import random
 
 
-@extend_schema(tags=["Video"])
+@extend_schema(tags=["videos"])
 class VideoViewSet(mixins.CreateModelMixin, BaseAPIViewSet):
     serializer_class = VideoSerializer
     queryset = Video.objects.all()
@@ -44,10 +44,7 @@ class VideoViewSet(mixins.CreateModelMixin, BaseAPIViewSet):
         uuid_file_name = random.add_uuid_to_filename(file_name)
         s3_key = f"videos/{request.user.id}/{uuid_file_name}"
 
-        s3_client = boto3.client(
-            "s3",
-            region_name=settings.AWS_S3_REGION_NAME,
-        )
+        s3_client = boto3.client("s3")
 
         presigned_post = s3_client.generate_presigned_post(
             Bucket=settings.AWS_STORAGE_BUCKET_NAME,

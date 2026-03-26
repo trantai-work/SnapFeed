@@ -235,10 +235,8 @@ SUPER_ADMIN_PASSWORD = env("SUPER_ADMIN_PASSWORD")
 CLIENT_HOMEPAGE_URL = env("CLIENT_HOMEPAGE_URL")
 
 # AWS S3
-AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
-AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME")
+AWS_DEFAULT_REGION = env("AWS_DEFAULT_REGION")
 AWS_S3_FILE_OVERWRITE = False
 AWS_QUERYSTRING_AUTH = False  # Public video -> False, if video is private, use True
 
@@ -256,7 +254,7 @@ STORAGES = {
 }
 
 MEDIA_URL = (
-    f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/media/"
+    f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_DEFAULT_REGION}.amazonaws.com/media/"
 )
 
 if DEBUG:
@@ -264,4 +262,7 @@ if DEBUG:
     # Django will search these folders when running collectstatic -> push it to S3 in configuration above
     STATICFILES_DIRS = [BASE_DIR / "static"]
 else:
-    STATIC_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/static/"
+    STATIC_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_DEFAULT_REGION}.amazonaws.com/static/"
+
+# API key
+API_KEY = env("API_KEY")
