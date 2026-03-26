@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, ImagePlus, RefreshCcw, Upload, X } from "lucide-react";
 import { uploadToS3, videosApi } from "../api/video.api";
@@ -25,6 +25,45 @@ export default function VideoUploadPage() {
   const pickVideoRef = useRef(null);
   const pickCoverRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [defaultCoverFile, setDefaultCoverFile] = useState(null);
+  const [defaultCoverPreviewUrl, setDefaultCoverPreviewUrl] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl = "";
+
+    const createDefaultCover = async () => {
+      if (!videoFile) {
+        setDefaultCoverFile(null);
+        setDefaultCoverPreviewUrl("");
+        return;
+      }
+
+      try {
+        const frameFile = await getVideoFirstFrameJpegFile(videoFile, {
+          fileNameBase: videoFile.name.replace(/\.[^/.]+$/, ""),
+        });
+        if (cancelled) return;
+
+        objectUrl = URL.createObjectURL(frameFile);
+        setDefaultCoverFile(frameFile);
+        setDefaultCoverPreviewUrl(objectUrl);
+      } catch {
+        if (cancelled) return;
+        setDefaultCoverFile(null);
+        setDefaultCoverPreviewUrl("");
+      }
+    };
+
+    createDefaultCover();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [videoFile]);
+
+  const effectiveCoverPreviewUrl = coverPreviewUrl || defaultCoverPreviewUrl;
 
   const fileLabel = useMemo(() => {
     if (!videoFile) return "";
@@ -113,7 +152,7 @@ export default function VideoUploadPage() {
 
       const duration = await getVideoDurationSeconds(videoFile);
 
-      let thumbnailFile = coverFile || undefined;
+      let thumbnailFile = coverFile || defaultCoverFile || undefined;
       if (!thumbnailFile) {
         try {
           thumbnailFile = await getVideoFirstFrameJpegFile(videoFile, {
@@ -312,9 +351,9 @@ export default function VideoUploadPage() {
                     <div className="mt-3 flex items-start gap-5">
                       <div className="w-36 sm:w-44">
                         <div className="aspect-[9/16] rounded-lg border border-gray-200 overflow-hidden bg-gray-50">
-                          {coverPreviewUrl ? (
+                          {effectiveCoverPreviewUrl ? (
                             <img
-                              src={coverPreviewUrl}
+                              src={effectiveCoverPreviewUrl}
                               alt="cover"
                               className="w-full h-full object-cover"
                             />

@@ -4,83 +4,16 @@ from django.conf import settings
 
 from rest_framework.views import exception_handler
 from rest_framework import status
-from rest_framework.exceptions import (
-    ParseError,
-    ValidationError,
-    AuthenticationFailed,
-    NotAuthenticated,
-    PermissionDenied,
+
+from core.exceptions.base import DomainException
+from core.exceptions.mappings import (
+    FRAMEWORK_EXCEPTION_MESSAGES,
+    DOMAIN_EXCEPTION_STATUS_MAP,
 )
-
-from rest_framework_simplejwt.exceptions import InvalidToken
-
-from core.exceptions.base import BaseAPIException
 from core.messages import ERROR_MESSAGES
 from utils import api_builder
 
 logger = logging.getLogger(__name__)
-
-
-def extract_validation_messages(error_data):
-    """
-    Format DRF ValidationError into a string.
-
-    Example:
-    Input: {"title": ["Required"], "thumbnail": ["Invalid", "Too large"]}
-    Output:
-    Title: Required
-    Thumbnail: Invalid, Too large
-    """
-
-    messages = []
-
-    if isinstance(error_data, dict):
-        for field, errs in error_data.items():
-            if isinstance(errs, list):
-                field_message = ", ".join(str(e) for e in errs)
-            else:
-                field_message = str(errs)
-            messages.append(f"{field.capitalize()}: {field_message}")
-    elif isinstance(error_data, list):
-        messages.append(", ".join(str(e) for e in error_data))
-    else:
-        messages.append(str(error_data))
-
-    return "\n".join(messages)
-
-
-FRAMEWORK_EXCEPTION_MESSAGES = {
-    ParseError: lambda exc, resp: {
-        "message": str(exc),
-        "data": None,
-        "status_code": status.HTTP_400_BAD_REQUEST,
-    },
-    ValidationError: lambda exc, resp: {
-        "message": extract_validation_messages(resp.data),
-        "data": None,
-        "status_code": status.HTTP_400_BAD_REQUEST,
-    },
-    InvalidToken: lambda exc, resp: {  # Use for both access and refresh token
-        "message": ERROR_MESSAGES["common"]["invalid_token"],
-        "data": None,
-        "status_code": status.HTTP_401_UNAUTHORIZED,
-    },
-    AuthenticationFailed: lambda exc, resp: {
-        "message": ERROR_MESSAGES["common"]["invalid_basic_auth"],
-        "data": None,
-        "status_code": status.HTTP_401_UNAUTHORIZED,
-    },
-    NotAuthenticated: lambda exc, resp: {
-        "message": ERROR_MESSAGES["common"]["not_authenticated"],
-        "data": None,
-        "status_code": status.HTTP_401_UNAUTHORIZED,
-    },
-    PermissionDenied: lambda exc, resp: {
-        "message": ERROR_MESSAGES["common"]["permission_denied"],
-        "data": None,
-        "status_code": status.HTTP_403_FORBIDDEN,
-    },
-}
 
 
 def custom_exception_handler(exc, context):
@@ -88,19 +21,21 @@ def custom_exception_handler(exc, context):
     Global exception handler.
 
     Handles:
-    1. Custom business exceptions
+    1. Domain exceptions
     2. Framework exceptions (DRF / JWT)
     3. Unexpected exceptions
     """
 
     response = exception_handler(exc, context)
 
-    # Handle custom business exceptions
-    if isinstance(exc, BaseAPIException):
-        message = ERROR_MESSAGES.get(exc.message_key, exc.message_key)
-
+    # Handle extract_validation_messages
+    if isinstance(exc, DomainException):
         return api_builder.build_response(
-            message=message, status_code=exc.status_code, success=False
+            message=str(exc),
+            status_code=DOMAIN_EXCEPTION_STATUS_MAP.get(
+                type(exc), status.HTTP_400_BAD_REQUEST
+            ),
+            success=False,
         )
 
     # Handle DRF / framework exceptions
