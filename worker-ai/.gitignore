@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+
+# Virtualenv
+.venv/
+venv/
+ENV/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Local runtime data
+videos/
+*.mp4
+*.mov
+*.mkv
+*.avi
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Caches / tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Cursor / local logs
+agent-transcripts/
+terminals/
