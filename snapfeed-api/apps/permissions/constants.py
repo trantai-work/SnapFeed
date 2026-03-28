@@ -7,8 +7,6 @@ class Groups(EnumChoices):
 
 
 GROUP_PERMISSIONS_MAP = {
-    Groups.MEMBER.value: [],
-    Groups.ADMIN.value: [
-        # "auth.view_group"
-    ],
+    Groups.MEMBER.value: ["videos.add_video", "videos.generate_presigned_url"],
+    Groups.ADMIN.value: [],
 }

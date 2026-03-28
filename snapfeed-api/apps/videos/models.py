@@ -23,6 +23,9 @@ class Video(BaseModel):
 
     class Meta:
         db_table = "videos"
+        permissions = [
+            ("generate_presigned_url", "Can generate presigned URL for video"),
+        ]
 
 
 class VideoReaction(BaseModel):

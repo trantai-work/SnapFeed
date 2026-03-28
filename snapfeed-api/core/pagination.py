@@ -1,4 +1,4 @@
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import PageNumberPagination, CursorPagination
 from utils.api_builder import build_response
 
 
@@ -26,3 +26,27 @@ class BasePagination(PageNumberPagination):
         return build_response(
             data=pagination_data,
         )
+
+
+class BaseCursorPagination(CursorPagination):
+    """
+    Custom cursor pagination class.
+    """
+
+    page_size_query_param = "page_size"
+    ordering = "id"
+
+    def get_paginated_response(self, data, **kwargs):
+        """
+        Returns paginated response with cursor links and results.
+        """
+
+        pagination_data = {
+            "next": self.get_next_link(),
+            "previous": self.get_previous_link(),
+            "results": data,
+        }
+
+        pagination_data.update(kwargs)
+
+        return build_response(data=pagination_data)
