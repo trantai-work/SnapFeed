@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "safedelete",
     "corsheaders",
     "storages",
+    "django.contrib.postgres",
     "apps.users",
     "apps.permissions",
     "apps.videos",

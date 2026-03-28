@@ -1,6 +1,9 @@
-from typing import Optional
+from typing import Optional, List
+
+from django.contrib.auth.models import Group
 
 from apps.oauth.services import social_account_services
+from apps.permissions.constants import Groups
 from apps.users.models import User
 from utils import random
 
@@ -16,7 +19,13 @@ def create_user(
     first_name: str,
     last_name: str,
     avatar_url: Optional[str] = None,
+    group_names: Optional[List[str]] = None,
 ) -> User:
+    """
+    Create a new user and assign to existing groups.
+    Default group is MEMBER if group_names is None.
+    Groups that do not exist are ignored.
+    """
 
     user = User(
         username=username,
@@ -32,6 +41,12 @@ def create_user(
         user.set_unusable_password()
 
     user.save()
+
+    if group_names is None:
+        group_names = [Groups.MEMBER.value]
+
+    existing_groups = Group.objects.filter(name__in=group_names)
+    user.groups.add(*existing_groups)
 
     return user
 
