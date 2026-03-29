@@ -1,5 +1,1 @@
-export default function FeedContent() {
-    return (
-        <div>Hello feed</div>
-    );
-  }
+export { default } from "../Feed/FeedContainer";

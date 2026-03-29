@@ -5,11 +5,18 @@ from apps.videos.models import Video
 
 
 class VideoSerializer(serializers.ModelSerializer):
+    user_avatar = serializers.CharField(source="user.avatar_url", read_only=True)
+    user_first_name = serializers.CharField(source="user.first_name", read_only=True)
+    user_last_name = serializers.CharField(source="user.last_name", read_only=True)
+
     class Meta:
         model = Video
         fields = [
             "id",
             "user",
+            "user_avatar",
+            "user_first_name",
+            "user_last_name",
             "description",
             "video_key",
             "thumbnail",
