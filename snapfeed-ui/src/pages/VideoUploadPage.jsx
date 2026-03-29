@@ -309,7 +309,6 @@ export default function VideoUploadPage() {
                   </div>
                 </div>
 
-                {/* Thanh progress: nằm ngoài, kéo dài full header */}
                 <div className="mt-3 h-[3px] w-full rounded-full bg-gray-200 overflow-hidden">
                   <div className="h-full bg-emerald-500 w-full" />
                 </div>

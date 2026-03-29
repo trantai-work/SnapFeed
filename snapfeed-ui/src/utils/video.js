@@ -82,7 +82,6 @@ export async function getVideoFirstFrameJpegFile(file, { fileNameBase = "thumbna
       };
 
       video.onloadeddata = () => {
-        // đảm bảo frame đầu có thể draw được
         if (video.readyState >= 2) capture();
       };
 
@@ -94,7 +93,6 @@ export async function getVideoFirstFrameJpegFile(file, { fileNameBase = "thumbna
       };
 
       video.src = url;
-      // seek về đầu để chắc chắn lấy first frame
       video.currentTime = 0;
     });
 
