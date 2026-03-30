@@ -6,7 +6,6 @@ from rest_framework import mixins
 
 from apps.videos.constants import MAX_VIDEO_UPLOAD_SIZE
 from apps.videos.models import Video
-from apps.videos.pagination import FeedPagination
 from apps.videos.permissions import GeneratePresignedUrlPermission
 from apps.videos.serializers import PresignedUrlSerializer, VideoSerializer
 from apps.videos.services import video_services, s3_services
@@ -68,7 +67,13 @@ class VideoViewSet(mixins.CreateModelMixin, BaseAPIViewSet):
 
         return self.response_ok(presigned_post)
 
-    @action(detail=False, methods=["get"], url_path="feeds", permission_classes=[])
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="feeds",
+        permission_classes=[],
+        pagination_class=None,
+    )
     def get_feeds(self, request):
         """
         Get feeds for user.
@@ -85,9 +90,4 @@ class VideoViewSet(mixins.CreateModelMixin, BaseAPIViewSet):
             user_embedding = user.embedding.embedding
             feeds = video_services.get_similar_videos(user_embedding, seen_video_ids)
 
-        return self.response_pagination(
-            request=request,
-            queryset=feeds,
-            serializer_class=self.get_serializer_class(),
-            pagination_class=FeedPagination,
-        )
+        return self.response_ok(self.get_serializer(feeds, many=True).data)

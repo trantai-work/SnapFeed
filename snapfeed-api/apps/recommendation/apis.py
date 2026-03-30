@@ -19,6 +19,7 @@ class VideoEmbeddingViewSet(CreateModelMixin, BaseAPIViewSet):
     serializer_class = VideoEmbeddingSerializer
     queryset = VideoEmbedding.objects.all()
     permission_classes = []
+    throttle_classes = []
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):

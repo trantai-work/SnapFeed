@@ -1,8 +1,6 @@
-import { useRef } from "react";
-import { Loader2 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { useCurrentIndex } from "../../hooks/useCurrentIndex";
 import { useFeedStride } from "../../hooks/useFeedStride";
-import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
 import { useScrollSnapNavigation } from "../../hooks/useScrollSnapNavigation";
 import { useVirtualList } from "../../hooks/useVirtualList";
 import { FeedItem } from "./FeedItem";
@@ -18,9 +16,9 @@ const FEED_INNER_COL_CLASS = [
   "items-stretch",
 ].join(" ");
 
-export function FeedList({ items = [], nextUrl, loadingMore, loadMore }) {
+export function FeedList({ items = [], onEndReached }) {
   const scrollRef = useRef(null);
-  const sentinelRef = useRef(null);
+  const endTriggeredForLengthRef = useRef(null);
 
   const stride = useFeedStride(scrollRef);
   const currentIndex = useCurrentIndex(scrollRef, items.length, stride);
@@ -32,14 +30,6 @@ export function FeedList({ items = [], nextUrl, loadingMore, loadMore }) {
     stride
   );
 
-  useInfiniteScroll({
-    scrollRootRef: scrollRef,
-    sentinelRef,
-    enabled: Boolean(nextUrl),
-    onLoadMore: loadMore,
-    dependencyKey: items.length,
-  });
-
   const scrollClassName = [
     "flex flex-col snap-y snap-mandatory overflow-y-auto overscroll-y-contain rounded-xl",
     FEED_SCROLL_GAP_CLASS,
@@ -49,6 +39,18 @@ export function FeedList({ items = [], nextUrl, loadingMore, loadMore }) {
 
   const visible = items.slice(start, end);
   const padBottom = Math.max(0, items.length - end) * stride;
+
+  useEffect(() => {
+    if (typeof onEndReached !== "function") return;
+    if (!items.length) return;
+
+    const nearEnd = currentIndex >= items.length - 3;
+    if (!nearEnd) return;
+
+    if (endTriggeredForLengthRef.current === items.length) return;
+    endTriggeredForLengthRef.current = items.length;
+    onEndReached();
+  }, [currentIndex, items.length, onEndReached]);
 
   return (
     <div className="relative w-full">
@@ -63,11 +65,13 @@ export function FeedList({ items = [], nextUrl, loadingMore, loadMore }) {
           <div className={FEED_INNER_COL_CLASS}>
             {visible.map((item, i) => {
               const index = start + i;
+              const video = item?.video ?? item;
 
               return (
                 <FeedItem
-                  key={item?.id ?? index}
-                  item={item}
+                  key={item?.instanceId || item?.videoKey || item?.id || index}
+                  item={video}
+                  instanceId={item?.instanceId}
                   isActive={index === currentIndex}
                   slideHeightClass={SLIDE_HEIGHT_CLASS}
                   scrollRootRef={scrollRef}
@@ -76,20 +80,6 @@ export function FeedList({ items = [], nextUrl, loadingMore, loadMore }) {
             })}
           </div>
         </div>
-
-        {nextUrl && (
-          <div
-            ref={sentinelRef}
-            className="flex h-16 shrink-0 snap-start items-center justify-center text-white/50"
-            aria-hidden
-          >
-            {loadingMore ? (
-              <Loader2 className="h-6 w-6 animate-spin" />
-            ) : (
-              <span className="text-xs" />
-            )}
-          </div>
-        )}
       </div>
 
       <FeedNavigation

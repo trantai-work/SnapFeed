@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "storages",
     "django.contrib.postgres",
+    "apps.maintenance",
     "apps.users",
     "apps.permissions",
     "apps.videos",

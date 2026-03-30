@@ -1,6 +1,6 @@
 from typing import Optional
 
-from django.db.models import QuerySet, OuterRef, Subquery, Value, Q
+from django.db.models import OuterRef, QuerySet, Subquery
 from django.db.models import F, Sum, Count, FloatField, ExpressionWrapper
 from django.db.models.functions import Now, Random, Extract
 from pgvector.django import CosineDistance
@@ -30,9 +30,9 @@ def get_seen_video(user: User) -> QuerySet[Video]:
     return Video.objects.filter(video_views__user=user).distinct()
 
 
-def get_trending_videos(limit=15) -> QuerySet[Video]:
+def get_trending_videos(limit: int = 25) -> QuerySet[Video]:
     """
-    Get trending videos base on custom score.
+    Get trending videos based on custom score.
     """
 
     return (
@@ -55,16 +55,17 @@ def get_trending_videos(limit=15) -> QuerySet[Video]:
                 output_field=FloatField(),
             )
         )
-        .order_by("-trending_score")[:limit]
+        .order_by("-trending_score")
     )
 
 
 def get_similar_videos(
-    user_embedding: list[float], exclude_video_ids: Optional[QuerySet] = None
+    user_embedding: list[float],
+    exclude_video_ids: Optional[QuerySet] = None,
+    limit: int = 50,
 ) -> QuerySet[Video]:
     """
-    Return lazy QuerySet of Videos ordered by similarity to user's embedding,
-    optionally excluding videos in exclude_video_ids.
+    Return videos similar to user's embedding, excluding already seen videos.
     """
 
     subquery = (
@@ -74,39 +75,18 @@ def get_similar_videos(
     )
 
     queryset = Video.objects.annotate(distance=Subquery(subquery))
-
     if exclude_video_ids:
         queryset = queryset.exclude(id__in=exclude_video_ids)
 
-    return queryset.order_by("distance")
-
-
-def get_random_videos(
-    limit: int = 15, exclude_video_ids: Optional[QuerySet] = None
-) -> QuerySet[Video]:
-    """
-    Return a lazy QuerySet with multiple random Videos.
-    """
-
-    queryset = Video.objects.all()
-
-    if exclude_video_ids:
-        queryset = queryset.exclude(id__in=exclude_video_ids)
-
-    return queryset.order_by(Random())[:limit]
+    return queryset.order_by("distance")[:limit]
 
 
 def get_default_feeds() -> QuerySet[Video]:
     """
-    Get default feed for user: combine trending + random videos.
-    Random videos will exclude trending videos to avoid duplication.
+    Get default feed for user.
     """
 
-    trending_ids = get_trending_videos().values_list("id", flat=True)
-    random_ids = get_random_videos(exclude_video_ids=trending_ids).values_list(
-        "id", flat=True
-    )
+    trending_pool = get_trending_videos(limit=1000).order_by(Random())
+    feeds = trending_pool[:25]
 
-    return Video.objects.filter(Q(id__in=trending_ids) | Q(id__in=random_ids)).annotate(
-        distance=Value(0.0, FloatField())
-    )
+    return feeds

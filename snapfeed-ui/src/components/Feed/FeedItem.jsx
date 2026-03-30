@@ -6,7 +6,13 @@ import { useAutoPlayVideo } from "../../hooks/useAutoPlayVideo";
 import { FeedActions } from "./FeedActions";
 import { FeedDescription } from "./FeedDescription";
 
-function FeedItemComponent({ item, isActive, slideHeightClass, scrollRootRef }) {
+function FeedItemComponent({
+  item,
+  instanceId,
+  isActive,
+  slideHeightClass,
+  scrollRootRef,
+}) {
   const videoRef = useRef(null);
   const src = buildVideoSrc(item.videoKey);
   const poster = item.thumbnail || undefined;
@@ -17,7 +23,7 @@ function FeedItemComponent({ item, isActive, slideHeightClass, scrollRootRef }) 
   const commentLabel = formatCount(item.commentCount ?? 0);
   const saveLabel = formatCount(0);
 
-  useAutoPlayVideo(videoRef, scrollRootRef, item.videoKey, isActive);
+  useAutoPlayVideo(videoRef, scrollRootRef, instanceId || item.videoKey, isActive);
 
   const slideClass = [
     "flex w-full shrink-0 snap-start snap-always items-stretch justify-center overflow-hidden bg-black",

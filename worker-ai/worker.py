@@ -24,10 +24,10 @@ def handle_message(message):
         s3.download_file(bucket, key, local_path)
 
         try:
-            results = process_video(local_path)
-            print(f"Classes for {key}:")
-            for label, prob in results:
-                print(f"  {label}: {prob:.4f}")
+            # results = process_video(local_path)
+            # print(f"Classes for {key}:")
+            # for label, prob in results:
+            #     print(f"  {label}: {prob:.4f}")
 
             embedding = extract_embedding(local_path)
             payload = {"video_s3_key": key, "embedding": embedding}

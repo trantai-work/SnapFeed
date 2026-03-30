@@ -306,3 +306,5 @@ $RECYCLE.BIN/
 Dockerfile.local
 docker-compose.local.yml
 docker-compose-local.yml
+
+temp/

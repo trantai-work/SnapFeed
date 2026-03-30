@@ -1,13 +1,12 @@
 import { Loader2 } from "lucide-react";
-import { useFeedPagination } from "../../hooks/useFeedPagination";
+import { useFeedItems } from "../../hooks/useFeedItems";
 import { FeedList } from "./FeedList";
 
 const shellClass =
   "flex h-[calc(100dvh-7rem)] min-h-[320px] items-center justify-center";
 
 export default function FeedContainer() {
-  const { items, nextUrl, loading, loadingMore, error, loadMore } =
-    useFeedPagination();
+  const { items, loading, error, loadMore } = useFeedItems();
 
   if (loading) {
     return (
@@ -45,9 +44,7 @@ export default function FeedContainer() {
   return (
     <FeedList
       items={items}
-      nextUrl={nextUrl}
-      loadingMore={loadingMore}
-      loadMore={loadMore}
+      onEndReached={loadMore}
     />
   );
 }
