@@ -27,8 +27,7 @@ jobs:
         run: |
           IMAGE=${{ secrets.DOCKER_USERNAME }}/snapfeed-api
           TAG=${GITHUB_REF#refs/tags/}
-
-          docker build -t $IMAGE:$TAG ./snapfeed-api
+          docker build -f ./snapfeed-api/Dockerfile.prod -t $IMAGE:$TAG ./snapfeed-api
           docker push $IMAGE:$TAG
 
       - name: Deploy to EC2
@@ -38,14 +37,23 @@ jobs:
           username: ${{ secrets.SNAPFEED_EC2_USERNAME }}
           key: ${{ secrets.SNAPFEED_EC2_KEY }}
           script: |
-            TAG=${GITHUB_REF#refs/tags/}
             cd /home/ec2-user/SnapFeed
 
-            export API_TAG=$TAG
+            TAG="${{ github.ref_name }}"
+            echo "Deploying API with TAG=$TAG"
 
-            docker-compose pull
-            docker-compose up -d --force-recreate
+            # Export variable so docker-compose can read it
+            export API_TAG="$TAG"
 
+            # Pull API image only
+            docker-compose pull api
+
+            # Start DB and API containers
+            docker-compose up -d db api
+
+            # Run migrations for API
             docker-compose run --rm api python manage.py migrate
 
+            echo "==== Containers status ===="
             docker ps
+            docker-compose logs api --tail=50
