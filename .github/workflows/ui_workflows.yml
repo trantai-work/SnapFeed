@@ -27,7 +27,6 @@ jobs:
         run: |
           IMAGE=${{ secrets.DOCKER_USERNAME }}/snapfeed-ui
           TAG=${GITHUB_REF#refs/tags/}
-
           docker build -t $IMAGE:$TAG ./snapfeed-ui
           docker push $IMAGE:$TAG
 
@@ -38,12 +37,20 @@ jobs:
           username: ${{ secrets.SNAPFEED_EC2_USERNAME }}
           key: ${{ secrets.SNAPFEED_EC2_KEY }}
           script: |
-            TAG=${GITHUB_REF#refs/tags/}
             cd /home/ec2-user/SnapFeed
 
-            export UI_TAG=$TAG
+            TAG="${{ github.ref_name }}"
+            echo "Deploying UI with TAG=$TAG"
 
-            docker-compose pull
-            docker-compose up -d --force-recreate
+            # Export variable so docker-compose can read it
+            export UI_TAG="$TAG"
 
+            # Pull UI image only
+            docker-compose pull ui
+
+            # Start UI container
+            docker-compose up -d ui
+
+            echo "==== Containers status ===="
             docker ps
+            docker-compose logs ui --tail=50
