@@ -1,0 +1,54 @@
+name: Deploy worker-ai
+
+on:
+  push:
+    tags:
+      - 'worker-ai-*'
+
+concurrency:
+  group: worker-ai
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Login DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker image
+        run: |
+          IMAGE=${{ secrets.DOCKER_USERNAME }}/snapfeed-worker-ai
+          TAG=${GITHUB_REF#refs/tags/}
+          docker build \
+            -t "$IMAGE:$TAG" -t "$IMAGE:latest" \
+            ./worker-ai
+          docker push "$IMAGE:$TAG"
+          docker push "$IMAGE:latest"
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SNAPFEED_EC2_HOST }}
+          username: ${{ secrets.SNAPFEED_EC2_USERNAME }}
+          key: ${{ secrets.SNAPFEED_EC2_KEY }}
+          script: |
+            cd /home/ec2-user/SnapFeed
+
+            echo "Deploying worker-ai (${{ github.ref_name }} → Docker Hub :latest on EC2)"
+            echo "Compose service name must match EC2 (videomae-worker if same as worker-ai/docker-compose.yml)."
+
+            docker-compose pull videomae-worker
+
+            docker-compose up -d --force-recreate videomae-worker
+
+            echo "==== Containers status ===="
+            docker ps
+            docker-compose logs videomae-worker --tail=50
