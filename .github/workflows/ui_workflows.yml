@@ -27,8 +27,20 @@ jobs:
         run: |
           IMAGE=${{ secrets.DOCKER_USERNAME }}/snapfeed-ui
           TAG=${GITHUB_REF#refs/tags/}
-          docker build -t $IMAGE:$TAG ./snapfeed-ui
-          docker push $IMAGE:$TAG
+          docker build \
+            --build-arg VITE_API_URL="${{ vars.VITE_API_URL }}" \
+            --build-arg VITE_DEFAULT_LANG="${{ vars.VITE_DEFAULT_LANG }}" \
+            --build-arg VITE_FACEBOOK_APP_ID="${{ vars.VITE_FACEBOOK_APP_ID }}" \
+            --build-arg VITE_FACEBOOK_AUTH_URL="${{ vars.VITE_FACEBOOK_AUTH_URL }}" \
+            --build-arg VITE_FACEBOOK_REDIRECT_URI="${{ vars.VITE_FACEBOOK_REDIRECT_URI }}" \
+            --build-arg VITE_GOOGLE_AUTH_URL="${{ vars.VITE_GOOGLE_AUTH_URL }}" \
+            --build-arg VITE_GOOGLE_CLIENT_ID="${{ vars.VITE_GOOGLE_CLIENT_ID }}" \
+            --build-arg VITE_GOOGLE_REDIRECT_URI="${{ vars.VITE_GOOGLE_REDIRECT_URI }}" \
+            --build-arg VITE_S3_BUCKET_URL="${{ vars.VITE_S3_BUCKET_URL }}" \
+            -t "$IMAGE:$TAG" -t "$IMAGE:latest" \
+            ./snapfeed-ui
+          docker push "$IMAGE:$TAG"
+          docker push "$IMAGE:latest"
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
@@ -39,17 +51,12 @@ jobs:
           script: |
             cd /home/ec2-user/SnapFeed
 
-            TAG="${{ github.ref_name }}"
-            echo "Deploying UI with TAG=$TAG"
+            echo "Deploying UI (${{ github.ref_name }} → Docker Hub :latest on EC2)"
+            echo "Compose images must use :latest (no UI_TAG placeholder)."
 
-            # Export variable so docker-compose can read it
-            export UI_TAG="$TAG"
-
-            # Pull UI image only
             docker-compose pull ui
 
-            # Start UI container
-            docker-compose up -d ui
+            docker-compose up -d --force-recreate ui
 
             echo "==== Containers status ===="
             docker ps
