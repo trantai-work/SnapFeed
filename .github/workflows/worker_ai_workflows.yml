@@ -1,12 +1,12 @@
-name: Deploy API
+name: Deploy worker-ai
 
 on:
   push:
     tags:
-      - 'api-*'
+      - 'worker-ai-*'
 
 concurrency:
-  group: api
+  group: worker-ai
   cancel-in-progress: true
 
 jobs:
@@ -25,11 +25,13 @@ jobs:
 
       - name: Build and Push Docker image
         run: |
-          IMAGE=${{ secrets.DOCKER_USERNAME }}/snapfeed-api
+          IMAGE=${{ secrets.DOCKER_USERNAME }}/snapfeed-worker-ai
           TAG=${GITHUB_REF#refs/tags/}
-          docker build -f ./snapfeed-api/Dockerfile.prod -t $IMAGE:$TAG -t $IMAGE:latest ./snapfeed-api
-          docker push $IMAGE:$TAG
-          docker push $IMAGE:latest
+          docker build \
+            -t "$IMAGE:$TAG" -t "$IMAGE:latest" \
+            ./worker-ai
+          docker push "$IMAGE:$TAG"
+          docker push "$IMAGE:latest"
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
@@ -40,15 +42,13 @@ jobs:
           script: |
             cd /home/ec2-user/SnapFeed
 
-            echo "Deploying API (${{ github.ref_name }} → Docker Hub :latest on EC2)"
-            echo "Compose images must use :latest (no API_TAG placeholder)."
+            echo "Deploying worker-ai (${{ github.ref_name }} → Docker Hub :latest on EC2)"
+            echo "Compose service name must match EC2 (videomae-worker if same as worker-ai/docker-compose.yml)."
 
-            docker-compose pull api
+            docker-compose pull videomae-worker
 
-            docker-compose up -d --force-recreate db api
-
-            docker-compose run --rm api python manage.py migrate
+            docker-compose up -d --force-recreate videomae-worker
 
             echo "==== Containers status ===="
             docker ps
-            docker-compose logs api --tail=50
+            docker-compose logs videomae-worker --tail=50
