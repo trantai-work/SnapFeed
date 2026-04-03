@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+body {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+}
+
+.feed-video-wrap video.feed-video {
+    accent-color: #dc2626 !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .feed-video-wrap:not(:hover) video.feed-video::-webkit-media-controls-panel {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+    }
+
+    .feed-video-wrap:hover video.feed-video::-webkit-media-controls-panel {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
+.feed-video::-webkit-media-controls-timeline {
+    border-radius: 4px;
+}

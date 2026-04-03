@@ -1,0 +1,15 @@
+{
+    "errors": {
+      "default": "Có lỗi xảy ra.",
+      "network": "Không thể kết nối tới máy chủ.",
+      "server": "Máy chủ gặp lỗi.",
+      "unauthorized": "Chưa xác thực.",
+      "missingVideoFile": "Thiếu file video.",
+      "cannotReadVideoDuration": "Không đọc được thời lượng video.",
+      "cannotReadVideoMetadata": "Không đọc được metadata video.",
+      "cannotReadVideoDimensions": "Không đọc được kích thước video.",
+      "cannotCreateCanvasContext": "Không tạo được canvas context.",
+      "cannotCreateThumbnail": "Không tạo được thumbnail.",
+      "cannotReadVideoForThumbnail": "Không đọc được video để tạo thumbnail."
+    }
+}

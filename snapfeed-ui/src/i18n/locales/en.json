@@ -1,0 +1,15 @@
+{
+    "errors": {
+      "default": "Something went wrong.",
+      "network": "Cannot connect to server.",
+      "server": "Server error.",
+      "unauthorized": "Unauthorized.",
+      "missingVideoFile": "Missing video file.",
+      "cannotReadVideoDuration": "Cannot read video duration.",
+      "cannotReadVideoMetadata": "Cannot read video metadata.",
+      "cannotReadVideoDimensions": "Cannot read video dimensions.",
+      "cannotCreateCanvasContext": "Cannot create canvas context.",
+      "cannotCreateThumbnail": "Cannot create thumbnail.",
+      "cannotReadVideoForThumbnail": "Cannot read video to create thumbnail."
+    }
+}

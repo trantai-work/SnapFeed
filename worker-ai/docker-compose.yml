@@ -1,0 +1,19 @@
+name: videomae-worker
+
+services:
+  videomae-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: videomae-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - HF_HOME=/cache/hf
+    volumes:
+      - hf_cache:/cache/hf
+    command: ["python", "main.py"]
+
+volumes:
+  hf_cache:
