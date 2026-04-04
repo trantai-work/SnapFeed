@@ -13,7 +13,7 @@ export default function Home() {
         onMobileClose={() => setMobileNavOpen(false)}
       />
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col max-lg:overflow-hidden max-lg:p-0 lg:min-h-screen lg:p-6 lg:pt-6">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col max-lg:max-h-[min(100svh,100dvh)] max-lg:overflow-x-hidden max-lg:overflow-y-hidden max-lg:p-0 lg:min-h-screen lg:max-h-none lg:overflow-visible lg:p-6 lg:pt-6">
         <Outlet />
       </div>
 

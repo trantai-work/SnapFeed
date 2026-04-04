@@ -53,7 +53,7 @@ export function FeedList({ items = [], onEndReached }) {
   }, [currentIndex, items.length, onEndReached]);
 
   return (
-    <div className="relative h-[100dvh] w-full max-w-[100vw] lg:h-auto lg:max-w-none">
+    <div className="relative box-border h-[min(100svh,100dvh)] max-h-[min(100svh,100dvh)] w-full min-w-0 max-w-full lg:h-auto lg:max-h-none lg:max-w-none">
       <div ref={scrollRef} className={scrollClassName}>
         <div
           className="box-border w-full min-w-0"
