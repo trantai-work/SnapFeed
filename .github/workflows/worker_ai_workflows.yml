@@ -25,7 +25,7 @@ jobs:
 
       - name: Build and Push Docker image
         run: |
-          IMAGE=${{ secrets.DOCKER_USERNAME }}/snapfeed-worker-ai
+          IMAGE=${{ secrets.DOCKER_USERNAME }}/snapfeed-ai-worker
           TAG=${GITHUB_REF#refs/tags/}
           docker build \
             -t "$IMAGE:$TAG" -t "$IMAGE:latest" \
@@ -36,14 +36,14 @@ jobs:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SNAPFEED_EC2_HOST }}
-          username: ${{ secrets.SNAPFEED_EC2_USERNAME }}
-          key: ${{ secrets.SNAPFEED_EC2_KEY }}
+          host: ${{ secrets.SNAPFEED_EC2_WORKER_HOST }}
+          username: ${{ secrets.SNAPFEED_EC2_WORKER_USERNAME }}
+          key: ${{ secrets.SNAPFEED_EC2_WORKER_KEY }}
           script: |
-            cd /home/ec2-user/SnapFeed
+            cd /home/ec2-user/Worker
 
             echo "Deploying worker-ai (${{ github.ref_name }} → Docker Hub :latest on EC2)"
-            echo "Compose service name must match EC2 (videomae-worker if same as worker-ai/docker-compose.yml)."
+            echo "Compose service name must match EC2."
 
             docker-compose pull videomae-worker
 
