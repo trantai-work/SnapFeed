@@ -80,7 +80,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
           <img
             src={theme === "light" ? logoLightMode : logo}
             alt="SnapFeed"
-            className="h-20 w-auto object-contain lg:h-28"
+            className="h-20 max-h-[min(22vh,8.5rem)] w-auto max-w-full object-contain lg:h-28 lg:max-h-none"
           />
         </div>
 
