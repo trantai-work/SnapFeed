@@ -31,7 +31,7 @@ export function FeedList({ items = [], onEndReached }) {
   );
 
   const scrollClassName = [
-    "flex flex-col snap-y snap-mandatory overflow-y-auto overscroll-y-contain rounded-xl",
+    "flex flex-col snap-y snap-mandatory overflow-y-auto overscroll-y-contain rounded-none lg:rounded-xl",
     FEED_SCROLL_GAP_CLASS,
     "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
     SLIDE_HEIGHT_CLASS,
@@ -53,7 +53,7 @@ export function FeedList({ items = [], onEndReached }) {
   }, [currentIndex, items.length, onEndReached]);
 
   return (
-    <div className="relative w-full">
+    <div className="relative h-[100dvh] w-full max-w-[100vw] lg:h-auto lg:max-w-none">
       <div ref={scrollRef} className={scrollClassName}>
         <div
           className="box-border w-full min-w-0"

@@ -3,14 +3,14 @@ import { useFeedItems } from "../../hooks/useFeedItems";
 import { FeedList } from "./FeedList";
 
 const shellClass =
-  "flex h-[calc(100dvh-7rem)] min-h-[320px] items-center justify-center";
+  "flex h-[100dvh] min-h-[320px] items-center justify-center lg:h-[calc(100dvh-7rem)]";
 
 export default function FeedContainer() {
   const { items, loading, error, loadMore } = useFeedItems();
 
   if (loading) {
     return (
-      <div className={`${shellClass} text-white/80`}>
+      <div className={`${shellClass} text-gray-500 dark:text-white/80`}>
         <Loader2 className="h-10 w-10 animate-spin" aria-hidden />
       </div>
     );
@@ -19,12 +19,12 @@ export default function FeedContainer() {
   if (error && items.length === 0) {
     return (
       <div
-        className={`${shellClass} flex-col gap-4 text-center text-white`}
+        className={`${shellClass} flex-col gap-4 text-center text-gray-800 dark:text-white`}
       >
-        <p className="text-sm text-white/80">Không tải được feed.</p>
+        <p className="text-sm text-gray-600 dark:text-white/80">Không tải được feed.</p>
         <button
           type="button"
-          className="rounded-full bg-white/10 px-4 py-2 text-sm hover:bg-white/20"
+          className="rounded-full bg-gray-200 px-4 py-2 text-sm text-gray-900 hover:bg-gray-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
           onClick={() => window.location.reload()}
         >
           Thử lại
@@ -35,7 +35,7 @@ export default function FeedContainer() {
 
   if (!items.length) {
     return (
-      <div className={`${shellClass} text-sm text-white/70`}>
+      <div className={`${shellClass} text-sm text-gray-600 dark:text-white/70`}>
         Chưa có video nào.
       </div>
     );
