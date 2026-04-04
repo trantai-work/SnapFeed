@@ -26,19 +26,27 @@ function FeedItemComponent({
   useAutoPlayVideo(videoRef, scrollRootRef, instanceId || item.videoKey, isActive);
 
   const slideClass = [
-    "flex w-full shrink-0 snap-start snap-always items-stretch justify-center overflow-hidden bg-black",
+    "flex w-full shrink-0 snap-start snap-always items-stretch justify-center overflow-hidden bg-black lg:bg-zinc-200 dark:lg:bg-black",
     slideHeightClass,
   ].join(" ");
 
+  const actionsProps = {
+    reactionLabel,
+    commentLabel,
+    saveLabel,
+    shareLabel: "Chia sẻ",
+    avatarUrl,
+  };
+
   return (
-    <div data-feed-slide className={slideClass}>
-      <div className="flex h-full min-h-0 w-full min-w-0 max-w-full items-stretch justify-center">
-        <div className="flex h-full min-h-0 max-h-full w-fit min-w-0 max-w-full items-stretch">
-          <div className="feed-video-wrap group relative h-full min-h-0 min-w-0 shrink overflow-hidden rounded-2xl">
+    <div data-feed-slide className={`${slideClass} max-lg:max-w-[100dvw]`}>
+      <div className="flex h-full min-h-0 w-full max-w-full items-stretch justify-center bg-black max-lg:min-w-0 lg:bg-zinc-200 dark:lg:bg-black">
+        <div className="flex h-full min-h-0 max-h-full w-full min-w-0 max-w-full items-stretch lg:w-fit">
+          <div className="feed-video-wrap group relative h-full min-h-0 w-full min-w-0 shrink overflow-hidden rounded-none lg:max-w-full lg:rounded-2xl lg:w-fit">
             {src ? (
               <video
                 ref={videoRef}
-                className="feed-video block h-full max-h-full w-auto min-h-0 max-w-full object-contain"
+                className="feed-video block h-full min-h-full w-full min-w-full max-w-none object-cover lg:h-auto lg:max-h-full lg:min-h-0 lg:w-auto lg:min-w-0 lg:max-w-full lg:object-contain"
                 src={src}
                 poster={poster}
                 loop
@@ -58,7 +66,7 @@ function FeedItemComponent({
               aria-hidden
             />
 
-            <div className="pointer-events-none absolute inset-x-0 bottom-14 z-10 p-4 pb-2">
+            <div className="pointer-events-none absolute inset-x-0 bottom-12 z-10 max-w-[calc(100%-4.5rem)] p-3 pb-2 pr-2 sm:bottom-14 sm:max-w-none sm:p-4 lg:max-w-full">
               <p className="text-sm font-semibold text-white drop-shadow">
                 {displayName}
               </p>
@@ -70,15 +78,15 @@ function FeedItemComponent({
                 {viewLabel} lượt xem
               </p>
             </div>
+
+            <FeedActions
+              {...actionsProps}
+              overlay
+              className="lg:hidden"
+            />
           </div>
 
-          <FeedActions
-            reactionLabel={reactionLabel}
-            commentLabel={commentLabel}
-            saveLabel={saveLabel}
-            shareLabel="Chia sẻ"
-            avatarUrl={avatarUrl}
-          />
+          <FeedActions {...actionsProps} />
         </div>
       </div>
     </div>

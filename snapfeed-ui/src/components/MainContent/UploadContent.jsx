@@ -49,21 +49,16 @@ export default function UploadContent() {
 
   return (
     <div className="w-full">
-      <div className="max-w-6xl mx-auto mt-10">
-        <div className="bg-white text-black rounded-2xl p-8 md:p-16 shadow-sm">
+      <div className="mx-auto mt-4 max-w-6xl sm:mt-8 lg:mt-10">
+        <div className="rounded-2xl bg-white p-4 text-gray-900 shadow-sm dark:bg-zinc-900 dark:text-white sm:p-8 md:p-16">
           <div
             className={[
-              "rounded-2xl border-2 border-dashed",
-              isDragging ? "border-pink-500 bg-pink-50/60" : "border-gray-200",
-              "transition-colors",
+              "min-h-[260px] cursor-pointer rounded-2xl border-2 border-dashed sm:min-h-[380px]",
+              isDragging
+                ? "border-pink-500 bg-pink-50/60 dark:bg-pink-950/40"
+                : "border-gray-200 dark:border-zinc-600",
+              "box-border min-w-full transition-colors",
             ].join(" ")}
-            style={{
-              cursor: "pointer",
-              minHeight: "380px",
-              height: "auto",
-              minWidth: "100%",
-              boxSizing: "border-box",
-            }}
             onDragEnter={e => {
               e.preventDefault();
               e.stopPropagation();
@@ -91,16 +86,13 @@ export default function UploadContent() {
               }
             }}
           >
-            <div
-              className="flex flex-col items-center justify-center text-center px-9 py-24"
-              style={{ background: "#f8f8f8" }}
-            >
-              <div className="h-20 w-20 rounded-full bg-gray-100 flex items-center justify-center mb-6">
-                <UploadCloud className="text-gray-500" size={34} />
+            <div className="flex flex-col items-center justify-center bg-gray-100 px-4 py-16 text-center dark:bg-zinc-800/80 sm:px-9 sm:py-24">
+              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-white dark:bg-zinc-700">
+                <UploadCloud className="text-gray-500 dark:text-zinc-400" size={34} />
               </div>
 
-              <div className="text-xl font-semibold mb-2">Chọn video để tải lên</div>
-              <div className="text-base text-gray-500 mb-6">{helperText}</div>
+              <div className="mb-2 text-xl font-semibold">Chọn video để tải lên</div>
+              <div className="mb-6 text-base text-gray-500 dark:text-zinc-400">{helperText}</div>
 
               <input
                 ref={inputRef}
@@ -128,24 +120,24 @@ export default function UploadContent() {
             </div>
           </div>
 
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
+          <div className="mt-6 grid grid-cols-1 gap-4 text-left sm:mt-8 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
             <InfoCard
-              icon={<FileVideo size={20} className="text-gray-700" />}
+              icon={<FileVideo size={20} className="text-gray-700 dark:text-zinc-300" />}
               title="Dung lượng và thời lượng"
               desc="Dung lượng tối đa: 3 GB"
             />
             <InfoCard
-              icon={<Frame size={20} className="text-gray-700" />}
+              icon={<Frame size={20} className="text-gray-700 dark:text-zinc-300" />}
               title="Định dạng tập tin"
               desc='Đề xuất: "mp4".'
             />
             <InfoCard
-              icon={<MonitorPlay size={20} className="text-gray-700" />}
+              icon={<MonitorPlay size={20} className="text-gray-700 dark:text-zinc-300" />}
               title="Độ phân giải video"
               desc="Độ phân giải cao khuyến nghị: 1080p, 1440p."
             />
             <InfoCard
-              icon={<Ratio size={20} className="text-gray-700" />}
+              icon={<Ratio size={20} className="text-gray-700 dark:text-zinc-300" />}
               title="Tỷ lệ khung hình"
               desc="Đề xuất: 16:9 cho chế độ ngang, 9:16 cho chế độ dọc."
             />
@@ -161,8 +153,8 @@ function InfoCard({ icon, title, desc }) {
     <div className="flex gap-4 p-4">
       <div className="mt-0.5">{icon}</div>
       <div>
-        <div className="font-semibold text-base">{title}</div>
-        <div className="text-sm text-gray-500 mt-1 leading-relaxed">{desc}</div>
+        <div className="text-base font-semibold">{title}</div>
+        <div className="mt-1 text-sm leading-relaxed text-gray-500 dark:text-zinc-400">{desc}</div>
       </div>
     </div>
   );
