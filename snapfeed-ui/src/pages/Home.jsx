@@ -7,7 +7,7 @@ export default function Home() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
-    <div className="flex min-h-dvh bg-gray-100 text-gray-900 transition-colors dark:bg-black dark:text-white">
+    <div className="flex min-h-dvh bg-white text-gray-900 transition-colors dark:bg-black dark:text-white">
       <Sidebar
         mobileOpen={mobileNavOpen}
         onMobileClose={() => setMobileNavOpen(false)}

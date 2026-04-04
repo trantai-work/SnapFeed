@@ -25,15 +25,15 @@ function FeedActionsComponent({
     : "flex cursor-pointer flex-col items-center gap-1.5 text-zinc-900 transition-transform hover:scale-105 active:scale-95 dark:text-white";
 
   const iconWrap = overlay
-    ? "flex h-9 w-9 items-center justify-center rounded-full bg-black/35 text-white shadow-sm ring-1 ring-white/25 backdrop-blur-[2px] transition-colors active:bg-black/50 max-lg:[@media(max-height:640px)]:h-8 max-lg:[@media(max-height:640px)]:w-8 sm:h-10 sm:w-10 md:h-11 md:w-11 lg:h-12 lg:w-12"
+    ? "flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white shadow-sm ring-1 ring-white/25 backdrop-blur-[2px] transition-colors active:bg-black/50 sm:h-12 sm:w-12 md:h-[3.25rem] md:w-[3.25rem] lg:h-12 lg:w-12"
     : "flex h-12 w-12 items-center justify-center rounded-full bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-300/90 transition-colors hover:bg-zinc-50 hover:ring-zinc-400/80 dark:bg-white/10 dark:text-white dark:shadow-none dark:ring-0 dark:hover:bg-white/20";
 
   const labelClass = overlay
-    ? "max-w-[3.25rem] truncate text-center text-[0.6rem] leading-tight text-white/95 drop-shadow sm:max-w-[4.25rem] sm:text-[0.65rem]"
+    ? "max-w-[3.5rem] truncate text-center text-[0.65rem] leading-tight text-white/95 drop-shadow sm:max-w-[4.25rem] sm:text-[0.7rem]"
     : "max-w-10 truncate text-center text-[0.6rem] leading-tight sm:max-w-[4.25rem] sm:text-[0.65rem]";
 
   const shareLabelClass = overlay
-    ? "text-center text-[0.6rem] leading-tight text-white/95 drop-shadow sm:text-[0.65rem]"
+    ? "text-center text-[0.65rem] leading-tight text-white/95 drop-shadow sm:text-[0.7rem]"
     : "text-center text-[0.6rem] leading-tight sm:text-[0.65rem]";
 
   const avatarRing = overlay
@@ -41,12 +41,12 @@ function FeedActionsComponent({
     : "ring-2 ring-zinc-300 dark:ring-white/30 dark:hover:ring-white/50";
 
   const overlayIconClass = overlay
-    ? "h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7"
+    ? "h-6 w-6 sm:h-7 sm:w-7"
     : "h-6 w-6 sm:h-7 sm:w-7";
 
   const asideClass = overlay
     ? classNames(
-        "pointer-events-auto absolute right-1.5 z-20 flex w-auto max-w-[3.25rem] flex-col items-center justify-center gap-2 overflow-y-auto overflow-x-visible overscroll-contain py-0.5 max-lg:bottom-[max(5rem,env(safe-area-inset-bottom,0px))] max-lg:left-auto max-lg:max-h-[min(58svh,calc(100svh-9rem))] max-lg:top-[max(3.5rem,env(safe-area-inset-top,0px))] max-lg:origin-[center_right] max-lg:[@media(max-height:700px)]:scale-[0.92] max-lg:[@media(max-height:600px)]:scale-[0.85] max-lg:[@media(max-height:500px)]:scale-[0.78] max-lg:[@media(max-width:400px)]:scale-[0.94] sm:right-2 sm:gap-2.5 sm:max-w-none md:gap-3",
+        "pointer-events-auto absolute right-2 z-20 flex w-max min-w-[3rem] flex-col items-center justify-center gap-2.5 overflow-visible px-0.5 py-1 max-lg:top-1/2 max-lg:bottom-auto max-lg:left-auto max-lg:max-h-[min(72dvh,calc(100%-2rem))] max-lg:-translate-y-1/2 max-lg:origin-center sm:right-3 sm:gap-3 md:gap-3.5",
         className
       )
     : classNames(
@@ -86,7 +86,7 @@ function FeedActionsComponent({
           <span
             className={classNames(
               overlay
-                ? "h-9 w-9 overflow-hidden rounded-full transition max-lg:[@media(max-height:640px)]:h-8 max-lg:[@media(max-height:640px)]:w-8 sm:h-10 sm:w-10 md:h-11 md:w-11"
+                ? "h-11 w-11 overflow-hidden rounded-full transition sm:h-12 sm:w-12 md:h-[3.25rem] md:w-[3.25rem]"
                 : "h-11 w-11 overflow-hidden rounded-full transition sm:h-12 sm:w-12",
               avatarRing
             )}
