@@ -3,7 +3,7 @@ import { useFeedItems } from "../../hooks/useFeedItems";
 import { FeedList } from "./FeedList";
 
 const shellClass =
-  "flex h-[100dvh] min-h-[320px] items-center justify-center lg:h-[calc(100dvh-7rem)]";
+  "flex box-border h-[min(100svh,100dvh)] max-h-[min(100svh,100dvh)] min-h-[280px] items-center justify-center lg:h-[calc(100dvh-7rem)] lg:max-h-none";
 
 export default function FeedContainer() {
   const { items, loading, error, loadMore } = useFeedItems();

@@ -24,14 +24,14 @@ export default function TopbarAction({ onOpenMobileNav }) {
         <>
         <button
           type="button"
-          className="fixed left-3 top-3 z-50 flex h-11 w-11 items-center justify-center rounded-full border border-gray-200/90 bg-white/95 text-gray-800 shadow-md backdrop-blur-md transition-colors hover:bg-gray-50 dark:border-white/10 dark:bg-[#1f1f1f]/95 dark:text-white dark:hover:bg-white/10 lg:hidden"
+          className="fixed left-2 top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200/90 bg-white/95 text-gray-800 shadow-md backdrop-blur-md transition-colors hover:bg-gray-50 dark:border-white/10 dark:bg-[#1f1f1f]/95 dark:text-white dark:hover:bg-white/10 sm:left-3 sm:top-3 sm:h-11 sm:w-11 lg:hidden"
           onClick={() => onOpenMobileNav?.()}
           aria-label="Mở menu"
         >
-          <Menu size={22} strokeWidth={2} />
+          <Menu className="h-[1.15rem] w-[1.15rem] sm:h-[1.35rem] sm:w-[1.35rem]" strokeWidth={2} />
         </button>
 
-        <div className="fixed right-3 top-3 z-50 flex max-w-[calc(100vw-5.5rem)] items-center gap-2 rounded-full border border-gray-200/90 bg-white/95 px-2 py-1.5 shadow-lg backdrop-blur-md dark:border-transparent dark:bg-[#1f1f1f]/95 sm:right-6 sm:top-4 sm:gap-3 sm:px-3 sm:py-2">
+        <div className="fixed right-2 top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex max-w-[calc(100vw-4.75rem)] origin-top-right scale-[0.92] items-center gap-1.5 rounded-full border border-gray-200/90 bg-white/95 px-1.5 py-1 shadow-lg backdrop-blur-md dark:border-transparent dark:bg-[#1f1f1f]/95 max-lg:max-w-[calc(100vw-4.25rem)] sm:right-3 sm:top-3 sm:gap-2 sm:px-2 sm:py-1.5 md:right-6 md:top-4 md:gap-3 md:px-3 md:py-2 lg:max-w-none lg:scale-100">
             <ThemeToggle />
             {!isAuthenticated ? (
                 <button
