@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import googleLogo from "../assets/google_logo.svg";
 import facebookLogo from "../assets/facebook_logo.svg";
@@ -160,7 +161,15 @@ export default function AuthModal({
             </div>
 
             <p className="mt-4 text-center text-[11px] leading-relaxed text-white/55">
-              Chào mừng bạn đến với Snapfeed! Hãy đăng nhập để bắt đầu trải nghiệm các tính năng tuyệt vời của chúng tôi.
+              Chào mừng bạn đến với Snapfeed! Hãy đăng nhập để bắt đầu trải nghiệm các tính năng tuyệt vời của chúng tôi.{" "}
+              <Link
+                to="/privacy"
+                onClick={() => onClose?.()}
+                className="text-pink-400 underline decoration-white/20 underline-offset-2 hover:text-pink-300"
+              >
+                Chính sách quyền riêng tư
+              </Link>
+              .
             </p>
           </div>
         </div>
