@@ -26,3 +26,62 @@ body {
 .feed-video::-webkit-media-controls-timeline {
     border-radius: 4px;
 }
+
+/* Mobile custom seek — no default gray chrome, thumb centered on track */
+.feed-mobile-video-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 0.875rem;
+    min-height: 0.875rem;
+    background: transparent;
+    color: transparent;
+}
+
+.feed-mobile-video-range:focus {
+    outline: none;
+}
+
+.feed-mobile-video-range:focus-visible {
+    outline: 2px solid rgb(236 72 153 / 0.5);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.feed-mobile-video-range::-webkit-slider-runnable-track {
+    height: 0.125rem;
+    border-radius: 9999px;
+    background: rgb(244 114 182 / 0.45);
+}
+
+.feed-mobile-video-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 0.625rem;
+    height: 0.625rem;
+    /* Căn giữa thumb với track: (trackH - thumbH) / 2 */
+    margin-top: calc((0.125rem - 0.625rem) / 2);
+    border-radius: 9999px;
+    background: #ec4899;
+    box-shadow: 0 0 0 1px rgb(251 207 232 / 0.55);
+}
+
+.feed-mobile-video-range::-moz-range-track {
+    height: 0.125rem;
+    border-radius: 9999px;
+    background: rgb(244 114 182 / 0.45);
+}
+
+.feed-mobile-video-range::-moz-range-thumb {
+    width: 0.625rem;
+    height: 0.625rem;
+    border: none;
+    border-radius: 9999px;
+    background: #ec4899;
+}
+
+.feed-mobile-video-range::-moz-range-progress {
+    height: 0.125rem;
+    border-radius: 9999px;
+    background: #ec4899;
+}
