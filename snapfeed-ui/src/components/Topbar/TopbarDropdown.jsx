@@ -55,8 +55,8 @@ export default function TopbarDropdown({
           "absolute z-[999]",
           positionClass,
           "w-[240px] rounded-xl",
-          "bg-[#2a2a2a] text-white",
-          "shadow-2xl ring-1 ring-white/10",
+          "bg-white text-gray-900 shadow-xl ring-1 ring-gray-200",
+          "dark:bg-[#2a2a2a] dark:text-white dark:shadow-2xl dark:ring-white/10",
           "overflow-hidden"
         )}
       >
@@ -72,15 +72,16 @@ export default function TopbarDropdown({
             "flex items-center gap-3",
             "text-sm font-semibold",
             "cursor-pointer",
-            "hover:bg-white/10 active:bg-white/15",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:ring-inset"
+            "hover:bg-gray-100 active:bg-gray-200",
+            "dark:hover:bg-white/10 dark:active:bg-white/15",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/30 focus-visible:ring-inset dark:focus-visible:ring-white/30"
           )}
         >
-          <UserRound size={18} className="text-white/90" />
+          <UserRound size={18} className="text-gray-700 dark:text-white/90" />
           <span>Xem hồ sơ</span>
         </button>
 
-        <div className="h-px bg-white/10" />
+        <div className="h-px bg-gray-200 dark:bg-white/10" />
 
         <button
           type="button"
@@ -94,11 +95,12 @@ export default function TopbarDropdown({
             "flex items-center gap-3",
             "text-sm font-semibold",
             "cursor-pointer",
-            "hover:bg-white/10 active:bg-white/15",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:ring-inset"
+            "hover:bg-gray-100 active:bg-gray-200",
+            "dark:hover:bg-white/10 dark:active:bg-white/15",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/30 focus-visible:ring-inset dark:focus-visible:ring-white/30"
           )}
         >
-          <LogOut size={18} className="text-white/90" />
+          <LogOut size={18} className="text-gray-700 dark:text-white/90" />
           <span>Đăng xuất</span>
         </button>
       </div>

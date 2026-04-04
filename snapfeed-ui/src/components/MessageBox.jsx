@@ -6,24 +6,24 @@ const MessageBoxContext = createContext(null);
 const STATUS_STYLES = {
   success: {
     icon: CheckCircle2,
-    border: "border-emerald-200",
-    title: "text-gray-900",
-    text: "text-gray-700",
-    iconColor: "text-emerald-600",
+    border: "border-emerald-200 dark:border-emerald-800/80",
+    title: "text-gray-900 dark:text-zinc-100",
+    text: "text-gray-700 dark:text-zinc-300",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
   },
   error: {
     icon: XCircle,
-    border: "border-red-200",
-    title: "text-gray-900",
-    text: "text-gray-700",
-    iconColor: "text-red-600",
+    border: "border-red-200 dark:border-red-900/80",
+    title: "text-gray-900 dark:text-zinc-100",
+    text: "text-gray-700 dark:text-zinc-300",
+    iconColor: "text-red-600 dark:text-red-400",
   },
   warning: {
     icon: AlertTriangle,
-    border: "border-amber-200",
-    title: "text-gray-900",
-    text: "text-gray-700",
-    iconColor: "text-amber-600",
+    border: "border-amber-200 dark:border-amber-900/80",
+    title: "text-gray-900 dark:text-zinc-100",
+    text: "text-gray-700 dark:text-zinc-300",
+    iconColor: "text-amber-600 dark:text-amber-400",
   },
 };
 
@@ -108,8 +108,8 @@ function MessageToast({ item, onClose }) {
     <div className="pointer-events-auto">
       <div
         className={[
-          "relative overflow-hidden rounded-2xl border shadow-lg shadow-black/10",
-          "bg-white",
+          "relative overflow-hidden rounded-2xl border shadow-lg shadow-black/10 dark:shadow-black/40",
+          "bg-white dark:bg-zinc-900",
           styles.border,
         ].join(" ")}
       >
@@ -134,7 +134,7 @@ function MessageToast({ item, onClose }) {
           <button
             type="button"
             onClick={() => onClose(item.id)}
-            className="absolute top-3.5 right-3.5 p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+            className="absolute top-3.5 right-3.5 rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
             aria-label="Đóng"
           >
             <X size={18} />

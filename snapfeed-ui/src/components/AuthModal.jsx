@@ -34,7 +34,7 @@ function ProviderIcon({ provider }) {
     );
   }
   return (
-    <span className="grid size-7 place-items-center rounded-full bg-[#2a2a2a] text-white">
+    <span className="grid size-7 place-items-center rounded-full bg-gray-300 text-gray-700 dark:bg-[#2a2a2a] dark:text-white">
       <span className="text-xs font-semibold">•</span>
     </span>
   );
@@ -53,13 +53,13 @@ function ProviderButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={classNames(
-        "w-full rounded-xl px-4 py-3 cursor-pointer",
-        "flex items-center gap-3",
-        "bg-[#2a2a2a] hover:bg-[#333] active:bg-[#3a3a3a]",
+        className={classNames(
+        "flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3",
+        "bg-gray-100 text-gray-900 hover:bg-gray-200 active:bg-gray-300",
+        "dark:bg-[#2a2a2a] dark:text-white dark:hover:bg-[#333] dark:active:bg-[#3a3a3a]",
         "transition-colors",
-        "disabled:opacity-60 disabled:cursor-not-allowed",
-        variant === "default" ? "text-white" : "text-white"
+        "disabled:cursor-not-allowed disabled:opacity-60",
+        variant === "default" ? "" : ""
       )}
     >
       {icon}
@@ -118,8 +118,8 @@ export default function AuthModal({
           aria-label="Đăng nhập"
           className={classNames(
             "w-full max-w-[420px]",
-            "rounded-2xl bg-[#111] text-white shadow-2xl",
-            "border border-white/10"
+            "rounded-2xl border border-gray-200 bg-white text-gray-900 shadow-2xl",
+            "dark:border-white/10 dark:bg-[#111] dark:text-white"
           )}
         >
           <div className="relative px-6 pt-6">
@@ -130,7 +130,7 @@ export default function AuthModal({
               className={classNames(
                 "absolute right-4 top-4",
                 "grid size-9 place-items-center rounded-full",
-                "bg-white/10 hover:bg-white/15 active:bg-white/20",
+                "bg-gray-100 hover:bg-gray-200 active:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/15 dark:active:bg-white/20",
                 "transition-colors cursor-pointer"
               )}
             >
@@ -140,7 +140,7 @@ export default function AuthModal({
             <h2 className="text-center text-[32px] leading-tight font-extrabold tracking-tight">
               Đăng nhập vào
               <br />
-              Snapfeed
+              SnapFeed
             </h2>
           </div>
 
@@ -160,12 +160,12 @@ export default function AuthModal({
               />
             </div>
 
-            <p className="mt-4 text-center text-[11px] leading-relaxed text-white/55">
+            <p className="mt-4 text-center text-[11px] leading-relaxed text-gray-500 dark:text-white/55">
               Chào mừng bạn đến với Snapfeed! Hãy đăng nhập để bắt đầu trải nghiệm các tính năng tuyệt vời của chúng tôi.{" "}
               <Link
-                to="/privacy"
+                to="/privacy-policy"
                 onClick={() => onClose?.()}
-                className="text-pink-400 underline decoration-white/20 underline-offset-2 hover:text-pink-300"
+                className="text-pink-600 underline decoration-gray-300 underline-offset-2 hover:text-pink-500 dark:text-pink-400 dark:decoration-white/20 dark:hover:text-pink-300"
               >
                 Chính sách quyền riêng tư
               </Link>

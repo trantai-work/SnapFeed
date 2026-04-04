@@ -1,21 +1,23 @@
-import Sidebar from "../components/Sidebar"
-import TopbarAction from "../components/Topbar/TopbarAction"
+import { useState } from "react";
 import { Outlet } from "react-router-dom";
+import Sidebar from "../components/Sidebar";
+import TopbarAction from "../components/Topbar/TopbarAction";
 
 export default function Home() {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   return (
-    <div className="flex bg-black min-h-screen text-white">
+    <div className="flex min-h-dvh bg-gray-100 text-gray-900 transition-colors dark:bg-black dark:text-white">
+      <Sidebar
+        mobileOpen={mobileNavOpen}
+        onMobileClose={() => setMobileNavOpen(false)}
+      />
 
-      {/* Sidebar */}
-      <Sidebar />
-
-      {/* Main content */}
-      <div className="flex-1 p-6">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col max-lg:overflow-hidden max-lg:p-0 lg:min-h-screen lg:p-6 lg:pt-6">
         <Outlet />
       </div>
-      {/* Top Right Actions */}
-      <TopbarAction />
 
+      <TopbarAction onOpenMobileNav={() => setMobileNavOpen(true)} />
     </div>
-  )
+  );
 }

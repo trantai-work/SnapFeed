@@ -4,10 +4,14 @@ import { CheckCircle2, ImagePlus, RefreshCcw, Upload, X } from "lucide-react";
 import { uploadToS3, videosApi } from "../api/video.api";
 import { useMessageBox } from "../components/MessageBox";
 import { useUploadDraft } from "../context/UploadDraftContext";
-import logo from "../assets/logo_no_text.png";
+import ThemeToggle from "../components/ThemeToggle";
+import logo from "../assets/logo.png";
+import logoLightMode from "../assets/logo_light_mode.png";
+import { useTheme } from "../context/ThemeContext";
 import { getVideoDurationSeconds, getVideoFirstFrameJpegFile } from "../utils/video";
 
 export default function VideoUploadPage() {
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const { show } = useMessageBox();
   const {
@@ -193,41 +197,36 @@ export default function VideoUploadPage() {
     }
   };
 
-  // Custom styles for topbar and sidebar
-  const fixedBarStyle = {
-    backgroundColor: "#f9fafb",
-  };
+  const barClass =
+    "border-gray-200 bg-gray-50 dark:border-zinc-800 dark:bg-zinc-900";
 
   if (!videoFile) {
     return (
-      <div className="h-screen bg-gray-50 overflow-hidden">
-        {/* Topbar (fixed) */}
+      <div className="h-screen overflow-hidden bg-gray-50 transition-colors dark:bg-zinc-950">
         <div
-          className="fixed top-0 left-0 right-0 h-[72px] border-b border-gray-200 flex items-center px-6 z-20"
-          style={fixedBarStyle}
+          className={`fixed top-0 right-0 left-0 z-20 flex h-[72px] items-center justify-between border-b px-3 sm:px-6 ${barClass}`}
         >
           <img
-            src={logo}
+            src={theme === "light" ? logoLightMode : logo}
             alt="SnapFeed"
-            className="h-18 w-auto object-contain"
+            className="h-10 w-auto max-w-[min(220px,50vw)] object-contain object-left sm:h-11"
           />
+          <ThemeToggle />
         </div>
 
-        {/* Sidebar (fixed) */}
         <div
-          className="hidden lg:block fixed top-[72px] bottom-0 left-0 w-[260px] border-r border-gray-200 z-10"
-          style={fixedBarStyle}
+          className={`fixed top-[72px] bottom-0 left-0 z-10 hidden w-[260px] border-r lg:block ${barClass}`}
         />
 
         {/* Main scroll area */}
         <div className="pt-[72px] lg:pl-[260px] h-full">
-          <div className="h-[calc(100vh-72px)] overflow-y-auto p-6">
+          <div className="h-[calc(100vh-72px)] overflow-y-auto p-3 sm:p-6">
             <div className="max-w-5xl mx-auto mt-4">
-              <div className="bg-white text-black rounded-2xl p-8 shadow-sm">
+              <div className="rounded-2xl bg-white p-4 text-gray-900 shadow-sm dark:bg-zinc-900 dark:text-white sm:p-8">
                 <div className="text-lg font-semibold">
                   Chưa có video để tải lên
                 </div>
-                <div className="text-sm text-gray-600 mt-1">
+                <div className="mt-1 text-sm text-gray-600 dark:text-zinc-400">
                   Vui lòng chọn video ở trang Upload trước.
                 </div>
                 <button
@@ -246,42 +245,39 @@ export default function VideoUploadPage() {
   }
 
   return (
-    <div className="h-screen bg-gray-50 overflow-hidden">
-      {/* Topbar (fixed) */}
+    <div className="h-screen overflow-hidden bg-gray-50 transition-colors dark:bg-zinc-950">
       <div
-        className="fixed top-0 left-0 right-0 h-[72px] border-b border-gray-200 flex items-center px-6 z-20"
-        style={fixedBarStyle}
+        className={`fixed top-0 right-0 left-0 z-20 flex h-[72px] items-center justify-between border-b px-3 sm:px-6 ${barClass}`}
       >
         <img
-          src={logo}
+          src={theme === "light" ? logoLightMode : logo}
           alt="SnapFeed"
-          className="h-18 w-auto object-contain"
+          className="h-10 w-auto max-w-[min(220px,50vw)] object-contain object-left sm:h-11"
         />
+        <ThemeToggle />
       </div>
 
-      {/* Sidebar (fixed) */}
       <div
-        className="hidden lg:block fixed top-[72px] bottom-0 left-0 w-[260px] border-r border-gray-200 z-10"
-        style={fixedBarStyle}
+        className={`fixed top-[72px] bottom-0 left-0 z-10 hidden w-[260px] border-r lg:block ${barClass}`}
       />
 
       {/* Main scroll area */}
       <div className="pt-[72px] lg:pl-[260px] h-full">
-        <div className="h-[calc(100vh-72px)] overflow-y-auto p-6">
-          <div className="max-w-6xl mx-auto mt-4">
-            <div className="bg-white text-black rounded-2xl p-6 md:p-8 shadow-sm">
+        <div className="h-[calc(100vh-72px)] overflow-y-auto p-3 sm:p-6">
+          <div className="mx-auto mt-4 max-w-6xl">
+            <div className="rounded-2xl bg-white p-4 text-gray-900 shadow-sm dark:bg-zinc-900 dark:text-white sm:p-6 md:p-8">
               {/* Header */}
               <div>
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="font-semibold truncate">{videoFile.name}</div>
-                      <span className="text-[11px] leading-5 px-2 rounded-full bg-gray-100 text-gray-600 shrink-0">
+                      <span className="shrink-0 rounded-full bg-gray-100 px-2 text-[11px] leading-5 text-gray-600 dark:bg-zinc-800 dark:text-zinc-300">
                         {videoFile.type || "video/mp4"}
                       </span>
                     </div>
 
-                    <div className="mt-2 flex items-center gap-2 text-xs text-gray-600">
+                    <div className="mt-2 flex items-center gap-2 text-xs text-gray-600 dark:text-zinc-400">
                       <CheckCircle2 size={14} className="text-emerald-600" />
                       <span className="truncate">
                         Đã tải lên ({(videoFile.size / (1024 * 1024)).toFixed(2)}MB)
@@ -301,15 +297,15 @@ export default function VideoUploadPage() {
                       type="button"
                       onClick={onPickVideo}
                       disabled={isUploading}
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm font-semibold disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+                      className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700"
                     >
-                      <RefreshCcw size={16} className="text-gray-700" />
+                      <RefreshCcw size={16} className="text-gray-700 dark:text-zinc-300" />
                       Thay thế
                     </button>
                   </div>
                 </div>
 
-                <div className="mt-3 h-[3px] w-full rounded-full bg-gray-200 overflow-hidden">
+                <div className="mt-3 h-[3px] w-full overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700">
                   <div className="h-full bg-emerald-500 w-full" />
                 </div>
               </div>
@@ -320,27 +316,27 @@ export default function VideoUploadPage() {
                 <div>
                   <div className="font-semibold mb-2">Chi tiết</div>
 
-                  <div className="border border-gray-200 rounded-xl p-4">
+                  <div className="rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
                     <div className="text-sm font-semibold">Mô tả</div>
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="Mô tả video của bạn..."
-                      className="mt-2 w-full min-h-[130px] resize-y outline-none text-sm"
+                      className="mt-2 min-h-[130px] w-full resize-y bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-zinc-500"
                     />
-                    <div className="flex items-center justify-end mt-2 text-xs text-gray-500">
+                    <div className="mt-2 flex items-center justify-end text-xs text-gray-500 dark:text-zinc-400">
                       <div>{Math.min(description.length, 4000)}/4000</div>
                     </div>
                   </div>
 
-                  <div className="mt-4 border border-gray-200 rounded-xl p-4">
+                  <div className="mt-4 rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
                     <div className="flex items-center justify-between gap-3">
                       <div className="text-sm font-semibold">Ảnh bìa</div>
                       {coverFile ? (
                         <button
                           type="button"
                           onClick={() => setCover(null)}
-                          className="text-xs text-gray-600 hover:text-gray-900 flex items-center gap-1 cursor-pointer"
+                          className="flex cursor-pointer items-center gap-1 text-xs text-gray-600 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-white"
                         >
                           <X size={14} /> Xóa
                         </button>
@@ -349,7 +345,7 @@ export default function VideoUploadPage() {
 
                     <div className="mt-3 flex items-start gap-5">
                       <div className="w-36 sm:w-44">
-                        <div className="aspect-[9/16] rounded-lg border border-gray-200 overflow-hidden bg-gray-50">
+                        <div className="aspect-[9/16] overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800">
                           {effectiveCoverPreviewUrl ? (
                             <img
                               src={effectiveCoverPreviewUrl}
@@ -357,7 +353,7 @@ export default function VideoUploadPage() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <div className="flex h-full w-full items-center justify-center text-gray-400 dark:text-zinc-500">
                               <ImagePlus size={18} />
                             </div>
                           )}
@@ -375,12 +371,12 @@ export default function VideoUploadPage() {
                         <button
                           type="button"
                           onClick={onPickCover}
-                          className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm font-semibold cursor-pointer disabled:cursor-not-allowed"
+                          className="cursor-pointer rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold hover:bg-gray-50 disabled:cursor-not-allowed dark:border-zinc-600 dark:hover:bg-zinc-800"
                           disabled={isUploading}
                         >
                           Chọn ảnh bìa
                         </button>
-                        <div className="text-xs text-gray-500 mt-2">
+                        <div className="mt-2 text-xs text-gray-500 dark:text-zinc-400">
                           Chọn ảnh bìa để hiển thị cho video (tùy chọn).
                         </div>
                       </div>
@@ -389,10 +385,10 @@ export default function VideoUploadPage() {
 
                 </div>
 
-                <div className="mt-6 border border-gray-200 rounded-xl p-4">
+                <div className="mt-6 rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
                   <div className="text-sm font-semibold">Xem trước</div>
 
-                  <div className="mt-3 rounded-2xl border border-gray-200 overflow-hidden bg-black flex items-center justify-center">
+                  <div className="mt-3 flex items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-black dark:border-zinc-600">
                     <video
                       src={videoPreviewUrl}
                       className="w-full max-h-[70vh] object-contain"
@@ -407,7 +403,7 @@ export default function VideoUploadPage() {
                     type="button"
                     onClick={onCancel}
                     disabled={isUploading}
-                    className="px-5 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 font-semibold disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+                    className="cursor-pointer rounded-lg border border-gray-200 px-5 py-2.5 font-semibold hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:hover:bg-zinc-800"
                   >
                     Hủy
                   </button>
