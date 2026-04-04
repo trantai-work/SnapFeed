@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import {
   Home as HomeIcon,
   Send,
@@ -78,6 +78,12 @@ export default function Sidebar() {
 
         {/* Footer */}
         <div className="mt-auto text-gray-500 text-sm space-y-2 pt-6 border-t border-gray-800">
+          <Link
+            to="/privacy"
+            className="block text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            Chính sách quyền riêng tư
+          </Link>
           <div className="pt-2 text-xs">
             © 2026 SnapFeed
           </div>
