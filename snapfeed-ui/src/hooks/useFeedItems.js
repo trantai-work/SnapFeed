@@ -61,10 +61,23 @@ export function useFeedItems() {
     }
   }, [fetchFeed]);
 
+  const updateFeedVideo = useCallback((videoId, patch) => {
+    setItems((prev) =>
+      prev.map((inst) => {
+        const v = inst.video ?? inst;
+        if (v.id !== videoId) return inst;
+        return {
+          ...inst,
+          video: { ...v, ...patch },
+        };
+      })
+    );
+  }, []);
+
   useEffect(() => {
     loadInitial();
   }, [loadInitial]);
 
-  return { items, loading, error, loadMore };
+  return { items, loading, error, loadMore, updateFeedVideo };
 }
 

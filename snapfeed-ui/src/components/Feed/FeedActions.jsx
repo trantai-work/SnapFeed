@@ -1,11 +1,11 @@
 import { memo } from "react";
 import {
   Bookmark,
-  Heart,
   MessageCircle,
   Share2,
   User,
 } from "lucide-react";
+import { FeedReactionButton } from "./FeedReactionButton";
 
 function classNames(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -17,6 +17,9 @@ function FeedActionsComponent({
   saveLabel,
   shareLabel,
   avatarUrl,
+  myReaction,
+  reactDisabled = false,
+  onReact,
   overlay = false,
   className = "",
 }) {
@@ -57,12 +60,13 @@ function FeedActionsComponent({
 
   return (
     <aside className={asideClass} aria-label="Tương tác">
-      <button type="button" className={actionBtn} aria-label="Thả tim">
-        <span className={iconWrap}>
-          <Heart className={overlayIconClass} strokeWidth={1.75} />
-        </span>
-        <span className={labelClass}>{reactionLabel}</span>
-      </button>
+      <FeedReactionButton
+        myReaction={myReaction}
+        reactionLabel={reactionLabel}
+        overlay={overlay}
+        disabled={reactDisabled}
+        onReact={onReact}
+      />
       <button type="button" className={actionBtn} aria-label="Bình luận">
         <span className={iconWrap}>
           <MessageCircle className={overlayIconClass} strokeWidth={1.75} />
