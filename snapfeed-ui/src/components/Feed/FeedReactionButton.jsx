@@ -94,9 +94,10 @@ function FeedReactionButtonComponent({
     }, 480);
   }, []);
 
-  const actionBtn = overlay
-    ? "flex cursor-pointer flex-col items-center gap-1.5 overflow-visible text-white transition-transform duration-200 will-change-transform active:scale-[0.97] disabled:cursor-not-allowed"
-    : "flex cursor-pointer flex-col items-center gap-1.5 overflow-visible text-zinc-900 transition-transform duration-200 will-change-transform hover:scale-[1.02] active:scale-[0.97] disabled:cursor-not-allowed dark:text-white";
+  /** Main control is icon-only <button>; label is a sibling (picker must not live inside <button> — nested buttons break clicks). */
+  const iconOnlyBtn = overlay
+    ? "inline-flex shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-white transition-transform duration-200 will-change-transform active:scale-[0.97] disabled:cursor-not-allowed"
+    : "inline-flex shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-zinc-900 transition-transform duration-200 will-change-transform hover:scale-[1.02] active:scale-[0.97] disabled:cursor-not-allowed dark:text-white";
 
   const iconWrap = overlay
     ? "flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-black/35 text-white shadow-sm ring-1 ring-white/25 backdrop-blur-[2px] transition-[transform,box-shadow] duration-200 ease-out active:bg-black/50 sm:h-12 sm:w-12 md:h-[3.25rem] md:w-[3.25rem] lg:h-12 lg:w-12"
@@ -217,41 +218,43 @@ function FeedReactionButtonComponent({
       onMouseEnter={onHoverZoneEnter}
       onMouseLeave={onHoverZoneLeave}
     >
-      <button
-        type="button"
-        className={actionBtn}
-        aria-label="Cảm xúc"
-        aria-expanded={pickerOpen}
-        disabled={disabled}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (suppressClickRef.current) {
-            suppressClickRef.current = false;
-            e.preventDefault();
-          }
-        }}
-        onContextMenu={(e) => e.preventDefault()}
-      >
-        {/* Anchor picker to icon circle only so it lines up with the round button, not the label */}
-        <span className="relative inline-flex shrink-0">
-          <span
-            className={`${iconWrap} ${iconPop ? "feed-reaction-icon-pop" : ""}`}
+      <div className="flex flex-col items-center gap-1.5">
+        <div className="relative inline-flex shrink-0 items-center justify-center">
+          <button
+            type="button"
+            className={iconOnlyBtn}
+            aria-label="Cảm xúc"
+            aria-expanded={pickerOpen}
+            aria-haspopup="menu"
+            disabled={disabled}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerCancel}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (suppressClickRef.current) {
+                suppressClickRef.current = false;
+                e.preventDefault();
+              }
+            }}
+            onContextMenu={(e) => e.preventDefault()}
           >
-            {meta ? (
-              <span
-                className={`flex select-none items-center justify-center text-[1.35rem] leading-none transition-transform duration-200 sm:text-[1.5rem] md:text-[1.6rem] ${myReaction === "love" ? "drop-shadow-sm" : ""}`}
-                aria-hidden
-              >
-                {meta.emoji}
-              </span>
-            ) : (
-              <Heart className={overlayIconClass} strokeWidth={1.75} fill="none" />
-            )}
-          </span>
+            <span
+              className={`${iconWrap} ${iconPop ? "feed-reaction-icon-pop" : ""}`}
+            >
+              {meta ? (
+                <span
+                  className={`flex select-none items-center justify-center text-[1.35rem] leading-none transition-transform duration-200 sm:text-[1.5rem] md:text-[1.6rem] ${myReaction === "love" ? "drop-shadow-sm" : ""}`}
+                  aria-hidden
+                >
+                  {meta.emoji}
+                </span>
+              ) : (
+                <Heart className={overlayIconClass} strokeWidth={1.75} fill="none" />
+              )}
+            </span>
+          </button>
 
           {pickerOpen ? (
             <div className={pickerBarClass} role="menu" aria-label="Chọn cảm xúc">
@@ -264,16 +267,19 @@ function FeedReactionButtonComponent({
                   className={pickerItemClass}
                   aria-label={label}
                   aria-current={myReaction === value ? true : undefined}
-                  onClick={() => onPick(value)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPick(value);
+                  }}
                 >
                   <span aria-hidden>{emoji}</span>
                 </button>
               ))}
             </div>
           ) : null}
-        </span>
+        </div>
         <span className={labelClass}>{reactionLabel}</span>
-      </button>
+      </div>
     </div>
   );
 }

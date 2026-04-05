@@ -12,6 +12,7 @@ import {
 import logo from "../assets/logo.png";
 import logoLightMode from "../assets/logo_light_mode.png";
 import AuthModal from "./AuthModal";
+import NotificationsPanel from "./NotificationsPanel";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { authService } from "../services/auth.service";
@@ -24,6 +25,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
   const { theme } = useTheme();
   const { isAuthenticated, loading } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const recentProvider = useMemo(() => {
     return window.localStorage.getItem("auth_recent_provider") || null;
   }, []);
@@ -31,11 +33,16 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
   useEffect(() => {
     if (!mobileOpen) return;
     const onKey = (e) => {
-      if (e.key === "Escape") onMobileClose();
+      if (e.key !== "Escape") return;
+      if (notificationsOpen) {
+        setNotificationsOpen(false);
+        return;
+      }
+      onMobileClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mobileOpen, onMobileClose]);
+  }, [mobileOpen, notificationsOpen, onMobileClose]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -57,7 +64,8 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
   if (loading) return null;
 
   const panelClass = classNames(
-    "flex w-[min(18rem,88vw)] flex-col border-r border-gray-200 bg-white p-4 text-gray-900 transition-colors dark:border-transparent dark:bg-black dark:text-white",
+    "flex min-h-0 w-[min(18rem,88vw)] flex-col border-r border-gray-200 bg-white text-gray-900 transition-colors dark:border-transparent dark:bg-black dark:text-white",
+    notificationsOpen ? "p-0" : "p-4",
     "fixed left-0 top-0 z-[60] h-[100dvh] shadow-xl transition-transform duration-300 ease-out will-change-transform lg:will-change-auto",
     "lg:static lg:z-auto lg:h-screen lg:w-64 lg:translate-x-0 lg:shadow-none",
     mobileOpen ? "translate-x-0" : "max-lg:-translate-x-full max-lg:pointer-events-none"
@@ -76,62 +84,91 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
       />
 
       <aside className={panelClass} aria-hidden={false}>
-        <div className="mb-4 flex items-center gap-2">
-          <img
-            src={theme === "light" ? logoLightMode : logo}
-            alt="SnapFeed"
-            className="h-20 max-h-[min(22vh,8.5rem)] w-auto max-w-full object-contain lg:h-28 lg:max-h-none"
-          />
-        </div>
+        {notificationsOpen ? (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <NotificationsPanel
+              onClose={() => setNotificationsOpen(false)}
+            />
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 flex items-center gap-2">
+              <img
+                src={theme === "light" ? logoLightMode : logo}
+                alt="SnapFeed"
+                className="h-20 max-h-[min(22vh,8.5rem)] w-auto max-w-full object-contain lg:h-28 lg:max-h-none"
+              />
+            </div>
 
-        <div className="mb-4 flex items-center rounded-full bg-gray-100 px-4 py-2 dark:bg-gray-800">
-          <Search size={16} className="text-gray-500 dark:text-gray-400" />
-          <input
-            placeholder="Tìm kiếm"
-            className="ml-2 w-full bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-500 dark:text-white dark:placeholder:text-gray-500"
-          />
-        </div>
+            <div className="mb-4 flex items-center rounded-full bg-gray-100 px-4 py-2 dark:bg-gray-800">
+              <Search size={16} className="text-gray-500 dark:text-gray-400" />
+              <input
+                placeholder="Tìm kiếm"
+                className="ml-2 w-full bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-500 dark:text-white dark:placeholder:text-gray-500"
+              />
+            </div>
 
-        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto">
-          {menu.map((item, index) => {
-            const Icon = item.icon;
-            const requiresAuth = !item.public;
-            return (
-              <NavLink
-                key={index}
-                to={item.path}
-                onClick={(e) => {
-                  if (!isAuthenticated && requiresAuth) {
-                    e.preventDefault();
-                    setAuthOpen(true);
-                    return;
-                  }
-                  onMobileClose();
-                }}
-                className={({ isActive }) =>
-                  classNames(
-                    "flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800",
-                    isActive ? "font-semibold text-pink-500" : ""
-                  )
+            <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+              {menu.map((item, index) => {
+                const Icon = item.icon;
+                const requiresAuth = !item.public;
+                if (item.path === "notifications") {
+                  return (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          setAuthOpen(true);
+                          return;
+                        }
+                        setNotificationsOpen(true);
+                      }}
+                      className="flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      <Icon size={20} />
+                      <span className="font-medium">{item.label}</span>
+                    </button>
+                  );
                 }
-              >
-                <Icon size={20} />
-                <span className="font-medium">{item.label}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
+                return (
+                  <NavLink
+                    key={index}
+                    to={item.path}
+                    onClick={(e) => {
+                      if (!isAuthenticated && requiresAuth) {
+                        e.preventDefault();
+                        setAuthOpen(true);
+                        return;
+                      }
+                      onMobileClose();
+                    }}
+                    className={({ isActive }) =>
+                      classNames(
+                        "flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800",
+                        isActive ? "font-semibold text-pink-500" : ""
+                      )
+                    }
+                  >
+                    <Icon size={20} />
+                    <span className="font-medium">{item.label}</span>
+                  </NavLink>
+                );
+              })}
+            </nav>
 
-        <div className="mt-auto space-y-2 border-t border-gray-200 pt-6 text-sm text-gray-500 dark:border-gray-800">
-          <Link
-            to="/privacy-policy"
-            className="block text-xs text-gray-500 transition-colors hover:text-gray-800 dark:hover:text-gray-300"
-            onClick={onMobileClose}
-          >
-            Chính sách quyền riêng tư
-          </Link>
-          <div className="pt-2 text-xs">© 2026 SnapFeed</div>
-        </div>
+            <div className="mt-auto space-y-2 border-t border-gray-200 pt-6 text-sm text-gray-500 dark:border-gray-800">
+              <Link
+                to="/privacy-policy"
+                className="block text-xs text-gray-500 transition-colors hover:text-gray-800 dark:hover:text-gray-300"
+                onClick={onMobileClose}
+              >
+                Chính sách quyền riêng tư
+              </Link>
+              <div className="pt-2 text-xs">© 2026 SnapFeed</div>
+            </div>
+          </>
+        )}
       </aside>
 
       <AuthModal
