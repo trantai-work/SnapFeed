@@ -7,7 +7,10 @@ from rest_framework import mixins
 
 from apps.videos.constants import MAX_VIDEO_UPLOAD_SIZE
 from apps.videos.models import Video, VideoReaction
-from apps.videos.permissions import GeneratePresignedUrlPermission
+from apps.videos.permissions import (
+    GeneratePresignedUrlPermission,
+    ReactVideoPermissions,
+)
 from apps.videos.serializers import (
     PresignedUrlSerializer,
     VideoSerializer,
@@ -16,7 +19,7 @@ from apps.videos.serializers import (
 from apps.notifications.services import notification_services
 from apps.videos.services import reaction_services, s3_services, video_services
 from core.apis import BaseAPIViewSet
-from core.permissions import FullDjangoModelPermissions, IsUserAuthenticated
+from core.permissions import FullDjangoModelPermissions
 from utils import random
 
 
@@ -116,7 +119,7 @@ class VideoViewSet(mixins.CreateModelMixin, BaseAPIViewSet):
         detail=True,
         methods=["put"],
         url_path="react",
-        permission_classes=[IsUserAuthenticated],
+        permission_classes=[ReactVideoPermissions],
         serializer_class=VideoReactionSerializer,
     )
     def video_react(self, request, pk=None):

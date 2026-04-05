@@ -31,6 +31,15 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
   }, []);
 
   useEffect(() => {
+    if (!notificationsOpen) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setNotificationsOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [notificationsOpen]);
+
+  useEffect(() => {
     if (!mobileOpen) return;
     const onKey = (e) => {
       if (e.key !== "Escape") return;
@@ -64,8 +73,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
   if (loading) return null;
 
   const panelClass = classNames(
-    "flex min-h-0 w-[min(18rem,88vw)] flex-col border-r border-gray-200 bg-white text-gray-900 transition-colors dark:border-transparent dark:bg-black dark:text-white",
-    notificationsOpen ? "p-0" : "p-4",
+    "flex min-h-0 w-[min(18rem,88vw)] flex-col border-r border-gray-200 bg-white p-4 text-gray-900 transition-colors dark:border-transparent dark:bg-black dark:text-white",
     "fixed left-0 top-0 z-[60] h-[100dvh] shadow-xl transition-transform duration-300 ease-out will-change-transform lg:will-change-auto",
     "lg:static lg:z-auto lg:h-screen lg:w-64 lg:translate-x-0 lg:shadow-none",
     mobileOpen ? "translate-x-0" : "max-lg:-translate-x-full max-lg:pointer-events-none"
@@ -84,14 +92,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
       />
 
       <aside className={panelClass} aria-hidden={false}>
-        {notificationsOpen ? (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <NotificationsPanel
-              onClose={() => setNotificationsOpen(false)}
-            />
-          </div>
-        ) : (
-          <>
             <div className="mb-4 flex items-center gap-2">
               <img
                 src={theme === "light" ? logoLightMode : logo}
@@ -117,14 +117,20 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                     <button
                       key={index}
                       type="button"
+                      aria-expanded={notificationsOpen}
                       onClick={() => {
                         if (!isAuthenticated) {
                           setAuthOpen(true);
                           return;
                         }
-                        setNotificationsOpen(true);
+                        setNotificationsOpen((open) => !open);
                       }}
-                      className="flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                      className={classNames(
+                        "flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 text-left transition-colors",
+                        "hover:bg-gray-100 active:bg-gray-200/80 dark:hover:bg-gray-800 dark:active:bg-gray-700/80",
+                        notificationsOpen &&
+                          "bg-gray-100 font-semibold dark:bg-gray-800/90"
+                      )}
                     >
                       <Icon size={20} />
                       <span className="font-medium">{item.label}</span>
@@ -167,9 +173,23 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
               </Link>
               <div className="pt-2 text-xs">© 2026 SnapFeed</div>
             </div>
-          </>
-        )}
       </aside>
+
+      {notificationsOpen ? (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-[100] cursor-default bg-black/45 backdrop-blur-[1px] transition-opacity dark:bg-black/55"
+            aria-label="Đóng lớp thông báo"
+            onClick={() => setNotificationsOpen(false)}
+          />
+          <div
+            className="fixed left-0 top-0 z-[110] flex h-[100dvh] w-full max-w-[min(48rem,100vw)] flex-col border-r border-zinc-200/90 bg-white shadow-2xl dark:border-zinc-800 dark:bg-black sm:max-w-[min(52rem,100vw)] lg:max-w-[28rem]"
+          >
+            <NotificationsPanel onClose={() => setNotificationsOpen(false)} />
+          </div>
+        </>
+      ) : null}
 
       <AuthModal
         open={authOpen}
