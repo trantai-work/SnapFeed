@@ -43,4 +43,12 @@ export const videosApi = {
     const data = await api.post("/videos", formData);
     return data;
   },
+
+  /**
+   * PUT /videos/:id/react — set, change, or toggle off (same type as current) reaction.
+   */
+  reactToVideo: async (videoId, reaction) => {
+    const data = await api.put(`/videos/${videoId}/react`, { reaction });
+    return data;
+  },
 };

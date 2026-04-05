@@ -85,3 +85,50 @@ body {
     border-radius: 9999px;
     background: #ec4899;
 }
+
+/* Feed reaction picker + main icon */
+@keyframes feed-reaction-picker-in {
+    from {
+        opacity: 0;
+        transform: translateY(0.35rem) scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes feed-reaction-item-in {
+    from {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes feed-reaction-icon-pop {
+    0% {
+        transform: scale(1);
+    }
+    40% {
+        transform: scale(1.22);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.feed-reaction-picker {
+    animation: feed-reaction-picker-in 0.24s cubic-bezier(0.34, 1.45, 0.64, 1) both;
+}
+
+.feed-reaction-picker-item {
+    animation: feed-reaction-item-in 0.22s cubic-bezier(0.34, 1.45, 0.64, 1) both;
+}
+
+.feed-reaction-icon-pop {
+    animation: feed-reaction-icon-pop 0.45s cubic-bezier(0.34, 1.45, 0.64, 1);
+}

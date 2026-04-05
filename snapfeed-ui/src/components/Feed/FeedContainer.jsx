@@ -6,7 +6,7 @@ const shellClass =
   "flex box-border h-[min(100svh,100dvh)] max-h-[min(100svh,100dvh)] min-h-[280px] items-center justify-center lg:h-[calc(100dvh-7rem)] lg:max-h-none";
 
 export default function FeedContainer() {
-  const { items, loading, error, loadMore } = useFeedItems();
+  const { items, loading, error, loadMore, updateFeedVideo } = useFeedItems();
 
   if (loading) {
     return (
@@ -45,6 +45,7 @@ export default function FeedContainer() {
     <FeedList
       items={items}
       onEndReached={loadMore}
+      onReactionUpdate={updateFeedVideo}
     />
   );
 }

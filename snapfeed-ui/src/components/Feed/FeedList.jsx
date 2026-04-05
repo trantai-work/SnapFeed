@@ -16,7 +16,7 @@ const FEED_INNER_COL_CLASS = [
   "items-stretch",
 ].join(" ");
 
-export function FeedList({ items = [], onEndReached }) {
+export function FeedList({ items = [], onEndReached, onReactionUpdate }) {
   const scrollRef = useRef(null);
   const endTriggeredForLengthRef = useRef(null);
 
@@ -75,6 +75,7 @@ export function FeedList({ items = [], onEndReached }) {
                   isActive={index === currentIndex}
                   slideHeightClass={SLIDE_HEIGHT_CLASS}
                   scrollRootRef={scrollRef}
+                  onReactionUpdate={onReactionUpdate}
                 />
               );
             })}

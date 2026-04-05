@@ -13,6 +13,7 @@ export function normalizeFeedItem(raw) {
     viewCount: raw.viewCount ?? raw.view_count ?? 0,
     commentCount: raw.commentCount ?? raw.comment_count ?? 0,
     reactionCount: raw.reactionCount ?? raw.reaction_count ?? 0,
+    myReaction: raw.myReaction ?? raw.my_reaction ?? null,
     userFirstName: raw.userFirstName ?? raw.user_first_name ?? "",
     userLastName: raw.userLastName ?? raw.user_last_name ?? "",
     userAvatar: raw.userAvatar ?? raw.user_avatar ?? null,
@@ -30,4 +31,13 @@ export function getUserDisplayName(item) {
 export function getUserAvatarUrl(item) {
   const url = item.userAvatar;
   return typeof url === "string" && url.length > 0 ? url : null;
+}
+
+/** Normalize PUT /videos/:id/react response (snake_case or camelCase). */
+export function normalizeReactApiResponse(raw) {
+  if (!raw || typeof raw !== "object") return {};
+  return {
+    myReaction: raw.reaction ?? null,
+    reactionCount: raw.reactionCount ?? raw.reaction_count ?? 0,
+  };
 }

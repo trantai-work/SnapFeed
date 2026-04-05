@@ -1,7 +1,13 @@
 import { memo, useCallback, useRef } from "react";
 import { formatCount } from "../../utils/format";
 import { buildVideoSrc } from "../../utils/feedVideo";
-import { getUserAvatarUrl, getUserDisplayName } from "../../utils/feedItem";
+import {
+  getUserAvatarUrl,
+  getUserDisplayName,
+  normalizeReactApiResponse,
+} from "../../utils/feedItem";
+import { videosApi } from "../../api/video.api";
+import { useAuth } from "../../context/AuthContext";
 import { useAutoPlayVideo } from "../../hooks/useAutoPlayVideo";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { FeedActions } from "./FeedActions";
@@ -14,8 +20,11 @@ function FeedItemComponent({
   isActive,
   slideHeightClass,
   scrollRootRef,
+  onReactionUpdate,
 }) {
+  const { isAuthenticated } = useAuth();
   const videoRef = useRef(null);
+  const reactInFlightRef = useRef(false);
   const src = buildVideoSrc(item.videoKey);
   const poster = item.thumbnail || undefined;
   const displayName = getUserDisplayName(item);
@@ -36,6 +45,22 @@ function FeedItemComponent({
     else v.pause();
   }, []);
 
+  const handleReact = useCallback(
+    async (reaction) => {
+      if (!isAuthenticated || reactInFlightRef.current) return;
+      reactInFlightRef.current = true;
+      try {
+        const raw = await videosApi.reactToVideo(item.id, reaction);
+        onReactionUpdate?.(item.id, normalizeReactApiResponse(raw));
+      } catch (e) {
+        console.error(e);
+      } finally {
+        reactInFlightRef.current = false;
+      }
+    },
+    [isAuthenticated, item.id, onReactionUpdate]
+  );
+
   const slideClass = [
     "flex w-full shrink-0 snap-start snap-always items-stretch justify-center overflow-hidden bg-white dark:bg-black lg:bg-white dark:lg:bg-black",
     slideHeightClass,
@@ -47,6 +72,9 @@ function FeedItemComponent({
     saveLabel,
     shareLabel: "Chia sẻ",
     avatarUrl,
+    myReaction: item.myReaction ?? null,
+    reactDisabled: !isAuthenticated,
+    onReact: handleReact,
   };
 
   return (
