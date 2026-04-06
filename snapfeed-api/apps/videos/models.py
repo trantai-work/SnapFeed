@@ -25,6 +25,7 @@ class Video(BaseModel):
         db_table = "videos"
         permissions = [
             ("generate_presigned_url", "Can generate presigned URL for video"),
+            ("react_video", "Can react video."),
         ]
 
 

@@ -7,15 +7,19 @@ from rest_framework import mixins
 
 from apps.videos.constants import MAX_VIDEO_UPLOAD_SIZE
 from apps.videos.models import Video, VideoReaction
-from apps.videos.permissions import GeneratePresignedUrlPermission
+from apps.videos.permissions import (
+    GeneratePresignedUrlPermission,
+    ReactVideoPermissions,
+)
 from apps.videos.serializers import (
     PresignedUrlSerializer,
     VideoSerializer,
     VideoReactionSerializer,
 )
+from apps.notifications.services import notification_services
 from apps.videos.services import reaction_services, s3_services, video_services
 from core.apis import BaseAPIViewSet
-from core.permissions import FullDjangoModelPermissions, IsUserAuthenticated
+from core.permissions import FullDjangoModelPermissions
 from utils import random
 
 
@@ -115,7 +119,7 @@ class VideoViewSet(mixins.CreateModelMixin, BaseAPIViewSet):
         detail=True,
         methods=["put"],
         url_path="react",
-        permission_classes=[IsUserAuthenticated],
+        permission_classes=[ReactVideoPermissions],
         serializer_class=VideoReactionSerializer,
     )
     def video_react(self, request, pk=None):
@@ -126,9 +130,16 @@ class VideoViewSet(mixins.CreateModelMixin, BaseAPIViewSet):
         video = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        reaction_row, count = reaction_services.set_video_reaction(
+        reaction_row, count, is_new_reaction = reaction_services.set_video_reaction(
             request.user, video, serializer.validated_data["reaction"]
         )
+
+        if is_new_reaction:
+            notification_services.notify_video_react(
+                request.user,
+                video,
+                reaction=reaction_row.reaction,
+            )
 
         if reaction_row is None:
             return self.response_ok(
