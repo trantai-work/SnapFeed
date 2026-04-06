@@ -7,9 +7,11 @@ services:
       dockerfile: Dockerfile
     image: snapfeed-api
     container_name: snapfeed-api
-    command: python manage.py runserver 0.0.0.0:8000
+    command: python -m daphne -b 0.0.0.0 -p 8000 config.asgi:application
     env_file:
       - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
     volumes:
       - .:/code
     ports:
@@ -17,6 +19,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:7-alpine
+    container_name: snapfeed-redis
+    restart: unless-stopped
+    ports:
+      - "${MAPPING_REDIS_PORT:-6379}:6379"
 
   db:
     image: pgvector/pgvector:pg15

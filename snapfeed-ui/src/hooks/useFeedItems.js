@@ -13,7 +13,7 @@ function toInstances(batchId, videos) {
   return out;
 }
 
-export function useFeedItems() {
+export function useFeedItems(resetKey = "") {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -61,10 +61,28 @@ export function useFeedItems() {
     }
   }, [fetchFeed]);
 
-  useEffect(() => {
-    loadInitial();
-  }, [loadInitial]);
+  const updateFeedVideo = useCallback((videoId, patch) => {
+    setItems((prev) =>
+      prev.map((inst) => {
+        const v = inst.video ?? inst;
+        if (v.id !== videoId) return inst;
+        return {
+          ...inst,
+          video: { ...v, ...patch },
+        };
+      })
+    );
+  }, []);
 
-  return { items, loading, error, loadMore };
+  useEffect(() => {
+    // Reset feed state when auth/user changes (e.g. logout) to avoid showing previous user's reactions.
+    inFlightRef.current = false;
+    batchCounterRef.current = 0;
+    setItems([]);
+    loadInitial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetKey]);
+
+  return { items, loading, error, loadMore, updateFeedVideo };
 }
 

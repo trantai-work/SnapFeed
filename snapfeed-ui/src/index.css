@@ -6,6 +6,43 @@ body {
     font-family: 'IBM Plex Sans', system-ui, sans-serif;
 }
 
+/* Notifications panel scrollbar */
+.notifications-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(148 163 184 / 0.65) transparent; /* slate-400 */
+}
+
+.dark .notifications-scroll {
+    scrollbar-color: rgb(148 163 184 / 0.35) transparent;
+}
+
+.notifications-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.notifications-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.notifications-scroll::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: rgb(148 163 184 / 0.55);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.dark .notifications-scroll::-webkit-scrollbar-thumb {
+    background: rgb(148 163 184 / 0.28);
+}
+
+.notifications-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgb(100 116 139 / 0.65); /* slate-500 */
+}
+
+.dark .notifications-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgb(148 163 184 / 0.42);
+}
+
 .feed-video-wrap video.feed-video {
     accent-color: #dc2626 !important;
 }
@@ -84,4 +121,51 @@ body {
     height: 0.125rem;
     border-radius: 9999px;
     background: #ec4899;
+}
+
+/* Feed reaction picker + main icon */
+@keyframes feed-reaction-picker-in {
+    from {
+        opacity: 0;
+        transform: translateY(0.35rem) scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes feed-reaction-item-in {
+    from {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes feed-reaction-icon-pop {
+    0% {
+        transform: scale(1);
+    }
+    40% {
+        transform: scale(1.22);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.feed-reaction-picker {
+    animation: feed-reaction-picker-in 0.24s cubic-bezier(0.34, 1.45, 0.64, 1) both;
+}
+
+.feed-reaction-picker-item {
+    animation: feed-reaction-item-in 0.22s cubic-bezier(0.34, 1.45, 0.64, 1) both;
+}
+
+.feed-reaction-icon-pop {
+    animation: feed-reaction-icon-pop 0.45s cubic-bezier(0.34, 1.45, 0.64, 1);
 }

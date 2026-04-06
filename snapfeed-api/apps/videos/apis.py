@@ -1,14 +1,23 @@
 from django.conf import settings
+from django.db.models import Prefetch
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import action
 import boto3
 from rest_framework import mixins
 
 from apps.videos.constants import MAX_VIDEO_UPLOAD_SIZE
-from apps.videos.models import Video
-from apps.videos.permissions import GeneratePresignedUrlPermission
-from apps.videos.serializers import PresignedUrlSerializer, VideoSerializer
-from apps.videos.services import video_services, s3_services
+from apps.videos.models import Video, VideoReaction
+from apps.videos.permissions import (
+    GeneratePresignedUrlPermission,
+    ReactVideoPermissions,
+)
+from apps.videos.serializers import (
+    PresignedUrlSerializer,
+    VideoSerializer,
+    VideoReactionSerializer,
+)
+from apps.notifications.services import notification_services
+from apps.videos.services import reaction_services, s3_services, video_services
 from core.apis import BaseAPIViewSet
 from core.permissions import FullDjangoModelPermissions
 from utils import random
@@ -90,4 +99,62 @@ class VideoViewSet(mixins.CreateModelMixin, BaseAPIViewSet):
             user_embedding = user.embedding.embedding
             feeds = video_services.get_similar_videos(user_embedding, seen_video_ids)
 
+        feeds = feeds.select_related("user")
+        if user.is_authenticated:
+            feeds = feeds.prefetch_related(
+                Prefetch(
+                    "reactions",
+                    queryset=VideoReaction.objects.filter(user=user),
+                    to_attr="_prefetched_user_reactions",
+                )
+            )
+
         return self.response_ok(self.get_serializer(feeds, many=True).data)
+
+    @extend_schema(
+        request=VideoReactionSerializer,
+        responses={200: VideoReactionSerializer},
+    )
+    @action(
+        detail=True,
+        methods=["put"],
+        url_path="react",
+        permission_classes=[ReactVideoPermissions],
+        serializer_class=VideoReactionSerializer,
+    )
+    def video_react(self, request, pk=None):
+        """
+        Set or change the current user's reaction on this video.
+        """
+
+        video = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        reaction_row, count, is_new_reaction = reaction_services.set_video_reaction(
+            request.user, video, serializer.validated_data["reaction"]
+        )
+
+        if is_new_reaction:
+            notification_services.notify_video_react(
+                request.user,
+                video,
+                reaction=reaction_row.reaction,
+            )
+
+        if reaction_row is None:
+            return self.response_ok(
+                {
+                    "id": None,
+                    "user": request.user.id,
+                    "video": video.id,
+                    "reaction": None,
+                    "reaction_count": count,
+                }
+            )
+
+        return self.response_ok(
+            self.get_serializer(
+                reaction_row,
+                context={**self.get_serializer_context(), "reaction_count": count},
+            ).data
+        )

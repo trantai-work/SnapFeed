@@ -1,12 +1,15 @@
 import { Loader2 } from "lucide-react";
 import { useFeedItems } from "../../hooks/useFeedItems";
 import { FeedList } from "./FeedList";
+import { useAuth } from "../../context/AuthContext";
 
 const shellClass =
   "flex box-border h-[min(100svh,100dvh)] max-h-[min(100svh,100dvh)] min-h-[280px] items-center justify-center lg:h-[calc(100dvh-7rem)] lg:max-h-none";
 
 export default function FeedContainer() {
-  const { items, loading, error, loadMore } = useFeedItems();
+  const { user } = useAuth();
+  const resetKey = user?.id ? `user:${user.id}` : "anon";
+  const { items, loading, error, loadMore, updateFeedVideo } = useFeedItems(resetKey);
 
   if (loading) {
     return (
@@ -45,6 +48,7 @@ export default function FeedContainer() {
     <FeedList
       items={items}
       onEndReached={loadMore}
+      onReactionUpdate={updateFeedVideo}
     />
   );
 }
