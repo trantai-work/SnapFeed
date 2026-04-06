@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, MessageSquare, User, X } from "lucide-react";
 import { notificationsApi } from "../api/notifications.api";
-import { formatNotificationTime } from "../utils/notificationItem";
+import {
+  formatNotificationTime,
+  normalizeNotificationRecipient,
+} from "../utils/notificationItem";
 
 const FILTERS = [
   { id: "all", label: "Tất cả" },
@@ -55,7 +58,11 @@ function ActorAvatar({ actor }) {
   );
 }
 
-export default function NotificationsPanel({ onClose }) {
+export default function NotificationsPanel({
+  onClose,
+  onItemMarkedRead,
+  incomingRecipient,
+}) {
   const [filter, setFilter] = useState("all");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,11 +71,22 @@ export default function NotificationsPanel({ onClose }) {
   const [nextCursor, setNextCursor] = useState(null);
   const scrollRef = useRef(null);
   const loadMoreLock = useRef(false);
+  const readInFlightRef = useRef(new Set());
 
   const visibleItems = useMemo(() => {
     if (filter === "all") return items;
     return items.filter((row) => row.notification.category === filter);
   }, [items, filter]);
+
+  useEffect(() => {
+    if (!incomingRecipient) return;
+    setItems((prev) => {
+      const row = normalizeNotificationRecipient(incomingRecipient);
+      if (!row) return prev;
+      if (prev.some((x) => x.id === row.id)) return prev;
+      return [row, ...prev];
+    });
+  }, [incomingRecipient]);
 
   const loadInitial = useCallback(async () => {
     setLoading(true);
@@ -122,6 +140,35 @@ export default function NotificationsPanel({ onClose }) {
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 140;
     if (nearBottom) loadMore();
   }, [nextCursor, loadingMore, loading, loadMore]);
+
+  const markReadOptimistic = useCallback(async (recipientId) => {
+    if (!recipientId) return;
+    if (readInFlightRef.current.has(recipientId)) return;
+
+    setItems((prev) =>
+      prev.map((row) => {
+        if (row.id !== recipientId) return row;
+        if (row.isRead) return row;
+        return { ...row, isRead: true, readAt: row.readAt ?? new Date().toISOString() };
+      })
+    );
+
+    readInFlightRef.current.add(recipientId);
+    try {
+      const updated = await notificationsApi.markRead(recipientId);
+      if (updated) {
+        setItems((prev) => prev.map((r) => (r.id === recipientId ? updated : r)));
+      }
+      if (typeof onItemMarkedRead === "function") {
+        onItemMarkedRead(recipientId, updated);
+      }
+    } catch (e) {
+      console.error(e);
+      // Keep optimistic read state; server is idempotent and user intent is clear.
+    } finally {
+      readInFlightRef.current.delete(recipientId);
+    }
+  }, []);
 
   const activeChip =
     "bg-gray-900 text-white shadow-sm dark:bg-white dark:text-black";
@@ -180,7 +227,7 @@ export default function NotificationsPanel({ onClose }) {
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-0 py-3 sm:py-4"
+        className="notifications-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-0 py-3 sm:py-4"
       >
         {loading ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16 text-zinc-500 dark:text-zinc-400">
@@ -229,6 +276,15 @@ export default function NotificationsPanel({ onClose }) {
                 <li key={row.id}>
                   <article
                     tabIndex={0}
+                    role="button"
+                    aria-label={unread ? "Đánh dấu đã đọc" : "Thông báo"}
+                    onClick={() => markReadOptimistic(row.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        markReadOptimistic(row.id);
+                      }
+                    }}
                     className={classNames(
                       "flex cursor-pointer gap-3 rounded-xl px-3 py-3 outline-none transition-colors sm:gap-3.5 sm:px-3.5",
                       unread

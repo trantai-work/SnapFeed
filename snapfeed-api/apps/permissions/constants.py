@@ -12,6 +12,7 @@ GROUP_PERMISSIONS_MAP = {
         "videos.generate_presigned_url",
         "videos.react_video",
         "notifications.view_notificationrecipient",
+        "notifications.change_notificationrecipient",
     ],
     Groups.ADMIN.value: [],
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import {
   Home as HomeIcon,
@@ -13,9 +13,12 @@ import logo from "../assets/logo.png";
 import logoLightMode from "../assets/logo_light_mode.png";
 import AuthModal from "./AuthModal";
 import NotificationsPanel from "./NotificationsPanel";
+import { useMessageBox } from "./MessageBox";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { authService } from "../services/auth.service";
+import { notificationsApi } from "../api/notifications.api";
+import { connectNotificationsSocket } from "../services/notificationsRealtime";
 
 function classNames(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -24,8 +27,13 @@ function classNames(...xs) {
 export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }) {
   const { theme } = useTheme();
   const { isAuthenticated, loading } = useAuth();
+  const { show } = useMessageBox();
   const [authOpen, setAuthOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadFetchLock = useRef(false);
+  const wsRef = useRef(null);
+  const [incomingRecipient, setIncomingRecipient] = useState(null);
   const recentProvider = useMemo(() => {
     return window.localStorage.getItem("auth_recent_provider") || null;
   }, []);
@@ -38,6 +46,76 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [notificationsOpen]);
+
+  const refreshUnread = useCallback(async () => {
+    if (!isAuthenticated || unreadFetchLock.current) return;
+    unreadFetchLock.current = true;
+    try {
+      const c = await notificationsApi.unreadCount();
+      setUnreadCount(c);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      unreadFetchLock.current = false;
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUnreadCount(0);
+      return;
+    }
+    refreshUnread();
+  }, [isAuthenticated, refreshUnread]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      return;
+    }
+
+    // (Re)connect websocket for realtime notifications.
+    if (wsRef.current) return;
+    wsRef.current = connectNotificationsSocket({
+      onMessage: (msg) => {
+        if (!msg || typeof msg !== "object") return;
+        if (msg.type === "notification.created") {
+          const payload = msg.payload || {};
+          const c = payload.unread_count;
+          if (typeof c === "number") setUnreadCount(c);
+          if (payload.recipient) setIncomingRecipient(payload.recipient);
+          if (payload.recipient?.notification) {
+            const n = payload.recipient.notification;
+            show({
+              status: "notification",
+              title: n.title || "Thông báo mới",
+              message: n.message || "",
+              duration: 6500,
+            });
+          }
+          return;
+        }
+        if (msg.type === "notification.read") {
+          const payload = msg.payload || {};
+          const c = payload.unread_count;
+          if (typeof c === "number") setUnreadCount(c);
+        }
+      },
+      onClose: () => {
+        wsRef.current = null;
+      },
+    });
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -132,7 +210,17 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                           "bg-gray-100 font-semibold dark:bg-gray-800/90"
                       )}
                     >
-                      <Icon size={20} />
+                      <span className="relative">
+                        <Icon size={20} />
+                        {unreadCount > 0 ? (
+                          <span
+                            className="absolute -right-2.5 -top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[0.65rem] font-bold leading-none text-white shadow-sm ring-2 ring-white dark:ring-black"
+                            aria-label={`${unreadCount} thông báo chưa đọc`}
+                          >
+                            {unreadCount > 99 ? "99+" : unreadCount}
+                          </span>
+                        ) : null}
+                      </span>
                       <span className="font-medium">{item.label}</span>
                     </button>
                   );
@@ -181,12 +269,22 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
             type="button"
             className="fixed inset-0 z-[100] cursor-default bg-black/45 backdrop-blur-[1px] transition-opacity dark:bg-black/55"
             aria-label="Đóng lớp thông báo"
-            onClick={() => setNotificationsOpen(false)}
+            onClick={() => {
+              setNotificationsOpen(false);
+              refreshUnread();
+            }}
           />
           <div
             className="fixed left-0 top-0 z-[110] flex h-[100dvh] w-full max-w-[min(48rem,100vw)] flex-col border-r border-zinc-200/90 bg-white shadow-2xl dark:border-zinc-800 dark:bg-black sm:max-w-[min(52rem,100vw)] lg:max-w-[28rem]"
           >
-            <NotificationsPanel onClose={() => setNotificationsOpen(false)} />
+            <NotificationsPanel
+              onClose={() => {
+                setNotificationsOpen(false);
+                refreshUnread();
+              }}
+              incomingRecipient={incomingRecipient}
+              onItemMarkedRead={() => refreshUnread()}
+            />
           </div>
         </>
       ) : null}

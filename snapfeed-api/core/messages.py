@@ -23,6 +23,7 @@ _ERROR_MESSAGES = {
         "lack_of_api_key": "Lack of API key.",
         "invalid_api_key": "Invalid API key.",
         "video_with_s3_key_not_found": "Video with {s3_key} key not found.",
+        "notification_not_found": "Notification not found.",
     },
     "vi": {
         "common": {
@@ -45,6 +46,7 @@ _ERROR_MESSAGES = {
         "lack_of_api_key": "Thiếu API key.",
         "invalid_api_key": "API key không hợp lệ.",
         "video_with_s3_key_not_found": "Video với {s3_key} key không tìm thấy.",
+        "notification_not_found": "Không tìm thấy thông báo.",
     },
 }
 

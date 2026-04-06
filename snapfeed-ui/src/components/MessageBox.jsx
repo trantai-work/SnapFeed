@@ -1,5 +1,12 @@
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
-import { CheckCircle2, AlertTriangle, XCircle, X } from "lucide-react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { CheckCircle2, AlertTriangle, XCircle, X, Bell } from "lucide-react";
 
 const MessageBoxContext = createContext(null);
 
@@ -24,6 +31,13 @@ const STATUS_STYLES = {
     title: "text-gray-900 dark:text-zinc-100",
     text: "text-gray-700 dark:text-zinc-300",
     iconColor: "text-amber-600 dark:text-amber-400",
+  },
+  notification: {
+    icon: Bell,
+    border: "border-sky-200 dark:border-sky-900/70",
+    title: "text-gray-900 dark:text-zinc-100",
+    text: "text-gray-700 dark:text-zinc-300",
+    iconColor: "text-sky-600 dark:text-sky-400",
   },
 };
 
@@ -92,7 +106,15 @@ export function useMessageBox() {
 
 function MessageBoxStack({ items, onClose }) {
   return (
-    <div className="fixed left-4 bottom-4 z-[9999] flex flex-col gap-3 w-[min(460px,calc(100vw-2rem))] pointer-events-none">
+    <div
+      className={[
+        "fixed z-[9999] flex w-[min(460px,calc(100vw-2rem))] flex-col gap-3 pointer-events-none",
+        // Mobile: top-right (doesn't cover bottom UI).
+        "right-4 top-4 left-auto bottom-auto",
+        // Desktop/tablet: bottom-left.
+        "sm:left-4 sm:bottom-4 sm:right-auto sm:top-auto",
+      ].join(" ")}
+    >
       {items.map((item) => (
         <MessageToast key={item.id} item={item} onClose={onClose} />
       ))}

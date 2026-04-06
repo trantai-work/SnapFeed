@@ -3,7 +3,10 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.db import transaction
+from django.utils import timezone
 
 from apps.comments.models import VideoComment
 from apps.notifications.constants import (
@@ -14,9 +17,14 @@ from apps.notifications.constants import (
     REACT_VIDEO_NOTIFICATION_TITLE,
 )
 from apps.notifications.models import Notification, NotificationRecipient
+from apps.notifications.serializers import NotificationRecipientSerializer
 from apps.users.models import User
 from apps.videos.models import Video
 from apps.videos.services import reaction_services
+
+
+def _user_group_name(user_id: int) -> str:
+    return f"notifications.user.{user_id}"
 
 
 def _format_notification_message(template: str, *, actor: User, **extra: str) -> str:
@@ -67,6 +75,8 @@ def create_notification_with_recipients(
     if not normalized:
         return None
 
+    created_recipients: list[NotificationRecipient] = []
+
     with transaction.atomic():
         notification = Notification.objects.create(
             actor=actor,
@@ -82,6 +92,39 @@ def create_notification_with_recipients(
             ],
             ignore_conflicts=True,
         )
+
+        created_recipients = list(
+            NotificationRecipient.objects.filter(
+                notification=notification, user__in=normalized
+            )
+            .select_related(
+                "notification",
+                "notification__actor",
+                "notification__target_content_type",
+            )
+            .order_by("-created_at", "-id")
+        )
+
+    # Push realtime events after commit. If channel layer is not configured/running,
+    # this is best-effort and should not break the request flow.
+    try:
+        channel_layer = get_channel_layer()
+        if channel_layer and created_recipients:
+            for r in created_recipients:
+                unread = NotificationRecipient.objects.filter(
+                    user=r.user, is_read=False
+                ).count()
+                payload = {
+                    "recipient": NotificationRecipientSerializer(r).data,
+                    "unread_count": unread,
+                }
+                async_to_sync(channel_layer.group_send)(
+                    _user_group_name(r.user_id),
+                    {"type": "notification_created", "payload": payload},
+                )
+    except Exception:
+        pass
+
     return notification
 
 
@@ -174,3 +217,40 @@ def notify_system(
         target=target,
         exclude_actor_from_recipients=False,
     )
+
+
+def mark_read(recipient: NotificationRecipient) -> NotificationRecipient:
+    """
+    Mark a NotificationRecipient row as read (idempotent).
+    """
+
+    if recipient.is_read:
+        return recipient
+
+    recipient.is_read = True
+    recipient.read_at = timezone.now()
+    recipient.save(update_fields=["is_read", "read_at", "updated_at"])
+
+    try:
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            unread = NotificationRecipient.objects.filter(
+                user=recipient.user, is_read=False
+            ).count()
+            payload = {"recipient_id": recipient.id, "unread_count": unread}
+            async_to_sync(channel_layer.group_send)(
+                _user_group_name(recipient.user_id),
+                {"type": "notification_read", "payload": payload},
+            )
+    except Exception:
+        pass
+
+    return recipient
+
+
+def get_unread_count(*, user: User) -> int:
+    """
+    Return unread notification recipient count for the given user.
+    """
+
+    return NotificationRecipient.objects.filter(user=user, is_read=False).count()

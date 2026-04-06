@@ -23,4 +23,17 @@ export const notificationsApi = {
       results: rawResults.map(normalizeNotificationRecipient).filter(Boolean),
     };
   },
+
+  /** PATCH /notifications/:id/read */
+  async markRead(recipientId) {
+    if (!recipientId) return null;
+    const data = await api.patch(`/notifications/${recipientId}/read`);
+    return normalizeNotificationRecipient(data);
+  },
+
+  /** GET /notifications/unread-count */
+  async unreadCount() {
+    const data = await api.get("/notifications/unread-count");
+    return typeof data?.count === "number" ? data.count : 0;
+  },
 };

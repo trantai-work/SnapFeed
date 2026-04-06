@@ -29,6 +29,7 @@ jobs:
           TAG=${GITHUB_REF#refs/tags/}
           docker build \
             --build-arg VITE_API_URL="${{ vars.VITE_API_URL }}" \
+            --build-arg VITE_WS_URL="${{ vars.VITE_WS_URL }}" \
             --build-arg VITE_DEFAULT_LANG="${{ vars.VITE_DEFAULT_LANG }}" \
             --build-arg VITE_FACEBOOK_APP_ID="${{ vars.VITE_FACEBOOK_APP_ID }}" \
             --build-arg VITE_FACEBOOK_AUTH_URL="${{ vars.VITE_FACEBOOK_AUTH_URL }}" \
