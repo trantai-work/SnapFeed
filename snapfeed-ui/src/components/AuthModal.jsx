@@ -111,7 +111,15 @@ export default function AuthModal({
       />
 
       {/* dialog */}
-      <div className="absolute inset-0 grid place-items-center p-4">
+      <div
+        className="absolute inset-0 grid place-items-center p-4"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) onClose?.();
+        }}
+        onTouchStart={(e) => {
+          if (e.target === e.currentTarget) onClose?.();
+        }}
+      >
         <div
           role="dialog"
           aria-modal="true"
@@ -121,6 +129,8 @@ export default function AuthModal({
             "rounded-2xl border border-gray-200 bg-white text-gray-900 shadow-2xl",
             "dark:border-white/10 dark:bg-[#111] dark:text-white"
           )}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
         >
           <div className="relative px-6 pt-6">
             <button

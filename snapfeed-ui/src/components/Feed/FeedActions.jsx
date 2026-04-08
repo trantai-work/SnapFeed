@@ -20,6 +20,10 @@ function FeedActionsComponent({
   myReaction,
   reactDisabled = false,
   onReact,
+  onComment,
+  onSave,
+  onShare,
+  onRequireAuth,
   overlay = false,
   className = "",
 }) {
@@ -66,20 +70,45 @@ function FeedActionsComponent({
         overlay={overlay}
         disabled={reactDisabled}
         onReact={onReact}
+        onRequireAuth={onRequireAuth}
       />
-      <button type="button" className={actionBtn} aria-label="Bình luận">
+      <button
+        type="button"
+        className={actionBtn}
+        aria-label="Bình luận"
+        onClick={() => {
+          if (typeof onComment === "function") onComment();
+          else if (typeof onRequireAuth === "function") onRequireAuth();
+        }}
+      >
         <span className={iconWrap}>
           <MessageCircle className={overlayIconClass} strokeWidth={1.75} />
         </span>
         <span className={labelClass}>{commentLabel}</span>
       </button>
-      <button type="button" className={actionBtn} aria-label="Lưu">
+      <button
+        type="button"
+        className={actionBtn}
+        aria-label="Lưu"
+        onClick={() => {
+          if (typeof onSave === "function") onSave();
+          else if (typeof onRequireAuth === "function") onRequireAuth();
+        }}
+      >
         <span className={iconWrap}>
           <Bookmark className={overlayIconClass} strokeWidth={1.75} />
         </span>
         <span className={labelClass}>{saveLabel}</span>
       </button>
-      <button type="button" className={actionBtn} aria-label="Chia sẻ">
+      <button
+        type="button"
+        className={actionBtn}
+        aria-label="Chia sẻ"
+        onClick={() => {
+          if (typeof onShare === "function") onShare();
+          else if (typeof onRequireAuth === "function") onRequireAuth();
+        }}
+      >
         <span className={iconWrap}>
           <Share2 className={overlayIconClass} strokeWidth={1.75} />
         </span>

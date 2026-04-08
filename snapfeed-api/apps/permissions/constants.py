@@ -13,6 +13,8 @@ GROUP_PERMISSIONS_MAP = {
         "videos.react_video",
         "notifications.view_notificationrecipient",
         "notifications.change_notificationrecipient",
+        "comments.view_videocomment",
+        "comments.add_videocomment",
     ],
     Groups.ADMIN.value: [],
 }

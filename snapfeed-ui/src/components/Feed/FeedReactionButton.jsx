@@ -21,6 +21,7 @@ function FeedReactionButtonComponent({
   overlay = false,
   disabled = false,
   onReact,
+  onRequireAuth,
 }) {
   const isHoverPickerMode = useMediaQuery(HOVER_PICKER_QUERY);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -151,7 +152,11 @@ function FeedReactionButtonComponent({
 
   const onPointerDown = useCallback(
     (e) => {
-      if (disabled || isHoverPickerMode) return;
+      if (disabled) {
+        onRequireAuth?.();
+        return;
+      }
+      if (isHoverPickerMode) return;
       longPressFired.current = false;
       startRef.current = { x: e.clientX, y: e.clientY };
       clearTimer();
@@ -163,7 +168,7 @@ function FeedReactionButtonComponent({
         }
       }, LONG_PRESS_MS);
     },
-    [clearTimer, disabled, isHoverPickerMode]
+    [clearTimer, disabled, isHoverPickerMode, onRequireAuth]
   );
 
   const onPointerMove = useCallback(
@@ -178,7 +183,10 @@ function FeedReactionButtonComponent({
 
   const onPointerUp = useCallback(() => {
     clearTimer();
-    if (disabled) return;
+    if (disabled) {
+      onRequireAuth?.();
+      return;
+    }
     if (longPressFired.current) return;
     suppressClickRef.current = true;
     triggerIconPop();
@@ -186,6 +194,7 @@ function FeedReactionButtonComponent({
   }, [
     clearTimer,
     disabled,
+    onRequireAuth,
     reactionForQuickTap,
     runReact,
     triggerIconPop,
