@@ -16,7 +16,13 @@ const FEED_INNER_COL_CLASS = [
   "items-stretch",
 ].join(" ");
 
-export function FeedList({ items = [], onEndReached, onReactionUpdate }) {
+export function FeedList({
+  items = [],
+  onEndReached,
+  onReactionUpdate,
+  onOpenComments,
+  onFeedScroll,
+}) {
   const scrollRef = useRef(null);
   const endTriggeredForLengthRef = useRef(null);
 
@@ -54,7 +60,13 @@ export function FeedList({ items = [], onEndReached, onReactionUpdate }) {
 
   return (
     <div className="relative box-border h-[min(100svh,100dvh)] max-h-[min(100svh,100dvh)] w-full min-w-0 max-w-full lg:h-auto lg:max-h-none lg:max-w-none">
-      <div ref={scrollRef} className={scrollClassName}>
+      <div
+        ref={scrollRef}
+        className={scrollClassName}
+        onScroll={() => {
+          onFeedScroll?.();
+        }}
+      >
         <div
           className="box-border w-full min-w-0"
           style={{
@@ -76,6 +88,7 @@ export function FeedList({ items = [], onEndReached, onReactionUpdate }) {
                   slideHeightClass={SLIDE_HEIGHT_CLASS}
                   scrollRootRef={scrollRef}
                   onReactionUpdate={onReactionUpdate}
+                  onOpenComments={typeof onOpenComments === "function" ? onOpenComments : undefined}
                 />
               );
             })}

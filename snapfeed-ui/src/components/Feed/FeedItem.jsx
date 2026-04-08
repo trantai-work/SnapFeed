@@ -13,6 +13,7 @@ import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { FeedActions } from "./FeedActions";
 import { FeedDescription } from "./FeedDescription";
 import { FeedVideoMobileBar } from "./FeedVideoMobileBar";
+import { openAuthModal } from "../../utils/authModalBus";
 
 function FeedItemComponent({
   item,
@@ -21,6 +22,7 @@ function FeedItemComponent({
   slideHeightClass,
   scrollRootRef,
   onReactionUpdate,
+  onOpenComments,
 }) {
   const { isAuthenticated } = useAuth();
   const videoRef = useRef(null);
@@ -47,7 +49,11 @@ function FeedItemComponent({
 
   const handleReact = useCallback(
     async (reaction) => {
-      if (!isAuthenticated || reactInFlightRef.current) return;
+      if (!isAuthenticated) {
+        openAuthModal();
+        return;
+      }
+      if (reactInFlightRef.current) return;
       reactInFlightRef.current = true;
       try {
         const raw = await videosApi.reactToVideo(item.id, reaction);
@@ -60,6 +66,10 @@ function FeedItemComponent({
     },
     [isAuthenticated, item.id, onReactionUpdate]
   );
+
+  const requireAuth = useCallback(() => {
+    openAuthModal();
+  }, []);
 
   const slideClass = [
     "flex w-full shrink-0 snap-start snap-always items-stretch justify-center overflow-hidden bg-white dark:bg-black lg:bg-white dark:lg:bg-black",
@@ -75,6 +85,28 @@ function FeedItemComponent({
     myReaction: item.myReaction ?? null,
     reactDisabled: !isAuthenticated,
     onReact: handleReact,
+    onRequireAuth: requireAuth,
+    onComment: () => {
+      if (!isAuthenticated) {
+        openAuthModal();
+        return;
+      }
+      onOpenComments?.(item.id);
+    },
+    onSave: () => {
+      if (!isAuthenticated) {
+        openAuthModal();
+        return;
+      }
+      // TODO: save video
+    },
+    onShare: () => {
+      if (!isAuthenticated) {
+        openAuthModal();
+        return;
+      }
+      // TODO: share video
+    },
   };
 
   return (

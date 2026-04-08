@@ -3,8 +3,6 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
 from django.db import transaction
 from django.utils import timezone
 
@@ -17,14 +15,11 @@ from apps.notifications.constants import (
     REACT_VIDEO_NOTIFICATION_TITLE,
 )
 from apps.notifications.models import Notification, NotificationRecipient
-from apps.notifications.serializers import NotificationRecipientSerializer
+from apps.notifications.services import notifications_realtime
 from apps.users.models import User
 from apps.videos.models import Video
 from apps.videos.services import reaction_services
-
-
-def _user_group_name(user_id: int) -> str:
-    return f"notifications.user.{user_id}"
+from utils.text import truncate_inline
 
 
 def _format_notification_message(template: str, *, actor: User, **extra: str) -> str:
@@ -105,25 +100,9 @@ def create_notification_with_recipients(
             .order_by("-created_at", "-id")
         )
 
-    # Push realtime events after commit. If channel layer is not configured/running,
-    # this is best-effort and should not break the request flow.
-    try:
-        channel_layer = get_channel_layer()
-        if channel_layer and created_recipients:
-            for r in created_recipients:
-                unread = NotificationRecipient.objects.filter(
-                    user=r.user, is_read=False
-                ).count()
-                payload = {
-                    "recipient": NotificationRecipientSerializer(r).data,
-                    "unread_count": unread,
-                }
-                async_to_sync(channel_layer.group_send)(
-                    _user_group_name(r.user_id),
-                    {"type": "notification_created", "payload": payload},
-                )
-    except Exception:
-        pass
+    transaction.on_commit(
+        lambda: notifications_realtime.push_notification_created(created_recipients)
+    )
 
     return notification
 
@@ -182,9 +161,11 @@ def notify_video_comment(
         recipient_users = [video.user]
 
     title = COMMENT_VIDEO_NOTIFICATION_TITLE
+    comment_excerpt = truncate_inline(comment.content, max_len=90) or "..."
     message = _format_notification_message(
         COMMENT_VIDEO_NOTIFICATION_MESSAGE_TEMPLATE,
         actor=actor,
+        comment_excerpt=comment_excerpt,
     )
 
     return create_notification_with_recipients(
@@ -231,19 +212,9 @@ def mark_read(recipient: NotificationRecipient) -> NotificationRecipient:
     recipient.read_at = timezone.now()
     recipient.save(update_fields=["is_read", "read_at", "updated_at"])
 
-    try:
-        channel_layer = get_channel_layer()
-        if channel_layer:
-            unread = NotificationRecipient.objects.filter(
-                user=recipient.user, is_read=False
-            ).count()
-            payload = {"recipient_id": recipient.id, "unread_count": unread}
-            async_to_sync(channel_layer.group_send)(
-                _user_group_name(recipient.user_id),
-                {"type": "notification_read", "payload": payload},
-            )
-    except Exception:
-        pass
+    transaction.on_commit(
+        lambda: notifications_realtime.push_notification_read(recipient)
+    )
 
     return recipient
 
