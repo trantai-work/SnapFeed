@@ -13,31 +13,23 @@ const MessageBoxContext = createContext(null);
 const STATUS_STYLES = {
   success: {
     icon: CheckCircle2,
-    border: "border-emerald-200 dark:border-emerald-800/80",
-    title: "text-gray-900 dark:text-zinc-100",
-    text: "text-gray-700 dark:text-zinc-300",
-    iconColor: "text-emerald-600 dark:text-emerald-400",
+    accent: "bg-emerald-500",
+    iconWrap: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
   },
   error: {
     icon: XCircle,
-    border: "border-red-200 dark:border-red-900/80",
-    title: "text-gray-900 dark:text-zinc-100",
-    text: "text-gray-700 dark:text-zinc-300",
-    iconColor: "text-red-600 dark:text-red-400",
+    accent: "bg-rose-500",
+    iconWrap: "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
   },
   warning: {
     icon: AlertTriangle,
-    border: "border-amber-200 dark:border-amber-900/80",
-    title: "text-gray-900 dark:text-zinc-100",
-    text: "text-gray-700 dark:text-zinc-300",
-    iconColor: "text-amber-600 dark:text-amber-400",
+    accent: "bg-amber-500",
+    iconWrap: "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
   },
   notification: {
     icon: Bell,
-    border: "border-sky-200 dark:border-sky-900/70",
-    title: "text-gray-900 dark:text-zinc-100",
-    text: "text-gray-700 dark:text-zinc-300",
-    iconColor: "text-sky-600 dark:text-sky-400",
+    accent: "bg-sky-500",
+    iconWrap: "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
   },
 };
 
@@ -130,24 +122,26 @@ function MessageToast({ item, onClose }) {
     <div className="pointer-events-auto">
       <div
         className={[
-          "relative overflow-hidden rounded-2xl border shadow-lg shadow-black/10 dark:shadow-black/40",
-          "bg-white dark:bg-zinc-900",
-          styles.border,
+          "relative overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-lg shadow-black/10 backdrop-blur-md",
+          "bg-white/95 text-zinc-900 dark:bg-zinc-950/85 dark:text-zinc-50",
+          "dark:ring-white/10 dark:shadow-black/40",
         ].join(" ")}
       >
-        <div className="relative p-5 pr-12 flex gap-4">
-          <div className="mt-0.5">
-            <Icon size={24} className={styles.iconColor} />
+        <div className={["absolute left-0 top-0 h-full w-1.5", styles.accent].join(" ")} />
+
+        <div className="relative flex gap-3.5 p-4 pl-5 pr-11">
+          <div className={["mt-0.5 grid h-9 w-9 place-items-center rounded-xl", styles.iconWrap].join(" ")}>
+            <Icon size={18} />
           </div>
 
           <div className="min-w-0">
             {item.title ? (
-              <div className={["text-base font-semibold leading-6", styles.title].join(" ")}>
+              <div className="text-sm font-semibold leading-5">
                 {item.title}
               </div>
             ) : null}
             {item.message ? (
-              <div className={["text-base leading-6 mt-0.5", styles.text].join(" ")}>
+              <div className="mt-0.5 text-sm leading-5 text-zinc-600 dark:text-zinc-300">
                 {item.message}
               </div>
             ) : null}
@@ -156,7 +150,7 @@ function MessageToast({ item, onClose }) {
           <button
             type="button"
             onClick={() => onClose(item.id)}
-            className="absolute top-3.5 right-3.5 rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            className="absolute right-3 top-3 rounded-lg p-2 text-zinc-500 transition hover:bg-black/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-zinc-100"
             aria-label="Đóng"
           >
             <X size={18} />

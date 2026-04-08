@@ -8,6 +8,7 @@ import {
   User,
   Search,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import logo from "../assets/logo.png";
 import logoLightMode from "../assets/logo_light_mode.png";
@@ -19,6 +20,8 @@ import { useTheme } from "../context/ThemeContext";
 import { authService } from "../services/auth.service";
 import { notificationsApi } from "../api/notifications.api";
 import { connectNotificationsSocket } from "../services/notificationsRealtime";
+import { onAuthModalOpen } from "../utils/authModalBus";
+import { authApi } from "../api";
 
 function classNames(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -26,7 +29,8 @@ function classNames(...xs) {
 
 export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }) {
   const { theme } = useTheme();
-  const { isAuthenticated, loading } = useAuth();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, loading, setUser } = useAuth();
   const { show } = useMessageBox();
   const [authOpen, setAuthOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -36,6 +40,10 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
   const [incomingRecipient, setIncomingRecipient] = useState(null);
   const recentProvider = useMemo(() => {
     return window.localStorage.getItem("auth_recent_provider") || null;
+  }, []);
+
+  useEffect(() => {
+    return onAuthModalOpen(() => setAuthOpen(true));
   }, []);
 
   useEffect(() => {
@@ -251,7 +259,57 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
               })}
             </nav>
 
-            <div className="mt-auto space-y-2 border-t border-gray-200 pt-6 text-sm text-gray-500 dark:border-gray-800">
+            <div className="mt-auto space-y-3 border-t border-gray-200 pt-6 text-sm text-gray-500 dark:border-gray-800">
+              {!loading ? (
+                !isAuthenticated ? (
+                  <button
+                    type="button"
+                    className="w-full cursor-pointer rounded-xl bg-[#f6339a] px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 active:brightness-95"
+                    onClick={() => {
+                      setAuthOpen(true);
+                    }}
+                  >
+                    Đăng nhập
+                  </button>
+                ) : (
+                  <>
+                    <div className="flex w-full items-center gap-3 rounded-xl bg-gray-100 px-3 py-3 text-left text-gray-900 dark:bg-white/10 dark:text-white">
+                      {user?.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.username || ""}
+                          className="h-9 w-9 shrink-0 rounded-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="h-9 w-9 shrink-0 rounded-full bg-gray-300 dark:bg-white/10" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold">
+                          {user?.firstName || ""} {user?.lastName || user?.username}
+                        </div>
+                        <div className="truncate text-xs text-gray-600 dark:text-white/60">
+                          @{user?.username || ""}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="w-full cursor-pointer rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-200 active:bg-gray-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:active:bg-white/20"
+                      onClick={async () => {
+                        await authApi.logout();
+                        setUser(null);
+                        navigate("/");
+                        onMobileClose();
+                      }}
+                    >
+                      Đăng xuất
+                    </button>
+                  </>
+                )
+              ) : null}
+
               <Link
                 to="/privacy-policy"
                 className="block text-xs text-gray-500 transition-colors hover:text-gray-800 dark:hover:text-gray-300"

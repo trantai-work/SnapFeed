@@ -18,5 +18,5 @@ REACT_VIDEO_NOTIFICATION_MESSAGE_TEMPLATE = (
 
 COMMENT_VIDEO_NOTIFICATION_TITLE = "Bình luận mới trên video"
 COMMENT_VIDEO_NOTIFICATION_MESSAGE_TEMPLATE = (
-    "{first_name} {last_name} đã bình luận trên video của bạn."
+    '{first_name} {last_name} đã bình luận: "{comment_excerpt}"'
 )
