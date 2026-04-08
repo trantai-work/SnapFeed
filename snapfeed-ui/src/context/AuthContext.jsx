@@ -26,6 +26,7 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false);
     }
+    
   }, []);
 
 
