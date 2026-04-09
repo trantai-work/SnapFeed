@@ -3,6 +3,13 @@ import { cursorFromNextLink } from "../utils/notificationItem";
 import { normalizeComment } from "../utils/commentItem";
 
 export const commentsApi = {
+  /** GET /comments/:id */
+  async getById(commentId) {
+    if (!commentId) return null;
+    const data = await api.get(`/comments/${commentId}`);
+    return normalizeComment(data);
+  },
+
   /** GET /comments?video_id=:id — cursor pagination */
   async list({ videoId, cursor, pageSize } = {}) {
     const params = {};

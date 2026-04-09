@@ -82,6 +82,7 @@ function FeedItemComponent({
     saveLabel,
     shareLabel: "Chia sẻ",
     avatarUrl,
+    profileUserId: item.user,
     myReaction: item.myReaction ?? null,
     reactDisabled: !isAuthenticated,
     onReact: handleReact,

@@ -1,9 +1,6 @@
 from core.pagination import BaseCursorPagination
 
 
-class FeedPagination(BaseCursorPagination):
-    """
-    Cursor pagination for feed API.
-    """
-
-    ordering = ["distance", "id"]
+class VideCursorPagination(BaseCursorPagination):
+    page_size = 10
+    ordering = ["-created_at", "-id"]
