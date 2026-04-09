@@ -81,6 +81,13 @@ export default function CommentsPanel({
   onCommentCreated,
   onRequestMobileComposer,
   incomingComment,
+  className,
+  border = "left", // left | top | none
+  headerLeft = null,
+  headerRight = null,
+  showCloseButton = true,
+  title = "Bình luận",
+  onListScroll,
 }) {
   const { isAuthenticated } = useAuth();
   const { show } = useMessageBox();
@@ -157,10 +164,12 @@ export default function CommentsPanel({
 
   const onScroll = useCallback(() => {
     const el = listRef.current;
-    if (!el || !canLoadMore) return;
+    if (!el) return;
+    onListScroll?.(el.scrollTop);
+    if (!canLoadMore) return;
     const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
     if (remaining < 240) loadMore();
-  }, [canLoadMore, loadMore]);
+  }, [canLoadMore, loadMore, onListScroll]);
 
   const canSubmit = useMemo(() => {
     const t = (content || "").trim();
@@ -207,26 +216,45 @@ export default function CommentsPanel({
     resizeInput();
   }, [content, resizeInput]);
 
+  const borderClass =
+    border === "left"
+      ? "border-l border-zinc-200/90 dark:border-white/10"
+      : border === "top"
+        ? "border-t border-zinc-200/90 dark:border-white/10"
+        : "";
+
   const wrapClass = classNames(
     "relative flex h-full w-full flex-col overflow-hidden",
-    "border-l border-zinc-200/90 bg-white shadow-2xl dark:border-white/10 dark:bg-black"
+    borderClass,
+    "bg-white shadow-2xl dark:bg-black",
+    className
   );
 
   return (
     <div className={wrapClass}>
       <div className="flex items-center justify-between border-b border-zinc-200/80 px-4 py-3 dark:border-white/10">
-        <button
-          type="button"
-          aria-label="Đóng"
-          onClick={() => onClose?.()}
-          className="grid h-9 w-9 place-items-center rounded-full bg-zinc-100 text-zinc-900 hover:bg-zinc-200 active:bg-zinc-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:active:bg-white/20"
-        >
-          <X size={18} />
-        </button>
+        {headerLeft ? (
+          <div className="h-9">{headerLeft}</div>
+        ) : showCloseButton ? (
+          <button
+            type="button"
+            aria-label="Đóng"
+            onClick={() => onClose?.()}
+            className="grid h-9 w-9 place-items-center rounded-full bg-zinc-100 text-zinc-900 hover:bg-zinc-200 active:bg-zinc-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:active:bg-white/20"
+          >
+            <X size={18} />
+          </button>
+        ) : (
+          <div className="h-9 w-9" aria-hidden />
+        )}
         <div className="text-sm font-semibold text-zinc-900 dark:text-white">
-          Bình luận
+          {title}
         </div>
-        <div className="h-9 w-9" aria-hidden />
+        {headerRight ? (
+          <div className="h-9">{headerRight}</div>
+        ) : (
+          <div className="h-9 w-9" aria-hidden />
+        )}
       </div>
 
       <div

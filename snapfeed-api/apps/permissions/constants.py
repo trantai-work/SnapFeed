@@ -11,6 +11,7 @@ GROUP_PERMISSIONS_MAP = {
         "videos.add_video",
         "videos.generate_presigned_url",
         "videos.react_video",
+        "videos.view_video",
         "notifications.view_notificationrecipient",
         "notifications.change_notificationrecipient",
         "comments.view_videocomment",

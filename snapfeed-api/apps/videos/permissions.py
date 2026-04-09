@@ -19,3 +19,13 @@ class ReactVideoPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
         return user.has_perm("videos.react_video")
+
+
+class ViewVideoPermissions(permissions.BasePermission):
+    """
+    Permission class to check if a user has permission to view videos.
+    """
+
+    def has_permission(self, request, view):
+        user = request.user
+        return user.has_perm("videos.view_video")

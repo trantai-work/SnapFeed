@@ -6,13 +6,17 @@ from apps.comments.models import VideoComment
 from apps.comments.pagination import VideoCommentPagination
 from apps.comments.serializers import VideoCommentSerializer
 from apps.comments.services import comment_services
-from core.apis import BaseAPIViewSet
+from core.apis import BaseAPIViewSet, WrappedResponseMixin
 from core.permissions import FullDjangoModelPermissions
 
 
 @extend_schema(tags=["comments"])
 class VideoCommentViewSet(
-    mixins.CreateModelMixin, mixins.ListModelMixin, BaseAPIViewSet
+    WrappedResponseMixin,
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    BaseAPIViewSet,
 ):
     serializer_class = VideoCommentSerializer
     permission_classes = [FullDjangoModelPermissions]
@@ -23,6 +27,15 @@ class VideoCommentViewSet(
         .order_by("-created_at", "-id")
         .all()
     )
+
+    def filter_queryset(self, queryset):
+        """
+        Only apply django-filter on list endpoints.
+        """
+
+        if getattr(self, "action", None) != "list":
+            return queryset
+        return super().filter_queryset(queryset)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

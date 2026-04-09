@@ -6,6 +6,55 @@ body {
     font-family: 'IBM Plex Sans', system-ui, sans-serif;
 }
 
+@keyframes messagebox-in {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* App scrollbar (avoid bright white in dark mode) */
+html {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(100 116 139 / 0.45) transparent; /* slate-500 */
+}
+
+.dark html {
+    scrollbar-color: rgb(148 163 184 / 0.22) transparent; /* slate-400 */
+}
+
+html::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+html::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+html::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: rgb(100 116 139 / 0.45);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.dark html::-webkit-scrollbar-thumb {
+    background: rgb(148 163 184 / 0.22);
+}
+
+html::-webkit-scrollbar-thumb:hover {
+    background: rgb(71 85 105 / 0.55); /* slate-600 */
+}
+
+.dark html::-webkit-scrollbar-thumb:hover {
+    background: rgb(148 163 184 / 0.32);
+}
+
 /* Notifications panel scrollbar */
 .notifications-scroll {
     scrollbar-width: thin;

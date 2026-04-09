@@ -49,7 +49,14 @@ export function MessageBoxProvider({ children, maxVisible = 4 }) {
   }, []);
 
   const show = useCallback(
-    ({ status = "success", title = "", message = "", duration = 7500 } = {}) => {
+    ({
+      status = "success",
+      title = "",
+      message = "",
+      duration = 7500,
+      onClick,
+      meta,
+    } = {}) => {
       const id =
         typeof crypto !== "undefined" && crypto.randomUUID
           ? crypto.randomUUID()
@@ -61,6 +68,8 @@ export function MessageBoxProvider({ children, maxVisible = 4 }) {
         title,
         message,
         createdAt: Date.now(),
+        onClick: typeof onClick === "function" ? onClick : null,
+        meta: meta ?? null,
       };
 
       setItems((prev) => {
@@ -100,11 +109,9 @@ function MessageBoxStack({ items, onClose }) {
   return (
     <div
       className={[
-        "fixed z-[9999] flex w-[min(460px,calc(100vw-2rem))] flex-col gap-3 pointer-events-none",
-        // Mobile: top-right (doesn't cover bottom UI).
-        "right-4 top-4 left-auto bottom-auto",
-        // Desktop/tablet: bottom-left.
-        "sm:left-4 sm:bottom-4 sm:right-auto sm:top-auto",
+        "fixed z-[9999] pointer-events-none",
+        "left-1/2 top-4 -translate-x-1/2",
+        "flex w-[min(520px,calc(100vw-2rem))] flex-col gap-3",
       ].join(" ")}
     >
       {items.map((item) => (
@@ -122,15 +129,27 @@ function MessageToast({ item, onClose }) {
     <div className="pointer-events-auto">
       <div
         className={[
-          "relative overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-lg shadow-black/10 backdrop-blur-md",
+          "relative overflow-hidden rounded-3xl ring-1 ring-black/5 shadow-xl shadow-black/10 backdrop-blur-md",
           "bg-white/95 text-zinc-900 dark:bg-zinc-950/85 dark:text-zinc-50",
           "dark:ring-white/10 dark:shadow-black/40",
+          "animate-[messagebox-in_240ms_ease-out]",
+          item.onClick ? "cursor-pointer" : "",
         ].join(" ")}
+        onClick={async () => {
+          if (!item.onClick) return;
+          await item.onClick(item.meta);
+          onClose(item.id);
+        }}
       >
         <div className={["absolute left-0 top-0 h-full w-1.5", styles.accent].join(" ")} />
 
-        <div className="relative flex gap-3.5 p-4 pl-5 pr-11">
-          <div className={["mt-0.5 grid h-9 w-9 place-items-center rounded-xl", styles.iconWrap].join(" ")}>
+        <div className="relative flex gap-4 p-4.5 pl-5.5 pr-12">
+          <div
+            className={[
+              "mt-0.5 grid h-10 w-10 place-items-center rounded-2xl",
+              styles.iconWrap,
+            ].join(" ")}
+          >
             <Icon size={18} />
           </div>
 
@@ -149,8 +168,11 @@ function MessageToast({ item, onClose }) {
 
           <button
             type="button"
-            onClick={() => onClose(item.id)}
-            className="absolute right-3 top-3 rounded-lg p-2 text-zinc-500 transition hover:bg-black/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-zinc-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose(item.id);
+            }}
+            className="absolute right-3.5 top-3.5 rounded-xl p-2 text-zinc-500 transition hover:bg-black/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-zinc-100"
             aria-label="Đóng"
           >
             <X size={18} />
