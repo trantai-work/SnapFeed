@@ -19,6 +19,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { authService } from "../services/auth.service";
 import { notificationsApi } from "../api/notifications.api";
+import { commentsApi } from "../api/comments.api";
 import { connectNotificationsSocket } from "../services/notificationsRealtime";
 import { onAuthModalOpen } from "../utils/authModalBus";
 import { authApi } from "../api";
@@ -97,11 +98,37 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
           if (payload.recipient) setIncomingRecipient(payload.recipient);
           if (payload.recipient?.notification) {
             const n = payload.recipient.notification;
+            const actorId = n?.actor?.id ?? null;
+            const target = n?.target ?? null;
+            const recipientId = payload.recipient?.id ?? null;
             show({
               status: "notification",
               title: n.title || "Thông báo mới",
               message: n.message || "",
               duration: 6500,
+              onClick: async (meta) => {
+                const target = meta?.target ?? null;
+                if (!target?.type || !target?.id) return;
+                setNotificationsOpen(false);
+                if (meta?.recipientId) {
+                  try {
+                    await notificationsApi.markRead(meta.recipientId);
+                    refreshUnread();
+                  } catch {
+                    // Ignore markRead failure; navigation intent is still valid.
+                  }
+                }
+                if (target.type === "videos.video") {
+                  navigate("/profile", { state: { openVideoId: target.id } });
+                  return;
+                }
+                if (target.type === "comments.videocomment") {
+                  const c = await commentsApi.getById(target.id);
+                  const vid = c?.video;
+                  if (vid) navigate("/profile", { state: { openVideoId: vid } });
+                }
+              },
+              meta: { actorId, target, recipientId },
             });
           }
           return;
@@ -178,13 +205,22 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
       />
 
       <aside className={panelClass} aria-hidden={false}>
-            <div className="mb-4 flex items-center gap-2">
+            <button
+              type="button"
+              className="mb-4 flex items-center gap-2 cursor-pointer"
+              aria-label="Về trang Đề xuất"
+              onClick={() => {
+                setNotificationsOpen(false);
+                navigate("/");
+                onMobileClose?.();
+              }}
+            >
               <img
                 src={theme === "light" ? logoLightMode : logo}
                 alt="SnapFeed"
                 className="h-20 max-h-[min(22vh,8.5rem)] w-auto max-w-full object-contain lg:h-28 lg:max-h-none"
               />
-            </div>
+            </button>
 
             <div className="mb-4 flex items-center rounded-full bg-gray-100 px-4 py-2 dark:bg-gray-800">
               <Search size={16} className="text-gray-500 dark:text-gray-400" />

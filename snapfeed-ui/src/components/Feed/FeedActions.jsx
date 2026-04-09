@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Bookmark,
   MessageCircle,
@@ -17,6 +18,7 @@ function FeedActionsComponent({
   saveLabel,
   shareLabel,
   avatarUrl,
+  profileUserId,
   myReaction,
   reactDisabled = false,
   onReact,
@@ -27,6 +29,8 @@ function FeedActionsComponent({
   overlay = false,
   className = "",
 }) {
+  const navigate = useNavigate();
+
   const actionBtn = overlay
     ? "flex cursor-pointer flex-col items-center gap-1.5 text-white transition-transform active:scale-95"
     : "flex cursor-pointer flex-col items-center gap-1.5 text-zinc-900 transition-transform hover:scale-105 active:scale-95 dark:text-white";
@@ -114,7 +118,15 @@ function FeedActionsComponent({
         </span>
         <span className={shareLabelClass}>{shareLabel}</span>
       </button>
-      <button type="button" className={actionBtn} aria-label="Hồ sơ người đăng">
+      <button
+        type="button"
+        className={actionBtn}
+        aria-label="Hồ sơ người đăng"
+        onClick={() => {
+          if (!profileUserId) return;
+          navigate(`/profile/${profileUserId}`);
+        }}
+      >
         {avatarUrl ? (
           <span
             className={classNames(

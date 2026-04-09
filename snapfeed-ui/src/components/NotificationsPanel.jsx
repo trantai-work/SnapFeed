@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, MessageSquare, User, X } from "lucide-react";
 import { notificationsApi } from "../api/notifications.api";
+import { commentsApi } from "../api/comments.api";
 import {
   formatNotificationTime,
   normalizeNotificationRecipient,
 } from "../utils/notificationItem";
+import { useNavigate } from "react-router-dom";
 
 const FILTERS = [
   { id: "all", label: "Tất cả" },
@@ -63,6 +65,7 @@ export default function NotificationsPanel({
   onItemMarkedRead,
   incomingRecipient,
 }) {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState("all");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -169,6 +172,36 @@ export default function NotificationsPanel({
       readInFlightRef.current.delete(recipientId);
     }
   }, []);
+
+  const handleOpenFromNotification = useCallback(
+    (row) => {
+      const n = row?.notification;
+      const target = n?.target ?? null;
+      if (!target?.type || !target?.id) return false;
+
+      const openVideoId = async (videoId) => {
+        if (!videoId) return;
+        onClose?.();
+        navigate("/profile", { state: { openVideoId: videoId } });
+      };
+
+      if (target.type === "videos.video") {
+        void openVideoId(target.id);
+        return true;
+      }
+
+      if (target.type === "comments.videocomment") {
+        void (async () => {
+          const c = await commentsApi.getById(target.id);
+          await openVideoId(c?.video);
+        })();
+        return true;
+      }
+
+      return false;
+    },
+    [navigate, onClose]
+  );
 
   const activeChip =
     "bg-gray-900 text-white shadow-sm dark:bg-white dark:text-black";
@@ -278,11 +311,15 @@ export default function NotificationsPanel({
                     tabIndex={0}
                     role="button"
                     aria-label={unread ? "Đánh dấu đã đọc" : "Thông báo"}
-                    onClick={() => markReadOptimistic(row.id)}
+                    onClick={() => {
+                      markReadOptimistic(row.id);
+                      handleOpenFromNotification(row);
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         markReadOptimistic(row.id);
+                        handleOpenFromNotification(row);
                       }
                     }}
                     className={classNames(

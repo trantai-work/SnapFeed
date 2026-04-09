@@ -8,13 +8,13 @@ export default function Home() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
-    <div className="flex min-h-dvh bg-white text-gray-900 transition-colors dark:bg-black dark:text-white">
+    <div className="flex h-[100dvh] overflow-hidden bg-white text-gray-900 transition-colors dark:bg-black dark:text-white">
       <Sidebar
         mobileOpen={mobileNavOpen}
         onMobileClose={() => setMobileNavOpen(false)}
       />
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col max-lg:max-h-[min(100svh,100dvh)] max-lg:overflow-x-hidden max-lg:overflow-y-hidden max-lg:p-0 lg:min-h-screen lg:max-h-none lg:overflow-visible lg:p-6 lg:pt-6">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden max-lg:p-0 lg:p-6 lg:pt-6">
         <button
           type="button"
           className="fixed left-2 top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200/90 bg-white/95 text-gray-800 shadow-md backdrop-blur-md transition-colors hover:bg-gray-50 dark:border-white/10 dark:bg-[#1f1f1f]/95 dark:text-white dark:hover:bg-white/10 sm:left-3 sm:top-3 sm:h-11 sm:w-11 lg:hidden"

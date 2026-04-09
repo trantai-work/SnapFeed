@@ -18,16 +18,34 @@ from apps.videos.serializers import (
 )
 from apps.notifications.services import notification_services
 from apps.videos.services import reaction_services, s3_services, video_services
-from core.apis import BaseAPIViewSet
+from core.apis import BaseAPIViewSet, WrappedResponseMixin
 from core.permissions import FullDjangoModelPermissions
 from utils import random
 
 
 @extend_schema(tags=["videos"])
-class VideoViewSet(mixins.CreateModelMixin, BaseAPIViewSet):
+class VideoViewSet(
+    WrappedResponseMixin,
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    BaseAPIViewSet,
+):
     serializer_class = VideoSerializer
     queryset = Video.objects.all()
     permission_classes = [FullDjangoModelPermissions]
+
+    def get_queryset(self):
+        qs = Video.objects.select_related("user").all()
+        user = getattr(self.request, "user", None)
+        if user and user.is_authenticated:
+            qs = qs.prefetch_related(
+                Prefetch(
+                    "reactions",
+                    queryset=VideoReaction.objects.filter(user=user),
+                    to_attr="_prefetched_user_reactions",
+                )
+            )
+        return qs
 
     def perform_create(self, serializer):
         """

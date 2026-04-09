@@ -5,6 +5,7 @@ import FeedContent from "../components/MainContent/FeedContent";
 import VideoUploadPage from "../pages/VideoUploadPage";
 import PrivacyPolicyPage from "../pages/PrivacyPolicyPage";
 import DeleteDataPage from "../pages/DeleteDataPage";
+import ProfilePage from "../pages/ProfilePage";
 
 function AppRoutes() {
   return (
@@ -12,6 +13,8 @@ function AppRoutes() {
       <Route path="/" element={<Home />}>
         <Route index element={<FeedContent />} />
         <Route path="upload" element={<UploadContent />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="profile/:id" element={<ProfilePage />} />
       </Route>
 
       <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />

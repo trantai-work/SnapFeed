@@ -1,5 +1,6 @@
 import api from "./api";
 import ApiError from "./ApiError";
+import { normalizeFeedItem } from "../utils/feedItem";
 
 export const uploadToS3 = async ({ url, fields, file }) => {
   const formData = new FormData();
@@ -23,6 +24,13 @@ export const uploadToS3 = async ({ url, fields, file }) => {
 };
 
 export const videosApi = {
+  /** GET /videos/:id */
+  getById: async (videoId) => {
+    if (!videoId) return null;
+    const data = await api.get(`/videos/${videoId}`);
+    return normalizeFeedItem(data);
+  },
+
   generatePresignedUrl: async ({ fileName, contentType }) => {
     const data = await api.post("/videos/generate_presigned_url", {
       fileName,
