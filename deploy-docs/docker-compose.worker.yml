@@ -1,0 +1,17 @@
+# Create docker-compose.yml and copy this content to it.
+
+name: videomae-worker
+services:
+  videomae-worker:
+    image: bintolo1b/snapfeed-ai-worker:latest
+    container_name: videomae-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - HF_HOME=/cache/hf
+    volumes:
+      - hf_cache:/cache/hf
+    command: ["python", "main.py"]
+volumes:
+  hf_cache:

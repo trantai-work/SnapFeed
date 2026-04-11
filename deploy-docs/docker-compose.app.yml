@@ -1,3 +1,5 @@
+# Create docker-compose.yml and copy this content to it.
+
 name: snapfeed
 services:
   api:
