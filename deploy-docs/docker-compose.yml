@@ -1,0 +1,36 @@
+name: snapfeed
+services:
+  api:
+    image: bintolo1b/snapfeed-api:latest
+    container_name: snapfeed-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    # ASGI (WebSocket works)
+    command: >
+      gunicorn config.asgi:application
+      --bind 0.0.0.0:8000
+      --workers 1
+      --worker-class uvicorn.workers.UvicornWorker
+    ports:
+      - "${MAPPING_API_PORT}:8000"
+    depends_on:
+      redis:
+        condition: service_started
+  redis:
+    image: redis:7-alpine
+    container_name: snapfeed-redis
+    restart: unless-stopped
+    ports:
+      - "${MAPPING_REDIS_PORT:-6379}:6379"
+  ui:
+    image: bintolo1b/snapfeed-ui:latest
+    container_name: snapfeed-ui
+    restart: unless-stopped
+    ports:
+      - "${MAPPING_UI_PORT}:80"
+    depends_on:
+      api:
+        condition: service_started
