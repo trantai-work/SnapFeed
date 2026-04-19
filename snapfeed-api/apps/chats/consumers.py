@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from django.contrib.auth.models import AnonymousUser
 
-from apps.notifications.constants import NOTIFICATIONS_USER_GROUP_PREFIX
+from apps.chats.constants import CHAT_USER_INBOX_GROUP_PREFIX
 from core.consumers import BaseAsyncJsonWebsocketConsumer
 
 
-class NotificationsConsumer(BaseAsyncJsonWebsocketConsumer):
+class ChatsInboxConsumer(BaseAsyncJsonWebsocketConsumer):
     async def connect(self):
         user = self.scope.get("user")
         if (
@@ -19,15 +19,15 @@ class NotificationsConsumer(BaseAsyncJsonWebsocketConsumer):
             return
 
         self.user = user
-        await self.add_groups(f"{NOTIFICATIONS_USER_GROUP_PREFIX}.{user.id}")
+        await self.add_groups(f"{CHAT_USER_INBOX_GROUP_PREFIX}.{user.id}")
         await self.accept()
 
-    async def notification_created(self, event):
+    async def message_created(self, event):
         await self.send_json(
-            {"type": "notification.created", "payload": event.get("payload")}
+            {"type": "message.created", "payload": event.get("payload")}
         )
 
-    async def notification_read(self, event):
+    async def conversation_updated(self, event):
         await self.send_json(
-            {"type": "notification.read", "payload": event.get("payload")}
+            {"type": "conversation.updated", "payload": event.get("payload")}
         )

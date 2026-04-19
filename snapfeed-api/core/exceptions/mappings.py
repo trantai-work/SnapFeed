@@ -9,6 +9,7 @@ from rest_framework.exceptions import (
 
 from rest_framework_simplejwt.exceptions import InvalidToken
 
+from apps.chats.exceptions import UserNotInConversationError
 from apps.videos.exceptions import (
     InvalidS3KeyFormatError,
     NotVideoOwnerError,
@@ -56,4 +57,5 @@ DOMAIN_EXCEPTION_STATUS_MAP = {
     NotVideoOwnerError: status.HTTP_403_FORBIDDEN,
     S3ObjectNotFoundError: status.HTTP_400_BAD_REQUEST,
     VideoWithS3KeyNotFound: status.HTTP_400_BAD_REQUEST,
+    UserNotInConversationError: status.HTTP_400_BAD_REQUEST,
 }

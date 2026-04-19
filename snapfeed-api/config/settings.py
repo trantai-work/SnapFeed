@@ -162,9 +162,7 @@ USE_I18N = True
 USE_TZ = True
 
 
-DEFAULT_RENDERER_CLASSES = (
-    "djangorestframework_camel_case.render.CamelCaseJSONRenderer",
-)
+DEFAULT_RENDERER_CLASSES = ("core.renderers.EnvelopeCamelCaseJSONRenderer",)
 
 if DEBUG:
     DEFAULT_RENDERER_CLASSES += (

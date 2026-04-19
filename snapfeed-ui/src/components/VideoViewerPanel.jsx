@@ -171,12 +171,14 @@ export default function VideoViewerPanel({
 
       <div
         className={classNames(
-          "absolute right-0 bg-white shadow-2xl dark:bg-black",
-          // Mobile: full screen (no left gap). Desktop: right drawer.
-          "max-lg:inset-0 max-lg:w-full lg:inset-y-0 lg:w-[min(1200px,96vw)]",
-          "overflow-hidden max-lg:rounded-none lg:rounded-l-3xl",
-          "transition-transform duration-300 ease-out will-change-transform",
-          shown ? "translate-x-0" : "translate-x-full"
+          "absolute bg-white shadow-2xl dark:bg-black border border-black/10 ring-1 ring-black/5 dark:border-white/20 dark:ring-white/10",
+          // Mobile: full screen. Desktop: centered panel (horizontally).
+          "max-lg:inset-0 max-lg:w-full lg:inset-y-0 lg:left-1/2 lg:w-[min(1200px,96vw)] lg:-translate-x-1/2",
+          "overflow-hidden max-lg:rounded-none lg:rounded-3xl",
+          "transition-[transform,opacity] duration-300 ease-out will-change-[transform,opacity]",
+          shown
+            ? "max-lg:translate-x-0 lg:opacity-100 lg:scale-100"
+            : "max-lg:translate-x-full lg:opacity-0 lg:scale-95"
         )}
         role="dialog"
         aria-modal="true"

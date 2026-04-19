@@ -25,6 +25,8 @@ _ERROR_MESSAGES = {
         "video_with_s3_key_not_found": "Video with {s3_key} key not found.",
         "notification_not_found": "Notification not found.",
         "text_comment_too_long": "Comment text is too long",
+        "user_not_in_conversation": "User not in conversation.",
+        "invalid_conversation": "Invalid conversation.",
     },
     "vi": {
         "common": {
@@ -49,6 +51,8 @@ _ERROR_MESSAGES = {
         "video_with_s3_key_not_found": "Video với {s3_key} key không tìm thấy.",
         "notification_not_found": "Không tìm thấy thông báo.",
         "text_comment_too_long": "Nội dung bình luận quá dài",
+        "user_not_in_conversation": "Người dùng không nằm trong đoạn chat.",
+        "invalid_conversation": "Đoạn chat không hợp lệ.",
     },
 }
 

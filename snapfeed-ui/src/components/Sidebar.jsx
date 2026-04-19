@@ -3,7 +3,7 @@ import { Link, NavLink } from "react-router-dom";
 import {
   Home as HomeIcon,
   Send,
-  MessageSquare,
+  Bell,
   Upload,
   User,
   Search,
@@ -19,6 +19,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { authService } from "../services/auth.service";
 import { notificationsApi } from "../api/notifications.api";
+import { conversationsApi } from "../api/conversations.api";
 import { commentsApi } from "../api/comments.api";
 import { connectNotificationsSocket } from "../services/notificationsRealtime";
 import { onAuthModalOpen } from "../utils/authModalBus";
@@ -36,7 +37,9 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
   const [authOpen, setAuthOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const unreadFetchLock = useRef(false);
+  const chatUnreadFetchLock = useRef(false);
   const wsRef = useRef(null);
   const [incomingRecipient, setIncomingRecipient] = useState(null);
   const recentProvider = useMemo(() => {
@@ -69,13 +72,28 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
     }
   }, [isAuthenticated]);
 
+  const refreshChatUnread = useCallback(async () => {
+    if (!isAuthenticated || chatUnreadFetchLock.current) return;
+    chatUnreadFetchLock.current = true;
+    try {
+      const c = await conversationsApi.unreadCount();
+      setChatUnreadCount(c);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      chatUnreadFetchLock.current = false;
+    }
+  }, [isAuthenticated]);
+
   useEffect(() => {
     if (!isAuthenticated) {
       setUnreadCount(0);
+      setChatUnreadCount(0);
       return;
     }
     refreshUnread();
-  }, [isAuthenticated, refreshUnread]);
+    refreshChatUnread();
+  }, [isAuthenticated, refreshUnread, refreshChatUnread]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -153,6 +171,16 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
   }, [isAuthenticated]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // Keep chat unread badge reasonably fresh without opening another /ws/chats socket.
+    const id = setInterval(() => {
+      refreshChatUnread();
+    }, 15000);
+    return () => clearInterval(id);
+  }, [isAuthenticated, refreshChatUnread]);
+
+  useEffect(() => {
     if (!mobileOpen) return;
     const onKey = (e) => {
       if (e.key !== "Escape") return;
@@ -178,7 +206,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
   const menu = [
     { icon: HomeIcon, label: "Đề xuất", path: "/", public: true },
     { icon: Send, label: "Tin nhắn", path: "chats" },
-    { icon: MessageSquare, label: "Thông báo", path: "notifications" },
+    { icon: Bell, label: "Thông báo", path: "notifications" },
     { icon: Upload, label: "Tải lên", path: "upload" },
     { icon: User, label: "Hồ sơ", path: "profile" },
   ];
@@ -269,6 +297,42 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                     </button>
                   );
                 }
+                if (item.path === "chats") {
+                  return (
+                    <NavLink
+                      key={index}
+                      to={item.path}
+                      onClick={(e) => {
+                        const requiresAuth = !item.public;
+                        if (!isAuthenticated && requiresAuth) {
+                          e.preventDefault();
+                          setAuthOpen(true);
+                          return;
+                        }
+                        onMobileClose();
+                      }}
+                      className={({ isActive }) =>
+                        classNames(
+                          "flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800",
+                          isActive ? "font-semibold text-pink-500" : ""
+                        )
+                      }
+                    >
+                      <span className="relative">
+                        <Icon size={20} />
+                        {chatUnreadCount > 0 ? (
+                          <span
+                            className="absolute -right-2.5 -top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[0.65rem] font-bold leading-none text-white shadow-sm ring-2 ring-white dark:ring-black"
+                            aria-label={`${chatUnreadCount} cuộc trò chuyện chưa đọc`}
+                          >
+                            {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="font-medium">{item.label}</span>
+                    </NavLink>
+                  );
+                }
                 return (
                   <NavLink
                     key={index}
@@ -309,7 +373,15 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                   </button>
                 ) : (
                   <>
-                    <div className="flex w-full items-center gap-3 rounded-xl bg-gray-100 px-3 py-3 text-left text-gray-900 dark:bg-white/10 dark:text-white">
+                    <button
+                      type="button"
+                      aria-label="Tới hồ sơ"
+                      className="flex w-full cursor-pointer items-center gap-3 rounded-xl bg-gray-100 px-3 py-3 text-left text-gray-900 transition-colors hover:bg-gray-200 active:bg-gray-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:active:bg-white/20"
+                      onClick={() => {
+                        navigate("/profile");
+                        onMobileClose();
+                      }}
+                    >
                       {user?.avatarUrl ? (
                         <img
                           src={user.avatarUrl}
@@ -328,7 +400,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                           @{user?.username || ""}
                         </div>
                       </div>
-                    </div>
+                    </button>
 
                     <button
                       type="button"

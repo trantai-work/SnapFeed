@@ -16,6 +16,10 @@ GROUP_PERMISSIONS_MAP = {
         "notifications.change_notificationrecipient",
         "comments.view_videocomment",
         "comments.add_videocomment",
+        "chats.view_conversation",
+        "chats.add_conversation",
+        "chats.view_message",
+        "chats.add_message",
     ],
     Groups.ADMIN.value: [],
 }

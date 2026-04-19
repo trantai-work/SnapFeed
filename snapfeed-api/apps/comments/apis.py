@@ -6,13 +6,12 @@ from apps.comments.models import VideoComment
 from apps.comments.pagination import VideoCommentPagination
 from apps.comments.serializers import VideoCommentSerializer
 from apps.comments.services import comment_services
-from core.apis import BaseAPIViewSet, WrappedResponseMixin
+from core.apis import BaseAPIViewSet
 from core.permissions import FullDjangoModelPermissions
 
 
 @extend_schema(tags=["comments"])
 class VideoCommentViewSet(
-    WrappedResponseMixin,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,

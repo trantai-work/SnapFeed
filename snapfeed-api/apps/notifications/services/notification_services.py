@@ -15,7 +15,7 @@ from apps.notifications.constants import (
     REACT_VIDEO_NOTIFICATION_TITLE,
 )
 from apps.notifications.models import Notification, NotificationRecipient
-from apps.notifications.services import notifications_realtime
+from apps.notifications.services import notifications_realtime_services
 from apps.users.models import User
 from apps.videos.models import Video
 from apps.videos.services import reaction_services
@@ -101,7 +101,9 @@ def create_notification_with_recipients(
         )
 
     transaction.on_commit(
-        lambda: notifications_realtime.push_notification_created(created_recipients)
+        lambda: notifications_realtime_services.push_notification_created(
+            created_recipients
+        )
     )
 
     return notification
@@ -213,10 +215,23 @@ def mark_read(recipient: NotificationRecipient) -> NotificationRecipient:
     recipient.save(update_fields=["is_read", "read_at", "updated_at"])
 
     transaction.on_commit(
-        lambda: notifications_realtime.push_notification_read(recipient)
+        lambda: notifications_realtime_services.push_notification_read(recipient)
     )
 
     return recipient
+
+
+def mark_read_all(*, user: User) -> int:
+    """
+    Mark all unread NotificationRecipient rows as read for the given user.
+    Returns number of rows updated.
+    """
+    now = timezone.now()
+    return int(
+        NotificationRecipient.objects.filter(user=user, is_read=False).update(
+            is_read=True, read_at=now, updated_at=now
+        )
+    )
 
 
 def get_unread_count(*, user: User) -> int:
