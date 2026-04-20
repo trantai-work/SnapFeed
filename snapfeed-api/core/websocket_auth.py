@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from http.cookies import SimpleCookie
 
 from asgiref.sync import sync_to_async
@@ -7,6 +8,8 @@ from channels.middleware import BaseMiddleware
 from django.contrib.auth.models import AnonymousUser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+
+logger = logging.getLogger(__name__)
 
 
 @sync_to_async
@@ -37,7 +40,14 @@ class CookieJWTAuthMiddleware(BaseMiddleware):
             if raw_token:
                 try:
                     scope["user"] = await _get_user_from_token(raw_token)
-                except (InvalidToken, TokenError, Exception):
+                except (InvalidToken, TokenError) as e:
+                    # Expected failure when token is expired/invalid.
+                    logger.info(
+                        "WebSocket JWT invalid/expired: %s", e.__class__.__name__
+                    )
+                    scope["user"] = AnonymousUser()
+                except Exception:
+                    logger.exception("Unexpected error validating WebSocket JWT")
                     scope["user"] = AnonymousUser()
 
         return await super().__call__(scope, receive, send)

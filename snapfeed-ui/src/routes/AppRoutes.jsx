@@ -6,6 +6,7 @@ import VideoUploadPage from "../pages/VideoUploadPage";
 import PrivacyPolicyPage from "../pages/PrivacyPolicyPage";
 import DeleteDataPage from "../pages/DeleteDataPage";
 import ProfilePage from "../pages/ProfilePage";
+import ChatsPage from "../pages/ChatsPage";
 
 function AppRoutes() {
   return (
@@ -15,6 +16,7 @@ function AppRoutes() {
         <Route path="upload" element={<UploadContent />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="profile/:id" element={<ProfilePage />} />
+        <Route path="chats" element={<ChatsPage />} />
       </Route>
 
       <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />

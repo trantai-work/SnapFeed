@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { Grid3X3, Heart, MessageCircle, Play } from "lucide-react";
+import { Grid3X3, Heart, MessageCircle, Play, Send } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { usersApi } from "../api";
+import { conversationsApi, usersApi } from "../api";
 import { formatCount } from "../utils/format";
 import { buildVideoSrc } from "../utils/feedVideo";
 import VideoViewerPanel from "../components/VideoViewerPanel";
@@ -52,6 +52,8 @@ export default function ProfilePage() {
 
   const effectiveUser = routeUserId ? profileUser : user;
   const effectiveUserId = routeUserId ?? authUserId;
+  const isViewingOtherUser = !!routeUserId && authUserId && routeUserId !== authUserId;
+  const [dmStarting, setDmStarting] = useState(false);
 
   const displayName = useMemo(() => {
     const fn = effectiveUser?.firstName || effectiveUser?.first_name || "";
@@ -250,6 +252,41 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {isViewingOtherUser ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={dmStarting}
+              onClick={async () => {
+                if (!routeUserId) return;
+                if (dmStarting) return;
+                setDmStarting(true);
+                try {
+                  const conv = await conversationsApi.direct(routeUserId);
+                  navigate("/chats", {
+                    state: { openConversation: conv || null },
+                  });
+                } catch (e) {
+                  // Best-effort: keep user on profile; errors will be shown by global handlers/toasts if any.
+                  console.error(e);
+                } finally {
+                  setDmStarting(false);
+                }
+              }}
+              className={classNames(
+                "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition",
+                "cursor-pointer",
+                "bg-pink-600 text-white hover:bg-pink-500 active:bg-pink-700",
+                "disabled:cursor-not-allowed disabled:opacity-70"
+              )}
+              aria-label="Nhắn tin"
+            >
+              <Send size={16} strokeWidth={2} aria-hidden />
+              {dmStarting ? "Đang mở…" : "Nhắn tin"}
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-6 border-b border-zinc-200 dark:border-white/10">
@@ -373,6 +410,7 @@ export default function ProfilePage() {
                     disabled={videosLoading}
                     className={classNames(
                       "rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 transition-colors",
+                      "cursor-pointer",
                       "hover:bg-zinc-50 active:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60",
                       "dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 dark:active:bg-white/15"
                     )}
@@ -484,6 +522,7 @@ export default function ProfilePage() {
                     disabled={likedLoading}
                     className={classNames(
                       "rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 transition-colors",
+                      "cursor-pointer",
                       "hover:bg-zinc-50 active:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60",
                       "dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 dark:active:bg-white/15"
                     )}

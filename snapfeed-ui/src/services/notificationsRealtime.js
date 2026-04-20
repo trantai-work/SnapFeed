@@ -1,3 +1,5 @@
+import { refreshAccessTokenOnce } from "./wsAuth";
+
 function buildWsUrl(path) {
   const explicit = import.meta.env.VITE_WS_URL;
   if (explicit && typeof explicit === "string" && explicit.length > 0) {
@@ -15,21 +17,79 @@ function buildWsUrl(path) {
   }
 }
 
-export function connectNotificationsSocket({ onMessage, onOpen, onClose } = {}) {
+export function connectNotificationsSocket({
+  onMessage,
+  onOpen,
+  onClose,
+  onError,
+  autoRefreshOn4401 = true,
+} = {}) {
   const url = buildWsUrl("/ws/notifications");
-  const ws = new WebSocket(url);
+  let ws = null;
+  let closedByUser = false;
+  let reconnectAttempt = 0;
 
-  ws.addEventListener("open", () => onOpen?.());
-  ws.addEventListener("close", () => onClose?.());
-  ws.addEventListener("message", (ev) => {
-    try {
-      const data = JSON.parse(ev.data);
-      onMessage?.(data);
-    } catch {
-      // ignore
-    }
-  });
+  const connect = () => {
+    ws = new WebSocket(url);
 
-  return ws;
+    ws.addEventListener("open", () => {
+      reconnectAttempt = 0;
+      onOpen?.();
+    });
+
+    ws.addEventListener("error", (ev) => onError?.(ev));
+
+    ws.addEventListener("close", async (ev) => {
+      onClose?.(ev);
+      if (closedByUser) return;
+      if (!autoRefreshOn4401) return;
+      if (ev?.code !== 4401) return;
+
+      try {
+        await refreshAccessTokenOnce();
+      } catch {
+        console.error("[ws/notifications] refresh token failed; not reconnecting", ev);
+        return;
+      }
+
+      const waitMs = Math.min(8000, 500 * 2 ** reconnectAttempt);
+      console.info(
+        `[ws/notifications] reconnecting after 4401 in ${waitMs}ms (attempt ${
+          reconnectAttempt + 1
+        })`
+      );
+      reconnectAttempt += 1;
+      setTimeout(() => {
+        if (!closedByUser) connect();
+      }, waitMs);
+    });
+
+    ws.addEventListener("message", (ev) => {
+      try {
+        const data = JSON.parse(ev.data);
+        onMessage?.(data);
+      } catch {
+        console.error("[ws/notifications] failed to parse message", ev?.data);
+      }
+    });
+
+    return ws;
+  };
+
+  connect();
+
+  return {
+    get socket() {
+      return ws;
+    },
+    close() {
+      closedByUser = true;
+      try {
+        ws?.close?.();
+      } catch {
+        // ignore
+      }
+    },
+  };
 }
 

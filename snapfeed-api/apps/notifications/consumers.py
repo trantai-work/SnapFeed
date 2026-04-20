@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.contrib.auth.models import AnonymousUser
 
+from apps.notifications.constants import NOTIFICATIONS_USER_GROUP_PREFIX
+from core.base_consumers import BaseAsyncJsonWebsocketConsumer
 
-def _user_group_name(user_id: int) -> str:
-    return f"notifications.user.{user_id}"
 
-
-class NotificationsConsumer(AsyncJsonWebsocketConsumer):
+class NotificationsConsumer(BaseAsyncJsonWebsocketConsumer):
     async def connect(self):
         user = self.scope.get("user")
         if (
@@ -16,20 +14,15 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
             or isinstance(user, AnonymousUser)
             or not getattr(user, "is_authenticated", False)
         ):
+            # During handshake we cannot send websocket frames; close with code only.
             await self.close(code=4401)
             return
 
         self.user = user
-        self.group_name = _user_group_name(user.id)
-        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.add_groups(f"{NOTIFICATIONS_USER_GROUP_PREFIX}.{user.id}")
         await self.accept()
 
-    async def disconnect(self, close_code):
-        if hasattr(self, "group_name"):
-            await self.channel_layer.group_discard(self.group_name, self.channel_name)
-
     async def notification_created(self, event):
-        # event: { "type": "notification.created", "payload": {...} }
         await self.send_json(
             {"type": "notification.created", "payload": event.get("payload")}
         )

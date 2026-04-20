@@ -3,3 +3,5 @@ export * from "./feed.api";
 export * from "./comments.api";
 export * from "./notifications.api";
 export * from "./user.api";
+export * from "./conversations.api";
+export * from "./messages.api";

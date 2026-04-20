@@ -5,14 +5,11 @@ import logging
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import models
+from apps.notifications.constants import NOTIFICATIONS_USER_GROUP_PREFIX
 from apps.notifications.models import NotificationRecipient
 from apps.notifications.serializers import NotificationRecipientSerializer
 
 logger = logging.getLogger(__name__)
-
-
-def _user_group_name(user_id: int) -> str:
-    return f"notifications.user.{user_id}"
 
 
 def push_notification_created(recipients: list[NotificationRecipient]) -> None:
@@ -44,7 +41,7 @@ def push_notification_created(recipients: list[NotificationRecipient]) -> None:
                 "unread_count": int(unread_map.get(r.user_id, 0)),
             }
             async_to_sync(channel_layer.group_send)(
-                _user_group_name(r.user_id),
+                f"{NOTIFICATIONS_USER_GROUP_PREFIX}.{r.user_id}",
                 {"type": "notification_created", "payload": payload},
             )
     except Exception:
@@ -72,7 +69,7 @@ def push_notification_read(recipient: NotificationRecipient) -> None:
         ).count()
         payload = {"recipient_id": recipient.id, "unread_count": unread}
         async_to_sync(channel_layer.group_send)(
-            _user_group_name(recipient.user_id),
+            f"{NOTIFICATIONS_USER_GROUP_PREFIX}.{recipient.user_id}",
             {"type": "notification_read", "payload": payload},
         )
     except Exception:

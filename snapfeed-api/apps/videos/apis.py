@@ -18,14 +18,13 @@ from apps.videos.serializers import (
 )
 from apps.notifications.services import notification_services
 from apps.videos.services import reaction_services, s3_services, video_services
-from core.apis import BaseAPIViewSet, WrappedResponseMixin
+from core.apis import BaseAPIViewSet
 from core.permissions import FullDjangoModelPermissions
 from utils import random
 
 
 @extend_schema(tags=["videos"])
 class VideoViewSet(
-    WrappedResponseMixin,
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
     BaseAPIViewSet,

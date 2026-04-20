@@ -20,3 +20,5 @@ COMMENT_VIDEO_NOTIFICATION_TITLE = "Bình luận mới trên video"
 COMMENT_VIDEO_NOTIFICATION_MESSAGE_TEMPLATE = (
     '{first_name} {last_name} đã bình luận: "{comment_excerpt}"'
 )
+
+NOTIFICATIONS_USER_GROUP_PREFIX = "notifications.user"
