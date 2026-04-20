@@ -2,12 +2,12 @@ from __future__ import annotations
 
 
 from django.db import transaction
-from django.db.models import Prefetch, DateTimeField, F
+from django.db.models import Prefetch
 from django.db.models import (
     Case,
     Count,
+    DateTimeField,
     IntegerField,
-    BooleanField,
     OuterRef,
     Subquery,
     Value,
@@ -77,12 +77,21 @@ def annotate_conversations_for_user(user: User):
         ),
     )
 
+    # When used directly on the outer Conversation queryset.
     participant_last_read_at = Subquery(
         ConversationParticipant.objects.filter(
             conversation_id=OuterRef("pk"), user=user
-        ).values("last_read_at")[:1]
+        ).values("last_read_at")[:1],
+        output_field=DateTimeField(),
     )
     base = base.annotate(participant_last_read_at=participant_last_read_at)
+
+    participant_last_read_at_for_message = Subquery(
+        ConversationParticipant.objects.filter(
+            conversation_id=OuterRef("conversation_id"), user=user
+        ).values("last_read_at")[:1],
+        output_field=DateTimeField(),
+    )
 
     unread_base = Message.objects.filter(conversation_id=OuterRef("pk")).exclude(
         sender_id=user.id
@@ -91,7 +100,7 @@ def annotate_conversations_for_user(user: User):
         unread_base.values("conversation").annotate(c=Count("id")).values("c")[:1]
     )
     unread_after = Subquery(
-        unread_base.filter(created_at__gt=participant_last_read_at)
+        unread_base.filter(created_at__gt=participant_last_read_at_for_message)
         .values("conversation")
         .annotate(c=Count("id"))
         .values("c")[:1]
@@ -113,59 +122,11 @@ def annotate_conversations_for_user(user: User):
 
 def get_conversation_unread_count(user: User) -> int:
     """
-    Get conversation unread count of a user.
+    Get unread *conversation* count of a user.
     """
 
-    participant_last_read_at = Subquery(
-        ConversationParticipant.objects.filter(
-            conversation_id=OuterRef("pk"), user=user
-        ).values("last_read_at")[:1],
-        output_field=DateTimeField(),
-    )
-
-    latest_other_msg = (
-        Message.objects.filter(conversation_id=OuterRef("pk"))
-        .exclude(sender_id=user.id)
-        .order_by("-created_at")
-    )
-
-    latest_other_msg_created_at = Subquery(
-        latest_other_msg.values("created_at")[:1],
-        output_field=DateTimeField(),
-    )
-
-    qs = (
-        Conversation.objects.filter(participants__user=user)
-        .distinct()
-        .annotate(
-            participant_last_read_at=participant_last_read_at,
-            latest_other_msg_created_at=latest_other_msg_created_at,
-        )
-        .annotate(
-            has_unread=Case(
-                When(type=ConversationType.SELF.value, then=Value(False)),
-                When(
-                    participant_last_read_at__isnull=True,
-                    then=Case(
-                        When(
-                            latest_other_msg_created_at__isnull=False, then=Value(True)
-                        ),
-                        default=Value(False),
-                        output_field=BooleanField(),
-                    ),
-                ),
-                When(
-                    latest_other_msg_created_at__gt=F("participant_last_read_at"),
-                    then=Value(True),
-                ),
-                default=Value(False),
-                output_field=BooleanField(),
-            )
-        )
-        .filter(has_unread=True)
-    )
-
-    return qs.count()
+    qs = annotate_conversations_for_user(user).filter(last_message_at__isnull=False)
+    return qs.filter(unread_count__gt=0).count()
 
 
 def get_or_create_direct_conversation(me: User, other: User) -> Conversation:

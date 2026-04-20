@@ -277,7 +277,7 @@ export default function VideoViewerPanel({
                       ) : null}
 
                       {/* Mobile: open comments on explicit click (no scroll-driven behavior). */}
-                      {!isDesktop ? (
+                      {!isDesktop && !mobileCommentsOpen ? (
                         <div className="mt-3 flex items-center gap-3">
                           <CommentReactButton
                             myReaction={videoState?.myReaction ?? null}

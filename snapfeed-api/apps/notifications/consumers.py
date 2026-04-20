@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.contrib.auth.models import AnonymousUser
 
 from apps.notifications.constants import NOTIFICATIONS_USER_GROUP_PREFIX
-from core.consumers import BaseAsyncJsonWebsocketConsumer
+from core.base_consumers import BaseAsyncJsonWebsocketConsumer
 
 
 class NotificationsConsumer(BaseAsyncJsonWebsocketConsumer):

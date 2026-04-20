@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import {
   Home as HomeIcon,
   Send,
@@ -21,9 +21,12 @@ import { authService } from "../services/auth.service";
 import { notificationsApi } from "../api/notifications.api";
 import { conversationsApi } from "../api/conversations.api";
 import { commentsApi } from "../api/comments.api";
-import { connectNotificationsSocket } from "../services/notificationsRealtime";
 import { onAuthModalOpen } from "../utils/authModalBus";
 import { authApi } from "../api";
+import { useRealtimeSocket } from "../context/RealtimeSocketContext";
+import { useChatUnread } from "../context/ChatUnreadContext";
+import { useChatUI } from "../context/ChatUIContext";
+import ThemeToggle from "./ThemeToggle";
 
 function classNames(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -32,15 +35,16 @@ function classNames(...xs) {
 export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }) {
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated, loading, setUser } = useAuth();
+  const { subscribe } = useRealtimeSocket();
+  const { totalUnread: chatUnreadCount } = useChatUnread();
+  const { activeConversationId } = useChatUI();
   const { show } = useMessageBox();
   const [authOpen, setAuthOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const unreadFetchLock = useRef(false);
-  const chatUnreadFetchLock = useRef(false);
-  const wsRef = useRef(null);
   const [incomingRecipient, setIncomingRecipient] = useState(null);
   const recentProvider = useMemo(() => {
     return window.localStorage.getItem("auth_recent_provider") || null;
@@ -72,113 +76,125 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
     }
   }, [isAuthenticated]);
 
-  const refreshChatUnread = useCallback(async () => {
-    if (!isAuthenticated || chatUnreadFetchLock.current) return;
-    chatUnreadFetchLock.current = true;
-    try {
-      const c = await conversationsApi.unreadCount();
-      setChatUnreadCount(c);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      chatUnreadFetchLock.current = false;
-    }
-  }, [isAuthenticated]);
-
   useEffect(() => {
     if (!isAuthenticated) {
       setUnreadCount(0);
-      setChatUnreadCount(0);
       return;
     }
     refreshUnread();
-    refreshChatUnread();
-  }, [isAuthenticated, refreshUnread, refreshChatUnread]);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-      return;
-    }
-
-    // (Re)connect websocket for realtime notifications.
-    if (wsRef.current) return;
-    wsRef.current = connectNotificationsSocket({
-      onMessage: (msg) => {
-        if (!msg || typeof msg !== "object") return;
-        if (msg.type === "notification.created") {
-          const payload = msg.payload || {};
-          const c = payload.unread_count;
-          if (typeof c === "number") setUnreadCount(c);
-          if (payload.recipient) setIncomingRecipient(payload.recipient);
-          if (payload.recipient?.notification) {
-            const n = payload.recipient.notification;
-            const actorId = n?.actor?.id ?? null;
-            const target = n?.target ?? null;
-            const recipientId = payload.recipient?.id ?? null;
-            show({
-              status: "notification",
-              title: n.title || "Thông báo mới",
-              message: n.message || "",
-              duration: 6500,
-              onClick: async (meta) => {
-                const target = meta?.target ?? null;
-                if (!target?.type || !target?.id) return;
-                setNotificationsOpen(false);
-                if (meta?.recipientId) {
-                  try {
-                    await notificationsApi.markRead(meta.recipientId);
-                    refreshUnread();
-                  } catch {
-                    // Ignore markRead failure; navigation intent is still valid.
-                  }
-                }
-                if (target.type === "videos.video") {
-                  navigate("/profile", { state: { openVideoId: target.id } });
-                  return;
-                }
-                if (target.type === "comments.videocomment") {
-                  const c = await commentsApi.getById(target.id);
-                  const vid = c?.video;
-                  if (vid) navigate("/profile", { state: { openVideoId: vid } });
-                }
-              },
-              meta: { actorId, target, recipientId },
-            });
-          }
-          return;
-        }
-        if (msg.type === "notification.read") {
-          const payload = msg.payload || {};
-          const c = payload.unread_count;
-          if (typeof c === "number") setUnreadCount(c);
-        }
-      },
-      onClose: () => {
-        wsRef.current = null;
-      },
-    });
-
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-    };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, refreshUnread]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    // Keep chat unread badge reasonably fresh without opening another /ws/chats socket.
-    const id = setInterval(() => {
-      refreshChatUnread();
-    }, 15000);
-    return () => clearInterval(id);
-  }, [isAuthenticated, refreshChatUnread]);
+    const unsubCreated = subscribe("notification.created", (payload) => {
+      const c = payload?.unread_count;
+      if (typeof c === "number") setUnreadCount(c);
+      if (payload?.recipient) setIncomingRecipient(payload.recipient);
+
+      if (payload?.recipient?.notification) {
+        const n = payload.recipient.notification;
+        const actorId = n?.actor?.id ?? null;
+        const target = n?.target ?? null;
+        const recipientId = payload.recipient?.id ?? null;
+        show({
+          status: "notification",
+          title: n.title || "Thông báo mới",
+          message: n.message || "",
+          duration: 6500,
+          onClick: async (meta) => {
+            const target = meta?.target ?? null;
+            if (!target?.type || !target?.id) return;
+            setNotificationsOpen(false);
+            if (meta?.recipientId) {
+              try {
+                await notificationsApi.markRead(meta.recipientId);
+                refreshUnread();
+              } catch {
+                // Ignore markRead failure; navigation intent is still valid.
+              }
+            }
+            if (target.type === "videos.video") {
+              navigate("/profile", { state: { openVideoId: target.id } });
+              return;
+            }
+            if (target.type === "comments.videocomment") {
+              const c = await commentsApi.getById(target.id);
+              const vid = c?.video;
+              if (vid) navigate("/profile", { state: { openVideoId: vid } });
+            }
+          },
+          meta: { actorId, target, recipientId },
+        });
+      }
+    });
+
+    const unsubRead = subscribe("notification.read", (payload) => {
+      const c = payload?.unread_count;
+      if (typeof c === "number") setUnreadCount(c);
+    });
+
+    const unsubChatMsg = subscribe("message.created", (payload) => {
+      const isChats = location?.pathname?.startsWith("/chats");
+      const isDesktop =
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(min-width: 768px)").matches;
+      if (isChats && isDesktop) return;
+
+      const msg = payload?.message ?? null;
+      if (!msg) return;
+
+      const senderId = msg?.sender?.id ?? msg?.senderId ?? null;
+      if (senderId != null && user?.id != null && Number(senderId) === Number(user.id)) return;
+
+      const content = String(msg?.content ?? "").trim();
+      if (!content) return;
+
+      const sender =
+        msg?.sender?.firstName || msg?.sender?.lastName
+          ? `${msg?.sender?.firstName ?? ""} ${msg?.sender?.lastName ?? ""}`.trim()
+          : msg?.sender?.username
+            ? `@${msg.sender.username}`
+            : "Tin nhắn mới";
+      const senderAvatarUrl = msg?.sender?.avatarUrl ?? msg?.sender?.avatar_url ?? null;
+
+      const convId =
+        payload?.conversationId ?? msg?.conversation ?? msg?.conversationId ?? null;
+      const convIdNum = convId != null ? Number(convId) : null;
+      if (convIdNum != null && Number.isFinite(convIdNum) && convIdNum === activeConversationId) {
+        return;
+      }
+
+      show({
+        status: "notification",
+        title: sender,
+        message: content.length > 140 ? `${content.slice(0, 140)}…` : content,
+        duration: 6500,
+        onClick: async () => {
+          if (!convId) return;
+          navigate("/chats", { state: { openConversation: { id: convId } } });
+        },
+        meta: { convId, avatarUrl: senderAvatarUrl },
+      });
+    });
+
+    return () => {
+      unsubCreated?.();
+      unsubRead?.();
+      unsubChatMsg?.();
+    };
+  }, [
+    activeConversationId,
+    commentsApi,
+    isAuthenticated,
+    location?.pathname,
+    navigate,
+    refreshUnread,
+    show,
+    subscribe,
+    user?.id,
+  ]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -360,6 +376,11 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
             </nav>
 
             <div className="mt-auto space-y-3 border-t border-gray-200 pt-6 text-sm text-gray-500 dark:border-gray-800">
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-gray-100 px-3 py-3 text-gray-900 dark:bg-white/10 dark:text-white">
+                <div className="text-sm font-semibold">Theme</div>
+                <ThemeToggle />
+              </div>
+
               {!loading ? (
                 !isAuthenticated ? (
                   <button

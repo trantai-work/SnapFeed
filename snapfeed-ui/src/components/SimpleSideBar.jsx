@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Bell, Home as HomeIcon, Send, Upload, User } from "lucide-react";
 
 import AuthModal from "./AuthModal";
@@ -10,10 +10,12 @@ import { authService } from "../services/auth.service";
 import { notificationsApi } from "../api/notifications.api";
 import { conversationsApi } from "../api/conversations.api";
 import { commentsApi } from "../api/comments.api";
-import { connectNotificationsSocket } from "../services/notificationsRealtime";
 import { onAuthModalOpen, openAuthModal } from "../utils/authModalBus";
 import { useMessageBox } from "./MessageBox";
 import { authApi } from "../api";
+import { useRealtimeSocket } from "../context/RealtimeSocketContext";
+import { useChatUnread } from "../context/ChatUnreadContext";
+import { useChatUI } from "../context/ChatUIContext";
 
 function classNames(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -50,17 +52,17 @@ function IconNavLink({ to, label, Icon, onClick, disabled }) {
 export default function SimpleSideBar() {
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated, loading, setUser } = useAuth();
+  const { subscribe } = useRealtimeSocket();
+  const { totalUnread: chatUnreadCount } = useChatUnread();
+  const { activeConversationId } = useChatUI();
   const { show } = useMessageBox();
 
   const [authOpen, setAuthOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const unreadFetchLock = useRef(false);
-  const [chatUnreadCount, setChatUnreadCount] = useState(0);
-  const chatUnreadFetchLock = useRef(false);
-  const wsRef = useRef(null);
-  const chatUnreadPollRef = useRef(null);
   const [incomingRecipient, setIncomingRecipient] = useState(null);
   const recentProvider = useMemo(() => {
     return window.localStorage.getItem("auth_recent_provider") || null;
@@ -92,119 +94,118 @@ export default function SimpleSideBar() {
     }
   }, [isAuthenticated]);
 
-  const refreshChatUnread = useCallback(async () => {
-    if (!isAuthenticated || chatUnreadFetchLock.current) return;
-    chatUnreadFetchLock.current = true;
-    try {
-      const c = await conversationsApi.unreadCount();
-      setChatUnreadCount(c);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      chatUnreadFetchLock.current = false;
-    }
-  }, [isAuthenticated]);
-
   useEffect(() => {
     if (!isAuthenticated) {
       setUnreadCount(0);
-      setChatUnreadCount(0);
       return;
     }
     refreshUnread();
-    refreshChatUnread();
-  }, [isAuthenticated, refreshUnread, refreshChatUnread]);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-      return;
-    }
-
-    if (wsRef.current) return;
-    wsRef.current = connectNotificationsSocket({
-      onMessage: (msg) => {
-        if (!msg || typeof msg !== "object") return;
-        if (msg.type === "notification.created") {
-          const payload = msg.payload || {};
-          const c = payload.unread_count;
-          if (typeof c === "number") setUnreadCount(c);
-          if (payload.recipient) setIncomingRecipient(payload.recipient);
-          if (payload.recipient?.notification) {
-            const n = payload.recipient.notification;
-            const actorId = n?.actor?.id ?? null;
-            const target = n?.target ?? null;
-            const recipientId = payload.recipient?.id ?? null;
-            show({
-              status: "notification",
-              title: n.title || "Thông báo mới",
-              message: n.message || "",
-              duration: 6500,
-              onClick: async (meta) => {
-                const target = meta?.target ?? null;
-                if (!target?.type || !target?.id) return;
-                setNotificationsOpen(false);
-                if (meta?.recipientId) {
-                  try {
-                    await notificationsApi.markRead(meta.recipientId);
-                    refreshUnread();
-                  } catch {
-                    // ignore
-                  }
-                }
-                if (target.type === "videos.video") {
-                  navigate("/profile", { state: { openVideoId: target.id } });
-                  return;
-                }
-                if (target.type === "comments.videocomment") {
-                  const c = await commentsApi.getById(target.id);
-                  const vid = c?.video;
-                  if (vid) navigate("/profile", { state: { openVideoId: vid } });
-                }
-              },
-              meta: { actorId, target, recipientId },
-            });
-          }
-          return;
-        }
-        if (msg.type === "notification.read") {
-          const payload = msg.payload || {};
-          const c = payload.unread_count;
-          if (typeof c === "number") setUnreadCount(c);
-        }
-      },
-      onClose: () => {
-        wsRef.current = null;
-      },
-    });
-
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-    };
-  }, [isAuthenticated, navigate, refreshUnread, show]);
+  }, [isAuthenticated, refreshUnread]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    // Keep chat unread badge fresh without opening another /ws/chats socket.
-    if (chatUnreadPollRef.current) clearInterval(chatUnreadPollRef.current);
-    chatUnreadPollRef.current = setInterval(() => {
-      refreshChatUnread();
-    }, 15000);
+    const unsubCreated = subscribe("notification.created", (payload) => {
+      const c = payload?.unread_count;
+      if (typeof c === "number") setUnreadCount(c);
+      if (payload?.recipient) setIncomingRecipient(payload.recipient);
+
+      if (payload?.recipient?.notification) {
+        const n = payload.recipient.notification;
+        const actorId = n?.actor?.id ?? null;
+        const target = n?.target ?? null;
+        const recipientId = payload.recipient?.id ?? null;
+        show({
+          status: "notification",
+          title: n.title || "Thông báo mới",
+          message: n.message || "",
+          duration: 6500,
+          onClick: async (meta) => {
+            const target = meta?.target ?? null;
+            if (!target?.type || !target?.id) return;
+            setNotificationsOpen(false);
+            if (meta?.recipientId) {
+              try {
+                await notificationsApi.markRead(meta.recipientId);
+                refreshUnread();
+              } catch {
+                // ignore
+              }
+            }
+            if (target.type === "videos.video") {
+              navigate("/profile", { state: { openVideoId: target.id } });
+              return;
+            }
+            if (target.type === "comments.videocomment") {
+              const c = await commentsApi.getById(target.id);
+              const vid = c?.video;
+              if (vid) navigate("/profile", { state: { openVideoId: vid } });
+            }
+          },
+          meta: { actorId, target, recipientId },
+        });
+      }
+    });
+
+    const unsubRead = subscribe("notification.read", (payload) => {
+      const c = payload?.unread_count;
+      if (typeof c === "number") setUnreadCount(c);
+    });
+
+    const unsubChatMsg = subscribe("message.created", (payload) => {
+      const isChats = location?.pathname?.startsWith("/chats");
+      const isDesktop =
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(min-width: 768px)").matches;
+      // SimpleSideBar is rendered for desktop chat navigation; on mobile it may still be mounted
+      // but hidden via CSS. Avoid showing duplicate toasts on mobile.
+      if (!isDesktop) return;
+      if (isChats) return;
+
+      const msg = payload?.message ?? null;
+      if (!msg) return;
+
+      const senderId = msg?.sender?.id ?? msg?.senderId ?? null;
+      if (senderId != null && user?.id != null && Number(senderId) === Number(user.id)) return;
+
+      const content = String(msg?.content ?? "").trim();
+      if (!content) return;
+
+      const sender =
+        msg?.sender?.firstName || msg?.sender?.lastName
+          ? `${msg?.sender?.firstName ?? ""} ${msg?.sender?.lastName ?? ""}`.trim()
+          : msg?.sender?.username
+            ? `@${msg.sender.username}`
+            : "Tin nhắn mới";
+      const senderAvatarUrl = msg?.sender?.avatarUrl ?? msg?.sender?.avatar_url ?? null;
+
+      const convId =
+        payload?.conversationId ?? msg?.conversation ?? msg?.conversationId ?? null;
+      const convIdNum = convId != null ? Number(convId) : null;
+      if (convIdNum != null && Number.isFinite(convIdNum) && convIdNum === activeConversationId) {
+        return;
+      }
+
+      show({
+        status: "notification",
+        title: sender,
+        message: content.length > 140 ? `${content.slice(0, 140)}…` : content,
+        duration: 6500,
+        onClick: async () => {
+          if (!convId) return;
+          navigate("/chats", { state: { openConversation: { id: convId } } });
+        },
+        meta: { convId, avatarUrl: senderAvatarUrl },
+      });
+    });
 
     return () => {
-      if (chatUnreadPollRef.current) {
-        clearInterval(chatUnreadPollRef.current);
-        chatUnreadPollRef.current = null;
-      }
+      unsubCreated?.();
+      unsubRead?.();
+      unsubChatMsg?.();
     };
-  }, [isAuthenticated, refreshChatUnread]);
+  }, [isAuthenticated, location?.pathname, navigate, refreshUnread, show, subscribe, user?.id]);
 
   if (loading) return null;
 

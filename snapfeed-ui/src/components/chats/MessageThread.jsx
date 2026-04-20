@@ -4,14 +4,17 @@ import { messagesApi } from "../../api";
 import MessageBubble from "./MessageBubble";
 import ConversationAvatar from "./ConversationAvatar";
 import { buildConversationName } from "../../utils/chat";
+import { useRealtimeSocket } from "../../context/RealtimeSocketContext";
 
 export default function MessageThread({
   conversation,
   meId,
   onMessageSent,
   onLatestIncomingMessageId,
+  showHeader = true,
 }) {
   const convId = conversation?.id ?? null;
+  const { subscribe } = useRealtimeSocket();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [items, setItems] = useState([]);
@@ -169,8 +172,25 @@ export default function MessageThread({
 
   useEffect(() => {
     if (!convId) return;
-    // Realtime updates are handled by the global inbox socket on `ChatsPage`.
-  }, [convId]);
+
+    // Append realtime messages for the currently open conversation.
+    const unsub = subscribe("message.created", (payload) => {
+      const msg = payload?.message ?? null;
+      if (!msg) return;
+      const incomingConvId =
+        payload?.conversationId ?? msg?.conversation ?? msg?.conversationId ?? null;
+      if (toIdNum(incomingConvId) !== toIdNum(convId)) return;
+
+      const msgId = toIdNum(msg?.id);
+      setItems((prev) => {
+        const arr = Array.isArray(prev) ? prev : [];
+        if (msgId != null && arr.some((m) => toIdNum(m?.id) === msgId)) return arr;
+        return [...arr, msg];
+      });
+    });
+
+    return () => unsub?.();
+  }, [convId, subscribe]);
 
   const list = useMemo(() => items || [], [items]);
 
@@ -271,25 +291,27 @@ export default function MessageThread({
 
   return (
     <div className="flex h-full w-full min-w-0 flex-1 flex-col bg-white dark:bg-black">
-      <header className="flex shrink-0 items-center gap-3 border-b border-gray-200 bg-white/70 px-4 py-4 backdrop-blur-md dark:border-white/10 dark:bg-black/30">
-        <ConversationAvatar conv={conversation} meId={meId} />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-            {buildConversationName(conversation, meId)}
+      {showHeader ? (
+        <header className="flex shrink-0 items-center gap-3 border-b border-gray-200 bg-white/70 px-4 py-4 backdrop-blur-md dark:border-white/10 dark:bg-black/30">
+          <ConversationAvatar conv={conversation} meId={meId} />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+              {buildConversationName(conversation, meId)}
+            </div>
+            <div className="truncate text-xs text-gray-500 dark:text-white/50">
+              {conversation?.type === "group"
+                ? "Nhóm"
+                : conversation?.type === "self"
+                  ? "Ghi chú"
+                  : "Trò chuyện"}
+            </div>
           </div>
-          <div className="truncate text-xs text-gray-500 dark:text-white/50">
-            {conversation?.type === "group"
-              ? "Nhóm"
-              : conversation?.type === "self"
-                ? "Ghi chú"
-                : "Trò chuyện"}
-          </div>
-        </div>
-      </header>
+        </header>
+      ) : null}
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-4"
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         onScroll={() => {
           const el = scrollRef.current;
           if (!el) return;
