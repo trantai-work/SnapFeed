@@ -17,14 +17,10 @@ function buildWsUrl(path) {
   }
 }
 
-export function connectNotificationsSocket({
-  onMessage,
-  onOpen,
-  onClose,
-  onError,
-  autoRefreshOn4401 = true,
-} = {}) {
-  const url = buildWsUrl("/ws/notifications");
+export function connectChatsInboxSocket(
+  { onMessage, onOpen, onClose, onError, autoRefreshOn4401 = true } = {}
+) {
+  const url = buildWsUrl(`/ws/chats`);
   let ws = null;
   let closedByUser = false;
   let reconnectAttempt = 0;
@@ -36,9 +32,7 @@ export function connectNotificationsSocket({
       reconnectAttempt = 0;
       onOpen?.();
     });
-
     ws.addEventListener("error", (ev) => onError?.(ev));
-
     ws.addEventListener("close", async (ev) => {
       onClose?.(ev);
       if (closedByUser) return;
@@ -48,28 +42,25 @@ export function connectNotificationsSocket({
       try {
         await refreshAccessTokenOnce();
       } catch {
-        console.error("[ws/notifications] refresh token failed; not reconnecting", ev);
+        console.error("[ws/chats] refresh token failed; not reconnecting", ev);
         return;
       }
 
       const waitMs = Math.min(8000, 500 * 2 ** reconnectAttempt);
       console.info(
-        `[ws/notifications] reconnecting after 4401 in ${waitMs}ms (attempt ${
-          reconnectAttempt + 1
-        })`
+        `[ws/chats] reconnecting after 4401 in ${waitMs}ms (attempt ${reconnectAttempt + 1})`
       );
       reconnectAttempt += 1;
       setTimeout(() => {
         if (!closedByUser) connect();
       }, waitMs);
     });
-
     ws.addEventListener("message", (ev) => {
       try {
         const data = JSON.parse(ev.data);
         onMessage?.(data);
       } catch {
-        console.error("[ws/notifications] failed to parse message", ev?.data);
+        console.error("[ws/chats] failed to parse message", ev?.data);
       }
     });
 

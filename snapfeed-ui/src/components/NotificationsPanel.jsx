@@ -75,6 +75,7 @@ export default function NotificationsPanel({
   const scrollRef = useRef(null);
   const loadMoreLock = useRef(false);
   const readInFlightRef = useRef(new Set());
+  const markedAllOnOpenRef = useRef(false);
 
   const visibleItems = useMemo(() => {
     if (filter === "all") return items;
@@ -128,6 +129,18 @@ export default function NotificationsPanel({
   useEffect(() => {
     loadInitial();
   }, [loadInitial]);
+
+  // Mark all notifications as read when panel is opened.
+  // Important: do NOT optimistically update UI list here; we still want
+  // the first open to visually highlight unread items.
+  useEffect(() => {
+    if (markedAllOnOpenRef.current) return;
+    markedAllOnOpenRef.current = true;
+    const t = setTimeout(() => {
+      void notificationsApi.markReadAll().catch(() => {});
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const onKey = (e) => {

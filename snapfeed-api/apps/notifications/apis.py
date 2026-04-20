@@ -38,6 +38,11 @@ class NotificationRecipientViewSet(mixins.ListModelMixin, BaseAPIViewSet):
         count = notification_services.get_unread_count(user=request.user)
         return self.response_ok({"count": count})
 
+    @action(detail=False, methods=["patch"], url_path="read-all")
+    def mark_read_all(self, request):
+        updated = notification_services.mark_read_all(user=request.user)
+        return self.response_ok()
+
     @action(
         detail=True,
         methods=["patch"],

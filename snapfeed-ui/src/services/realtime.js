@@ -17,14 +17,14 @@ function buildWsUrl(path) {
   }
 }
 
-export function connectNotificationsSocket({
+export function connectRealtimeSocket({
   onMessage,
   onOpen,
   onClose,
   onError,
   autoRefreshOn4401 = true,
 } = {}) {
-  const url = buildWsUrl("/ws/notifications");
+  const url = buildWsUrl("/ws/realtime");
   let ws = null;
   let closedByUser = false;
   let reconnectAttempt = 0;
@@ -36,9 +36,7 @@ export function connectNotificationsSocket({
       reconnectAttempt = 0;
       onOpen?.();
     });
-
     ws.addEventListener("error", (ev) => onError?.(ev));
-
     ws.addEventListener("close", async (ev) => {
       onClose?.(ev);
       if (closedByUser) return;
@@ -48,13 +46,13 @@ export function connectNotificationsSocket({
       try {
         await refreshAccessTokenOnce();
       } catch {
-        console.error("[ws/notifications] refresh token failed; not reconnecting", ev);
+        console.error("[ws/realtime] refresh token failed; not reconnecting", ev);
         return;
       }
 
       const waitMs = Math.min(8000, 500 * 2 ** reconnectAttempt);
       console.info(
-        `[ws/notifications] reconnecting after 4401 in ${waitMs}ms (attempt ${
+        `[ws/realtime] reconnecting after 4401 in ${waitMs}ms (attempt ${
           reconnectAttempt + 1
         })`
       );
@@ -69,7 +67,7 @@ export function connectNotificationsSocket({
         const data = JSON.parse(ev.data);
         onMessage?.(data);
       } catch {
-        console.error("[ws/notifications] failed to parse message", ev?.data);
+        console.error("[ws/realtime] failed to parse message", ev?.data);
       }
     });
 

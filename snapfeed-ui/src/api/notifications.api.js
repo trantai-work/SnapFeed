@@ -31,6 +31,12 @@ export const notificationsApi = {
     return normalizeNotificationRecipient(data);
   },
 
+  /** PATCH /notifications/read-all */
+  async markReadAll() {
+    const data = await api.patch("/notifications/read-all");
+    return data;
+  },
+
   /** GET /notifications/unread-count */
   async unreadCount() {
     const data = await api.get("/notifications/unread-count");

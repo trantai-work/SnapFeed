@@ -6,6 +6,7 @@ from apps.recommendation.apis import VideoEmbeddingViewSet
 from apps.users.apis import UserViewSet
 from apps.videos.apis import VideoViewSet
 from apps.comments.apis import VideoCommentViewSet
+from apps.chats.apis import ConversationViewSet, MessageViewSet
 
 api_router = drf_routers.SimpleRouter(trailing_slash=False)
 api_router.register(r"auth", OAuthViewSet, basename="auth")
@@ -18,6 +19,8 @@ api_router.register(
     r"video-embeddings", VideoEmbeddingViewSet, basename="video-embedding"
 )
 api_router.register(r"comments", VideoCommentViewSet, basename="comment")
+api_router.register(r"conversations", ConversationViewSet, basename="conversation")
+api_router.register(r"chats/messages", MessageViewSet, basename="message")
 
 # Add api router urls
 urlpatterns = []

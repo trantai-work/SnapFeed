@@ -124,6 +124,7 @@ function MessageBoxStack({ items, onClose }) {
 function MessageToast({ item, onClose }) {
   const styles = STATUS_STYLES[item.status] ?? STATUS_STYLES.success;
   const Icon = styles.icon;
+  const avatarUrl = item?.meta?.avatarUrl ?? null;
 
   return (
     <div className="pointer-events-auto">
@@ -150,7 +151,16 @@ function MessageToast({ item, onClose }) {
               styles.iconWrap,
             ].join(" ")}
           >
-            <Icon size={18} />
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt=""
+                className="h-10 w-10 rounded-2xl object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <Icon size={18} />
+            )}
           </div>
 
           <div className="min-w-0">
