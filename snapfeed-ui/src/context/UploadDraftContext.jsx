@@ -5,7 +5,9 @@ const UploadDraftContext = createContext(null);
 export function UploadDraftProvider({ children }) {
   const [videoFile, setVideoFile] = useState(null);
   const [coverFile, setCoverFile] = useState(null);
+  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [tagsText, setTagsText] = useState("");
   const [location, setLocation] = useState("");
 
   const videoUrlRef = useRef("");
@@ -30,7 +32,9 @@ export function UploadDraftProvider({ children }) {
     coverUrlRef.current = "";
     setVideoFile(null);
     setCoverFile(null);
+    setTitle("");
     setDescription("");
+    setTagsText("");
     setLocation("");
   }, []);
 
@@ -38,17 +42,21 @@ export function UploadDraftProvider({ children }) {
     () => ({
       videoFile,
       coverFile,
+      title,
       description,
+      tagsText,
       location,
       videoPreviewUrl: videoUrlRef.current,
       coverPreviewUrl: coverUrlRef.current,
       setVideo,
       setCover,
+      setTitle,
       setDescription,
+      setTagsText,
       setLocation,
       reset,
     }),
-    [videoFile, coverFile, description, location, setVideo, setCover, reset]
+    [videoFile, coverFile, title, description, tagsText, location, setVideo, setCover, reset]
   );
 
   return <UploadDraftContext.Provider value={value}>{children}</UploadDraftContext.Provider>;

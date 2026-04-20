@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db.models import Prefetch
+from django.db.models import Q
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import action
 import boto3
@@ -18,6 +19,7 @@ from apps.videos.serializers import (
 )
 from apps.notifications.services import notification_services
 from apps.videos.services import reaction_services, s3_services, video_services
+from apps.videos.services import tag_services
 from core.apis import BaseAPIViewSet
 from core.permissions import FullDjangoModelPermissions
 from utils import random
@@ -34,7 +36,7 @@ class VideoViewSet(
     permission_classes = [FullDjangoModelPermissions]
 
     def get_queryset(self):
-        qs = Video.objects.select_related("user").all()
+        qs = Video.objects.select_related("user").prefetch_related("tags").all()
         user = getattr(self.request, "user", None)
         if user and user.is_authenticated:
             qs = qs.prefetch_related(
@@ -57,7 +59,19 @@ class VideoViewSet(
         s3_services.validate_s3_key_format(video_key, user.id)
         s3_services.check_s3_object_exists(video_key)
 
-        serializer.save(user=self.request.user)
+        raw_names = serializer.validated_data.pop("tags_input", None)
+
+        video = serializer.save(user=self.request.user)
+        final_tags = tag_services.sync_video_tags_from_names(
+            video=video, names=raw_names
+        )
+        if final_tags is not None:
+            # Make serializer output `tags` without extra queries later.
+            prefetched = getattr(video, "_prefetched_objects_cache", None)
+            if prefetched is None:
+                video._prefetched_objects_cache = {}
+                prefetched = video._prefetched_objects_cache
+            prefetched["tags"] = final_tags
 
     @action(
         detail=False,
@@ -116,7 +130,7 @@ class VideoViewSet(
             user_embedding = user.embedding.embedding
             feeds = video_services.get_similar_videos(user_embedding, seen_video_ids)
 
-        feeds = feeds.select_related("user")
+        feeds = feeds.select_related("user").prefetch_related("tags")
         if user.is_authenticated:
             feeds = feeds.prefetch_related(
                 Prefetch(
@@ -127,6 +141,27 @@ class VideoViewSet(
             )
 
         return self.response_ok(self.get_serializer(feeds, many=True).data)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="search",
+        permission_classes=[],
+        pagination_class=None,
+    )
+    def search(self, request):
+        """
+        Simple search videos by description (case-insensitive).
+        """
+
+        q = (request.query_params.get("q") or "").strip()
+        if not q:
+            return self.response_ok([])
+
+        qs = (
+            self.get_queryset().filter(Q(description__icontains=q)).order_by("-id")[:20]
+        )
+        return self.response_ok(self.get_serializer(qs, many=True).data)
 
     @extend_schema(
         request=VideoReactionSerializer,

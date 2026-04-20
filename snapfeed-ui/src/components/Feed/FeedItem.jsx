@@ -35,6 +35,7 @@ function FeedItemComponent({
   const reactionLabel = formatCount(item.reactionCount ?? 0);
   const commentLabel = formatCount(item.commentCount ?? 0);
   const saveLabel = formatCount(0);
+  const tags = Array.isArray(item?.tags) ? item.tags.filter(Boolean) : [];
 
   const showNativeControls = useMediaQuery("(min-width: 1024px)");
 
@@ -134,6 +135,24 @@ function FeedItemComponent({
                 Thiếu cấu hình VITE_S3_BUCKET_URL hoặc videoKey
               </div>
             )}
+
+            {tags.length > 0 ? (
+              <div className="pointer-events-none absolute left-3 top-3 z-10 flex max-w-[calc(100%-5rem)] flex-wrap gap-2">
+                {tags.slice(0, 2).map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-full bg-black/45 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-[1px]"
+                  >
+                    #{t}
+                  </span>
+                ))}
+                {tags.length > 2 ? (
+                  <span className="rounded-full bg-black/45 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-[1px]">
+                    +{tags.length - 2}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="pointer-events-none absolute inset-x-0 bottom-20 z-10 max-w-[calc(100%-3.75rem)] p-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pr-14 sm:bottom-24 sm:max-w-[calc(100%-4rem)] sm:pr-16 lg:bottom-14 lg:max-w-full lg:pr-4">
               <p className="text-sm font-semibold text-white drop-shadow">
