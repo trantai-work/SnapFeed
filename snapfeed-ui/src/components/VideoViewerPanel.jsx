@@ -57,6 +57,11 @@ export default function VideoViewerPanel({
     return getUserAvatarUrl(videoState || video || {});
   }, [video, videoState]);
 
+  const tags = useMemo(() => {
+    const raw = videoState?.tags ?? video?.tags;
+    return Array.isArray(raw) ? raw.filter(Boolean) : [];
+  }, [video?.tags, videoState?.tags]);
+
   useEffect(() => {
     setVideoState(video || null);
     setDescExpanded(false);
@@ -222,9 +227,7 @@ export default function VideoViewerPanel({
                 </div>
               )}
 
-              <div className="pointer-events-none absolute left-3 top-3 rounded-full bg-black/45 px-2.5 py-1 text-xs font-semibold text-white">
-                {formatCount(video?.viewCount ?? 0)} lượt xem
-              </div>
+              {/* View count moved out of video overlay (see right panel / actions). */}
             </div>
 
             <div className="min-h-0 w-full flex-1 lg:w-[420px] lg:flex-none">
@@ -304,6 +307,26 @@ export default function VideoViewerPanel({
                     </div>
                   </div>
                 </div>
+
+                {tags.length > 0 ? (
+                  <div className="border-t border-zinc-200/90 bg-white px-4 py-2 dark:border-white/10 dark:bg-black lg:border-l lg:border-t-0">
+                    <div className="flex flex-wrap gap-1.5">
+                      {tags.slice(0, 6).map((t) => (
+                        <span
+                          key={t}
+                          className="rounded-full bg-zinc-100 px-2 py-1 text-[11px] font-semibold text-zinc-800 dark:bg-white/10 dark:text-white/85"
+                        >
+                          #{t}
+                        </span>
+                      ))}
+                      {tags.length > 6 ? (
+                        <span className="rounded-full bg-zinc-100 px-2 py-1 text-[11px] font-semibold text-zinc-800 dark:bg-white/10 dark:text-white/85">
+                          +{tags.length - 6}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
 
                 {(isDesktop || mobileCommentsOpen) && (
                   <CommentsPanel

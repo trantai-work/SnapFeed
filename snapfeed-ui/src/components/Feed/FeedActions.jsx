@@ -1,9 +1,8 @@
 import { memo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Bookmark,
+  Eye,
   MessageCircle,
-  Share2,
   User,
 } from "lucide-react";
 import { FeedReactionButton } from "./FeedReactionButton";
@@ -13,18 +12,15 @@ function classNames(...xs) {
 }
 
 function FeedActionsComponent({
+  viewLabel,
   reactionLabel,
   commentLabel,
-  saveLabel,
-  shareLabel,
   avatarUrl,
   profileUserId,
   myReaction,
   reactDisabled = false,
   onReact,
   onComment,
-  onSave,
-  onShare,
   onRequireAuth,
   overlay = false,
   className = "",
@@ -43,9 +39,17 @@ function FeedActionsComponent({
     ? "max-w-[3.5rem] truncate text-center text-[0.65rem] leading-tight text-white/95 drop-shadow sm:max-w-[4.25rem] sm:text-[0.7rem]"
     : "max-w-10 truncate text-center text-[0.6rem] leading-tight sm:max-w-[4.25rem] sm:text-[0.65rem]";
 
-  const shareLabelClass = overlay
-    ? "text-center text-[0.65rem] leading-tight text-white/95 drop-shadow sm:text-[0.7rem]"
-    : "text-center text-[0.6rem] leading-tight sm:text-[0.65rem]";
+  const statWrap = overlay
+    ? "flex flex-col items-center gap-1.5 text-white/95 select-none"
+    : "flex flex-col items-center gap-1.5 text-zinc-900/90 dark:text-white/90 select-none";
+
+  const statIconWrap = overlay
+    ? "flex h-11 w-11 items-center justify-center rounded-full bg-black/20 text-white ring-1 ring-white/15 backdrop-blur-[2px] sm:h-12 sm:w-12 md:h-[3.25rem] md:w-[3.25rem] lg:h-12 lg:w-12"
+    : "flex h-12 w-12 items-center justify-center rounded-full bg-white/70 text-zinc-900 ring-1 ring-zinc-200/70 dark:bg-white/5 dark:text-white dark:ring-white/10";
+
+  const statLabelClass = overlay
+    ? "max-w-[3.5rem] truncate text-center text-[0.65rem] font-semibold leading-tight text-white/95 drop-shadow sm:max-w-[4.25rem] sm:text-[0.7rem]"
+    : "max-w-10 truncate text-center text-[0.6rem] font-semibold leading-tight sm:max-w-[4.25rem] sm:text-[0.65rem]";
 
   const avatarRing = overlay
     ? "ring-2 ring-white/50"
@@ -68,6 +72,14 @@ function FeedActionsComponent({
 
   return (
     <aside className={asideClass} aria-label="Tương tác">
+      {viewLabel ? (
+        <div className={statWrap} aria-label="Lượt xem">
+          <span className={statIconWrap} aria-hidden>
+            <Eye className={overlayIconClass} strokeWidth={1.75} />
+          </span>
+          <span className={statLabelClass}>{viewLabel}</span>
+        </div>
+      ) : null}
       <FeedReactionButton
         myReaction={myReaction}
         reactionLabel={reactionLabel}
@@ -89,34 +101,6 @@ function FeedActionsComponent({
           <MessageCircle className={overlayIconClass} strokeWidth={1.75} />
         </span>
         <span className={labelClass}>{commentLabel}</span>
-      </button>
-      <button
-        type="button"
-        className={actionBtn}
-        aria-label="Lưu"
-        onClick={() => {
-          if (typeof onSave === "function") onSave();
-          else if (typeof onRequireAuth === "function") onRequireAuth();
-        }}
-      >
-        <span className={iconWrap}>
-          <Bookmark className={overlayIconClass} strokeWidth={1.75} />
-        </span>
-        <span className={labelClass}>{saveLabel}</span>
-      </button>
-      <button
-        type="button"
-        className={actionBtn}
-        aria-label="Chia sẻ"
-        onClick={() => {
-          if (typeof onShare === "function") onShare();
-          else if (typeof onRequireAuth === "function") onRequireAuth();
-        }}
-      >
-        <span className={iconWrap}>
-          <Share2 className={overlayIconClass} strokeWidth={1.75} />
-        </span>
-        <span className={shareLabelClass}>{shareLabel}</span>
       </button>
       <button
         type="button"

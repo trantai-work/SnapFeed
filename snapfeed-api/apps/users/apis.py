@@ -69,6 +69,7 @@ class UserViewSet(BaseAPIViewSet):
         qs = (
             Video.objects.filter(user=user)
             .select_related("user")
+            .prefetch_related("tags")
             .order_by("-created_at", "-id")
         )
 
@@ -95,6 +96,7 @@ class UserViewSet(BaseAPIViewSet):
         qs = (
             Video.objects.filter(reactions__user=user)
             .select_related("user")
+            .prefetch_related("tags")
             .order_by("-created_at", "-id")
             .distinct()
         )
