@@ -50,10 +50,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
   const [incomingRecipient, setIncomingRecipient] = useState(null);
 
   const [searchQ, setSearchQ] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [videoResults, setVideoResults] = useState([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const searchBoxRef = useRef(null);
   const recentProvider = useMemo(() => {
     return window.localStorage.getItem("auth_recent_provider") || null;
   }, []);
@@ -62,49 +58,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
     return onAuthModalOpen(() => setAuthOpen(true));
   }, []);
 
-  useEffect(() => {
-    if (!searchOpen) return;
-    const onDoc = (e) => {
-      const el = searchBoxRef.current;
-      if (!el) return;
-      if (el.contains(e.target)) return;
-      setSearchOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [searchOpen]);
 
-  useEffect(() => {
-    const q = String(searchQ || "").trim();
-    if (!q) {
-      setVideoResults([]);
-      setSearchLoading(false);
-      return;
-    }
-
-    let alive = true;
-    setSearchLoading(true);
-    const t = setTimeout(() => {
-      (async () => {
-        try {
-          const res = await videosApi.search({ q });
-          if (!alive) return;
-          setVideoResults(Array.isArray(res) ? res : []);
-        } catch {
-          if (!alive) return;
-          setVideoResults([]);
-        } finally {
-          if (!alive) return;
-          setSearchLoading(false);
-        }
-      })();
-    }, 320);
-
-    return () => {
-      alive = false;
-      clearTimeout(t);
-    };
-  }, [searchQ]);
 
   useEffect(() => {
     if (!notificationsOpen) return;
@@ -318,92 +272,24 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
               />
             </button>
 
-            <div className="mb-4 flex items-center rounded-full bg-gray-100 px-4 py-2 dark:bg-gray-800">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const q = String(searchQ || "").trim();
+                if (!q) return;
+                navigate(`/search?q=${encodeURIComponent(q)}`);
+                onMobileClose();
+              }}
+              className="mb-4 flex items-center rounded-full bg-gray-100 px-4 py-2 dark:bg-gray-800"
+            >
               <Search size={16} className="text-gray-500 dark:text-gray-400" />
               <input
                 placeholder="Tìm kiếm"
                 value={searchQ}
-                onChange={(e) => {
-                  setSearchQ(e.target.value);
-                  setSearchOpen(true);
-                }}
-                onFocus={() => setSearchOpen(true)}
+                onChange={(e) => setSearchQ(e.target.value)}
                 className="ml-2 w-full bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-500 dark:text-white dark:placeholder:text-gray-500"
               />
-            </div>
-
-            {searchOpen && String(searchQ || "").trim() ? (
-              <div ref={searchBoxRef} className="relative mb-4">
-                <div className="rounded-2xl border border-zinc-200/80 bg-white shadow-xl dark:border-white/10 dark:bg-zinc-950">
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <div className="text-sm font-semibold text-zinc-900 dark:text-white">
-                      Video
-                    </div>
-                    {searchLoading ? (
-                      <div className="text-xs text-zinc-500 dark:text-white/50">
-                        Đang tìm...
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="max-h-[min(52vh,28rem)] overflow-y-auto p-2">
-                    {!searchLoading && videoResults.length === 0 ? (
-                      <div className="px-3 py-4 text-sm text-zinc-600 dark:text-white/60">
-                        Không có kết quả.
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        {videoResults.map((v) => {
-                          const title =
-                            String(v?.description || "").trim() || "Video";
-                          const author = getUserDisplayName(v || {});
-                          const avatar = getUserAvatarUrl(v || {});
-                          return (
-                            <button
-                              key={v?.id}
-                              type="button"
-                              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-zinc-100 active:bg-zinc-200/70 dark:hover:bg-white/10 dark:active:bg-white/15"
-                              onClick={() => {
-                                if (!v?.id) return;
-                                setSearchOpen(false);
-                                onMobileClose?.();
-                                navigate("/profile", { state: { openVideoId: v.id } });
-                              }}
-                            >
-                              <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-zinc-200 dark:bg-white/10">
-                                {v?.thumbnail ? (
-                                  <img
-                                    src={v.thumbnail}
-                                    alt=""
-                                    className="h-full w-full object-cover"
-                                    referrerPolicy="no-referrer"
-                                  />
-                                ) : avatar ? (
-                                  <img
-                                    src={avatar}
-                                    alt=""
-                                    className="h-full w-full object-cover opacity-90"
-                                    referrerPolicy="no-referrer"
-                                  />
-                                ) : null}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="truncate text-sm font-semibold text-zinc-900 dark:text-white">
-                                  {title}
-                                </div>
-                                <div className="truncate text-xs text-zinc-500 dark:text-white/50">
-                                  {author}
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : null}
+            </form>
 
             <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto">
               {menu.map((item, index) => {

@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "storages",
     "django.contrib.postgres",
+    "django_elasticsearch_dsl",
     "apps.maintenance",
     "apps.users",
     "apps.permissions",
@@ -286,3 +287,9 @@ else:
 
 # API key
 API_KEY = env("API_KEY")
+
+# Elasticsearch (django-elasticsearch-dsl)
+ELASTICSEARCH_HOST = env("ELASTICSEARCH_HOST")
+ELASTICSEARCH_DSL = {
+    "default": {"hosts": ELASTICSEARCH_HOST},
+}

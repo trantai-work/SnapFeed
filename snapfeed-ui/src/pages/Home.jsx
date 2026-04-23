@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { Menu } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import SimpleSideBar from "../components/SimpleSideBar";
+import DraggableMenuButton from "../components/DraggableMenuButton";
 
 export default function Home() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -37,17 +38,9 @@ export default function Home() {
         }
       >
         {!isChatPage ? (
-          <button
-            type="button"
-            className="fixed left-2 top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200/90 bg-white/95 text-gray-800 shadow-md backdrop-blur-md transition-colors hover:bg-gray-50 dark:border-white/10 dark:bg-[#1f1f1f]/95 dark:text-white dark:hover:bg-white/10 sm:left-3 sm:top-3 sm:h-11 sm:w-11 lg:hidden"
-            onClick={() => setMobileNavOpen(true)}
-            aria-label="Mở menu"
-          >
-            <Menu
-              className="h-[1.15rem] w-[1.15rem] sm:h-[1.35rem] sm:w-[1.35rem]"
-              strokeWidth={2}
-            />
-          </button>
+          <div className="lg:hidden">
+            <DraggableMenuButton onClick={() => setMobileNavOpen(true)} />
+          </div>
         ) : null}
 
         {isChatPage ? (

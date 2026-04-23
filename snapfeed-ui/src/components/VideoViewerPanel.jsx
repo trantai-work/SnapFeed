@@ -255,6 +255,11 @@ export default function VideoViewerPanel({
                       <div className="truncate text-sm font-extrabold text-zinc-900 dark:text-white">
                         {authorName}
                       </div>
+                      {videoState?.title ? (
+                        <div className="mt-0.5 line-clamp-1 text-sm font-extrabold text-zinc-900 dark:text-white">
+                          {videoState.title}
+                        </div>
+                      ) : null}
                       <div
                         className={classNames(
                           "mt-1 whitespace-pre-wrap break-words text-sm text-zinc-700 dark:text-white/75",

@@ -64,12 +64,19 @@ export const videosApi = {
     return data;
   },
 
-  /** GET /videos/search?q=... */
-  search: async ({ q } = {}) => {
-    const query = String(q ?? "").trim();
-    if (!query) return [];
-    const data = await api.get("/videos/search", { params: { q: query } });
-    const arr = Array.isArray(data) ? data : Array.isArray(data?.results) ? data.results : [];
-    return arr.map(normalizeFeedItem);
+  /** GET /videos/search?keyword=...&cursor=...&size=... */
+  search: async ({ keyword, cursor = null, size = 20 } = {}) => {
+    const q = String(keyword ?? "").trim();
+    if (!q) return { results: [], nextCursor: null };
+
+    const params = { keyword: q, size };
+    if (cursor) params.cursor = cursor;
+
+    const data = await api.get("/videos/search", { params });
+    const rawResults = Array.isArray(data?.results) ? data.results : [];
+    return {
+      results: rawResults.map(normalizeFeedItem).filter(Boolean),
+      nextCursor: data?.nextCursor ?? data?.next_cursor ?? null,
+    };
   },
 };

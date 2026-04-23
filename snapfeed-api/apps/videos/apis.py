@@ -1,12 +1,15 @@
 from django.conf import settings
 from django.db.models import Prefetch
-from django.db.models import Q
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import action
 import boto3
 from rest_framework import mixins
 
-from apps.videos.constants import MAX_VIDEO_UPLOAD_SIZE
+from apps.videos.constants import (
+    MAX_VIDEO_UPLOAD_SIZE,
+    VIDEO_SEARCH_DEFAULT_SIZE,
+    VIDEO_SEARCH_MAX_SIZE,
+)
 from apps.videos.models import Video, VideoReaction
 from apps.videos.permissions import (
     GeneratePresignedUrlPermission,
@@ -142,6 +145,22 @@ class VideoViewSet(
 
         return self.response_ok(self.get_serializer(feeds, many=True).data)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="keyword",
+                description="Search query",
+                required=True,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="size",
+                description="Result size",
+                required=False,
+                type=int,
+            ),
+        ]
+    )
     @action(
         detail=False,
         methods=["get"],
@@ -151,17 +170,31 @@ class VideoViewSet(
     )
     def search(self, request):
         """
-        Simple search videos by description (case-insensitive).
+        Search videos by keyword (Elasticsearch).
         """
 
-        q = (request.query_params.get("q") or "").strip()
-        if not q:
-            return self.response_ok([])
+        keyword = (request.query_params.get("keyword") or "").strip()
+        if not keyword:
+            return self.response_ok({"results": [], "next_cursor": None})
 
-        qs = (
-            self.get_queryset().filter(Q(description__icontains=q)).order_by("-id")[:20]
+        cursor = (request.query_params.get("cursor") or "").strip() or None
+        size_raw = (request.query_params.get("size") or "").strip()
+        size = VIDEO_SEARCH_DEFAULT_SIZE
+        if size_raw:
+            try:
+                size = max(1, min(VIDEO_SEARCH_MAX_SIZE, int(size_raw)))
+            except ValueError:
+                size = VIDEO_SEARCH_DEFAULT_SIZE
+
+        qs, next_cursor = video_services.search_videos(
+            keyword=keyword, base_qs=self.get_queryset(), size=size, cursor=cursor
         )
-        return self.response_ok(self.get_serializer(qs, many=True).data)
+        return self.response_ok(
+            {
+                "results": self.get_serializer(qs, many=True).data,
+                "next": next_cursor,
+            }
+        )
 
     @extend_schema(
         request=VideoReactionSerializer,

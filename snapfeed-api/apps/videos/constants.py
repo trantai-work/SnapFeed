@@ -29,6 +29,10 @@ class AllowedVideoContentTypes(EnumChoices):
 
 MAX_VIDEO_UPLOAD_SIZE = 3 * 1024 * 1024 * 1024  # 3GB
 
+# Video search (Elasticsearch) pagination
+VIDEO_SEARCH_DEFAULT_SIZE = 20
+VIDEO_SEARCH_MAX_SIZE = 50
+
 DEFAULT_TAGS: list[str] = [
     "music",
     "dance",
@@ -113,4 +117,27 @@ DEFAULT_VIDEO_DESCRIPTIONS: list[str] = [
     "Một chút random trong ngày.",
     "Mood hôm nay: khá ổn.",
     "Không biết nói gì, xem là hiểu 😆",
+]
+
+DEFAULT_VIDEO_TITLES: list[str] = [
+    "Chill một chút",
+    "Khoảnh khắc hôm nay",
+    "Vlog ngắn",
+    "Một chút vui vui",
+    "Thử trend",
+    "Góc nhỏ của mình",
+    "10 giây thôi",
+    "Mood hôm nay",
+    "Đi đâu đó",
+    "Món ngon nè",
+    "Tập tành",
+    "Behind the scenes",
+    "Một ngày bình thường",
+    "Cute moment",
+    "Quick update",
+    "Hôm nay có gì?",
+    "Cười lên nào",
+    "Đừng bỏ lỡ",
+    "Xem tới cuối nha",
+    "Random",
 ]

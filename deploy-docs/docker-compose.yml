@@ -8,23 +8,41 @@ services:
       - .env
     environment:
       - REDIS_URL=redis://redis:6379/0
+      - ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST}
     # ASGI (WebSocket works)
     command: >
       gunicorn config.asgi:application
       --bind 0.0.0.0:8000
-      --workers 1
+      --workers 4
       --worker-class uvicorn.workers.UvicornWorker
     ports:
       - "${MAPPING_API_PORT}:8000"
     depends_on:
       redis:
         condition: service_started
+      elasticsearch:
+        condition: service_started
+
   redis:
     image: redis:7-alpine
     container_name: snapfeed-redis
     restart: unless-stopped
     ports:
       - "${MAPPING_REDIS_PORT:-6379}:6379"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.3.0
+    container_name: snapfeed-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "${MAPPING_ELASTIC_PORT:-9200}:9200"
+    volumes:
+      - data_elasticsearch:/usr/share/elasticsearch/data
+
   ui:
     image: bintolo1b/snapfeed-ui:latest
     container_name: snapfeed-ui
@@ -34,3 +52,6 @@ services:
     depends_on:
       api:
         condition: service_started
+
+volumes:
+  data_elasticsearch:

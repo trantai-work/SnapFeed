@@ -124,6 +124,11 @@ function FeedItemComponent({
               <p className="text-sm font-semibold text-white drop-shadow">
                 {displayName}
               </p>
+              {item.title ? (
+                <p className="mt-0.5 line-clamp-1 text-sm font-extrabold text-white drop-shadow">
+                  {item.title}
+                </p>
+              ) : null}
               <FeedDescription
                 text={item.description}
                 videoItemId={item.id}
