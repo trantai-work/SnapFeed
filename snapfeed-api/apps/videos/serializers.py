@@ -8,7 +8,14 @@ class VideoSerializer(serializers.ModelSerializer):
     user_avatar = serializers.CharField(source="user.avatar_url", read_only=True)
     user_first_name = serializers.CharField(source="user.first_name", read_only=True)
     user_last_name = serializers.CharField(source="user.last_name", read_only=True)
+    title = serializers.CharField(required=False, allow_blank=True, default="")
     my_reaction = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField()
+    tags_input = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        required=False,
+        write_only=True,
+    )
 
     class Meta:
         model = Video
@@ -18,7 +25,10 @@ class VideoSerializer(serializers.ModelSerializer):
             "user_avatar",
             "user_first_name",
             "user_last_name",
+            "title",
             "description",
+            "tags",
+            "tags_input",
             "video_key",
             "thumbnail",
             "duration",
@@ -47,6 +57,12 @@ class VideoSerializer(serializers.ModelSerializer):
 
         row = VideoReaction.objects.filter(user=request.user, video_id=obj.pk).first()
         return row.reaction if row else None
+
+    def get_tags(self, obj):
+        prefetched_cache = getattr(obj, "_prefetched_objects_cache", None) or {}
+        if "tags" not in prefetched_cache:
+            return None
+        return [t.name for t in prefetched_cache["tags"]]
 
 
 class PresignedUrlSerializer(serializers.Serializer):

@@ -43,4 +43,20 @@ export const usersApi = {
       results: rawResults.map(normalizeFeedItem).filter(Boolean),
     };
   },
+
+  /** GET /users/search?keyword=...&cursor=...&size=... */
+  search: async ({ keyword, cursor = null, size = 20 } = {}) => {
+    const q = String(keyword ?? "").trim();
+    if (!q) return { results: [], nextCursor: null };
+
+    const params = { keyword: q, size };
+    if (cursor) params.cursor = cursor;
+
+    const data = await api.get("/users/search", { params });
+    const rawResults = Array.isArray(data?.results) ? data.results : [];
+    return {
+      results: rawResults.filter(Boolean),
+      nextCursor: data?.nextCursor ?? data?.next_cursor ?? null,
+    };
+  },
 };

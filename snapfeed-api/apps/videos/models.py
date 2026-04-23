@@ -6,9 +6,18 @@ from core.models import BaseModel
 from apps.users.models import User
 
 
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    class Meta:
+        db_table = "tags"
+
+
 class Video(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="videos")
+    title = models.CharField(max_length=255, blank=True, default="")
     description = models.TextField(blank=True)
+    tags = models.ManyToManyField(Tag, related_name="videos", blank=True)
     video_key = models.CharField(max_length=255, unique=True)
     thumbnail = models.ImageField(
         upload_to="thumbnails/",

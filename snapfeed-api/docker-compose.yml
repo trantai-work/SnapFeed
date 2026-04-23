@@ -12,6 +12,7 @@ services:
       - .env
     environment:
       - REDIS_URL=redis://redis:6379/0
+      - ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST}
     volumes:
       - .:/code
     ports:
@@ -20,6 +21,8 @@ services:
       db:
         condition: service_healthy
       redis:
+        condition: service_started
+      elasticsearch:
         condition: service_started
 
   redis:
@@ -50,5 +53,19 @@ services:
       retries: 5
       start_period: 5s
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.3.0
+    container_name: snapfeed-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms128m -Xmx128m
+    ports:
+      - "${MAPPING_ELASTIC_PORT}:9200"
+    volumes:
+      - data_elasticsearch:/usr/share/elasticsearch/data
+
 volumes:
   data_snapfeed:
+  data_elasticsearch:

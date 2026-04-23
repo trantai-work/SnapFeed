@@ -4,8 +4,14 @@ from django.contrib.auth.models import Group
 
 from apps.oauth.services import social_account_services
 from apps.permissions.constants import Groups
+from apps.users.constants import USER_SEARCH_DEFAULT_SIZE
 from apps.users.models import User
 from utils import random
+from typing import Tuple
+from django.db.models import QuerySet, Case, IntegerField, Value, When
+
+from apps.users.documents import UserDocument
+from utils.search_cursor import decode_search_after_cursor, encode_search_after_cursor
 
 
 def find_user_by_email(email: str) -> Optional[User]:
@@ -87,3 +93,58 @@ def get_or_create_user_by_social_account(
     )
 
     return user
+
+
+def search_users(
+    *,
+    keyword: str,
+    base_qs: QuerySet[User],
+    size: int = USER_SEARCH_DEFAULT_SIZE,
+    cursor: str | None = None,
+) -> Tuple[QuerySet[User], str | None]:
+    """
+    Search users via Elasticsearch (username, first_name, last_name) using `search_after`.
+
+    Returns:
+      (queryset, next_cursor)
+    """
+
+    s = (
+        UserDocument.search()
+        .query(
+            "multi_match",
+            query=keyword,
+            fields=["username^3", "first_name^2", "last_name^2"],
+            type="best_fields",
+            operator="or",
+        )
+        # Stable sort + tie-breaker for search_after.
+        .sort({"_score": "desc"}, {"id": "desc"})
+        .extra(size=size)
+    )
+
+    if cursor:
+        s = s.extra(search_after=decode_search_after_cursor(cursor))
+
+    resp = s.execute()
+
+    hits = resp.hits
+    ids = [int(hit.meta.id) for hit in hits]
+
+    if not ids:
+        return base_qs.none(), None
+
+    order = Case(
+        *[When(pk=pk, then=Value(idx)) for idx, pk in enumerate(ids)],
+        output_field=IntegerField(),
+    )
+    qs = base_qs.filter(pk__in=ids).order_by(order)
+
+    next_cursor = None
+    last_hit = hits[-1] if hits else None
+    if last_hit is not None and hasattr(last_hit.meta, "sort"):
+        sort_values = getattr(last_hit.meta, "sort", None)
+        if isinstance(sort_values, (list, tuple)):
+            next_cursor = encode_search_after_cursor(list(sort_values))
+
+    return qs, next_cursor
