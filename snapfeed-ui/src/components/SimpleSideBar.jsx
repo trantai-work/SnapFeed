@@ -113,6 +113,7 @@ export default function SimpleSideBar() {
       if (payload?.recipient?.notification) {
         const n = payload.recipient.notification;
         const actorId = n?.actor?.id ?? null;
+        const actorAvatarUrl = n?.actor?.avatarUrl ?? n?.actor?.avatar_url ?? null;
         const target = n?.target ?? null;
         const recipientId = payload.recipient?.id ?? null;
         show({
@@ -122,7 +123,8 @@ export default function SimpleSideBar() {
           duration: 6500,
           onClick: async (meta) => {
             const target = meta?.target ?? null;
-            if (!target?.type || !target?.id) return;
+            const actorId = meta?.actorId ?? null;
+            
             setNotificationsOpen(false);
             if (meta?.recipientId) {
               try {
@@ -132,17 +134,33 @@ export default function SimpleSideBar() {
                 // ignore
               }
             }
-            if (target.type === "videos.video") {
+            
+            // Handle video notifications
+            if (target?.type === "videos.video" && target?.id) {
               navigate("/profile", { state: { openVideoId: target.id } });
               return;
             }
-            if (target.type === "comments.videocomment") {
+            
+            // Handle comment notifications
+            if (target?.type === "comments.videocomment" && target?.id) {
               const c = await commentsApi.getById(target.id);
               const vid = c?.video;
               if (vid) navigate("/profile", { state: { openVideoId: vid } });
+              return;
+            }
+            
+            // Handle follow notifications (target is user) or any notification with actor
+            if (target?.type === "users.user" && target?.id) {
+              navigate(`/profile/${target.id}`);
+              return;
+            }
+            
+            // Fallback: navigate to actor's profile if available
+            if (actorId) {
+              navigate(`/profile/${actorId}`);
             }
           },
-          meta: { actorId, target, recipientId },
+          meta: { actorId, target, recipientId, avatarUrl: actorAvatarUrl },
         });
       }
     });
@@ -256,7 +274,16 @@ export default function SimpleSideBar() {
             }
           >
             <span className="relative">
-              <Bell size={22} />
+              {incomingRecipient?.notification?.actor?.avatarUrl && unreadCount > 0 ? (
+                <img
+                  src={incomingRecipient.notification.actor.avatarUrl}
+                  alt="Thông báo"
+                  className="h-[22px] w-[22px] rounded-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <Bell size={22} />
+              )}
               {unreadCount > 0 ? (
                 <span
                   className="absolute -right-2.5 -top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[0.65rem] font-bold leading-none text-white shadow-sm ring-2 ring-white dark:ring-black"

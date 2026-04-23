@@ -1,11 +1,13 @@
-import { memo } from "react";
+import { memo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Eye,
   MessageCircle,
   User,
+  UserCheck,
 } from "lucide-react";
 import { FeedReactionButton } from "./FeedReactionButton";
+import { usersApi } from "../../api/user.api";
 
 function classNames(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -19,13 +21,46 @@ function FeedActionsComponent({
   profileUserId,
   myReaction,
   reactDisabled = false,
+  isFollowing = false,
+  currentUserId = null,
   onReact,
   onComment,
   onRequireAuth,
+  onFollowUpdate,
   overlay = false,
   className = "",
 }) {
   const navigate = useNavigate();
+  const [followState, setFollowState] = useState(isFollowing);
+  const [followLoading, setFollowLoading] = useState(false);
+
+  // Sync followState with isFollowing prop
+  useEffect(() => {
+    setFollowState(isFollowing);
+  }, [isFollowing]);
+
+  const handleFollow = async (e) => {
+    e.stopPropagation();
+    if (!profileUserId || !currentUserId || profileUserId === currentUserId) return;
+    if (followLoading) return;
+
+    setFollowLoading(true);
+    try {
+      if (followState) {
+        await usersApi.unfollow(profileUserId);
+        setFollowState(false);
+        onFollowUpdate?.(profileUserId, false);
+      } else {
+        await usersApi.follow(profileUserId);
+        setFollowState(true);
+        onFollowUpdate?.(profileUserId, true);
+      }
+    } catch (error) {
+      console.error("Follow error:", error);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   const actionBtn = overlay
     ? "flex cursor-pointer flex-col items-center gap-1.5 text-white transition-transform active:scale-95"
@@ -102,37 +137,79 @@ function FeedActionsComponent({
         </span>
         <span className={labelClass}>{commentLabel}</span>
       </button>
-      <button
-        type="button"
-        className={actionBtn}
-        aria-label="Hồ sơ người đăng"
-        onClick={() => {
-          if (!profileUserId) return;
-          navigate(`/profile/${profileUserId}`);
-        }}
-      >
-        {avatarUrl ? (
-          <span
+      <div className="relative">
+        <button
+          type="button"
+          className={actionBtn}
+          aria-label="Hồ sơ người đăng"
+          onClick={() => {
+            if (!profileUserId) return;
+            navigate(`/profile/${profileUserId}`);
+          }}
+        >
+          {avatarUrl ? (
+            <span
+              className={classNames(
+                overlay
+                  ? "block h-11 w-11 overflow-hidden rounded-full transition sm:h-12 sm:w-12 md:h-[3.25rem] md:w-[3.25rem]"
+                  : "block h-11 w-11 overflow-hidden rounded-full transition sm:h-12 sm:w-12",
+                avatarRing
+              )}
+            >
+              <img
+                src={avatarUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </span>
+          ) : (
+            <span className={iconWrap}>
+              <User className={overlayIconClass} strokeWidth={1.75} />
+            </span>
+          )}
+        </button>
+
+        {profileUserId && currentUserId && profileUserId !== currentUserId && !followState && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleFollow(e);
+            }}
+            disabled={followLoading}
             className={classNames(
-              overlay
-                ? "h-11 w-11 overflow-hidden rounded-full transition sm:h-12 sm:w-12 md:h-[3.25rem] md:w-[3.25rem]"
-                : "h-11 w-11 overflow-hidden rounded-full transition sm:h-12 sm:w-12",
-              avatarRing
+              "absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full transition-all cursor-pointer",
+              followState
+                ? overlay
+                  ? "bg-white text-blue-600 ring-2 ring-white/50"
+                  : "bg-white text-blue-600 ring-2 ring-blue-300 dark:bg-blue-500/90 dark:text-white dark:ring-blue-400/50"
+                : overlay
+                ? "bg-pink-600 text-white ring-2 ring-white/50"
+                : "bg-pink-600 text-white ring-2 ring-pink-400 dark:ring-pink-500/50",
+              followLoading && "opacity-50 pointer-events-none",
+              "hover:scale-110 active:scale-95"
             )}
+            aria-label={followState ? "Bỏ theo dõi" : "Theo dõi"}
           >
-            <img
-              src={avatarUrl}
-              alt=""
-              className="h-full w-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-          </span>
-        ) : (
-          <span className={iconWrap}>
-            <User className={overlayIconClass} strokeWidth={1.75} />
-          </span>
+            {followState ? (
+              <UserCheck className="h-3 w-3" strokeWidth={3} />
+            ) : (
+              <svg
+                className="h-3 w-3"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            )}
+          </button>
         )}
-      </button>
+      </div>
     </aside>
   );
 }

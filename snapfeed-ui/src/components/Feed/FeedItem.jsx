@@ -23,8 +23,9 @@ function FeedItemComponent({
   scrollRootRef,
   onReactionUpdate,
   onOpenComments,
+  onFollowUpdate,
 }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const videoRef = useRef(null);
   const reactInFlightRef = useRef(false);
   const src = buildVideoSrc(item.videoKey);
@@ -84,8 +85,11 @@ function FeedItemComponent({
     profileUserId: item.user,
     myReaction: item.myReaction ?? null,
     reactDisabled: !isAuthenticated,
+    isFollowing: item.isFollowing ?? false,
+    currentUserId: user?.id ?? null,
     onReact: handleReact,
     onRequireAuth: requireAuth,
+    onFollowUpdate,
     onComment: () => {
       if (!isAuthenticated) {
         openAuthModal();

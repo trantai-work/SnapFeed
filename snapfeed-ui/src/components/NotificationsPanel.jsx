@@ -12,6 +12,7 @@ const FILTERS = [
   { id: "all", label: "Tất cả" },
   { id: "react", label: "Cảm xúc" },
   { id: "comment", label: "Bình luận" },
+  { id: "follow", label: "Theo dõi" },
   { id: "system", label: "Hệ thống" },
 ];
 
@@ -190,6 +191,14 @@ export default function NotificationsPanel({
     (row) => {
       const n = row?.notification;
       const target = n?.target ?? null;
+      
+      // Handle follow notification - target is the follower user
+      if (n?.category === "follow" && target?.type === "users.user" && target?.id) {
+        onClose?.();
+        navigate(`/profile/${target.id}`);
+        return true;
+      }
+      
       if (!target?.type || !target?.id) return false;
 
       const openVideoId = async (videoId) => {

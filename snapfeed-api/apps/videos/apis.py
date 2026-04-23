@@ -39,6 +39,9 @@ class VideoViewSet(
     permission_classes = [FullDjangoModelPermissions]
 
     def get_queryset(self):
+        from django.db.models import Exists, OuterRef
+        from apps.users.models import UserFollow
+
         qs = Video.objects.select_related("user").prefetch_related("tags").all()
         user = getattr(self.request, "user", None)
         if user and user.is_authenticated:
@@ -47,6 +50,15 @@ class VideoViewSet(
                     "reactions",
                     queryset=VideoReaction.objects.filter(user=user),
                     to_attr="_prefetched_user_reactions",
+                )
+            )
+            # Annotate is_following for video owner
+            qs = qs.annotate(
+                is_following_owner=Exists(
+                    UserFollow.objects.filter(
+                        follower=user,
+                        following=OuterRef("user_id"),
+                    )
                 )
             )
         return qs

@@ -10,6 +10,7 @@ from rest_framework.exceptions import (
 from rest_framework_simplejwt.exceptions import InvalidToken
 
 from apps.chats.exceptions import UserNotInConversationError
+from apps.users.exceptions import CannotFollowYourselfError, HaveNotFollowUserError
 from apps.videos.exceptions import (
     InvalidS3KeyFormatError,
     NotVideoOwnerError,
@@ -58,4 +59,6 @@ DOMAIN_EXCEPTION_STATUS_MAP = {
     S3ObjectNotFoundError: status.HTTP_400_BAD_REQUEST,
     VideoWithS3KeyNotFound: status.HTTP_400_BAD_REQUEST,
     UserNotInConversationError: status.HTTP_400_BAD_REQUEST,
+    CannotFollowYourselfError: status.HTTP_400_BAD_REQUEST,
+    HaveNotFollowUserError: status.HTTP_400_BAD_REQUEST,
 }
