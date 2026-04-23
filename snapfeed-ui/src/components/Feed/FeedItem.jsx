@@ -34,7 +34,7 @@ function FeedItemComponent({
   const viewLabel = formatCount(item.viewCount ?? 0);
   const reactionLabel = formatCount(item.reactionCount ?? 0);
   const commentLabel = formatCount(item.commentCount ?? 0);
-  const saveLabel = formatCount(0);
+  const tags = Array.isArray(item?.tags) ? item.tags.filter(Boolean) : [];
 
   const showNativeControls = useMediaQuery("(min-width: 1024px)");
 
@@ -77,10 +77,9 @@ function FeedItemComponent({
   ].join(" ");
 
   const actionsProps = {
+    viewLabel: viewLabel ? `${viewLabel}` : null,
     reactionLabel,
     commentLabel,
-    saveLabel,
-    shareLabel: "Chia sẻ",
     avatarUrl,
     profileUserId: item.user,
     myReaction: item.myReaction ?? null,
@@ -93,20 +92,6 @@ function FeedItemComponent({
         return;
       }
       onOpenComments?.(item.id);
-    },
-    onSave: () => {
-      if (!isAuthenticated) {
-        openAuthModal();
-        return;
-      }
-      // TODO: save video
-    },
-    onShare: () => {
-      if (!isAuthenticated) {
-        openAuthModal();
-        return;
-      }
-      // TODO: share video
     },
   };
 
@@ -139,13 +124,32 @@ function FeedItemComponent({
               <p className="text-sm font-semibold text-white drop-shadow">
                 {displayName}
               </p>
+              {item.title ? (
+                <p className="mt-0.5 line-clamp-1 text-sm font-extrabold text-white drop-shadow">
+                  {item.title}
+                </p>
+              ) : null}
               <FeedDescription
                 text={item.description}
                 videoItemId={item.id}
               />
-              <p className="mt-2 text-xs text-white/60 drop-shadow">
-                {viewLabel} lượt xem
-              </p>
+              {tags.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {tags.slice(0, 2).map((t) => (
+                    <span
+                      key={t}
+                      className="rounded-full bg-black/45 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-[1px]"
+                    >
+                      #{t}
+                    </span>
+                  ))}
+                  {tags.length > 2 ? (
+                    <span className="rounded-full bg-black/45 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-[1px]">
+                      +{tags.length - 2}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
 
             <FeedActions

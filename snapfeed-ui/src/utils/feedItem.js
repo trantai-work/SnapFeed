@@ -6,7 +6,9 @@ export function normalizeFeedItem(raw) {
   return {
     id: raw.id,
     user: raw.user,
+    title: raw.title ?? "",
     description: raw.description ?? "",
+    tags: raw.tags ?? [],
     videoKey: raw.videoKey ?? raw.video_key ?? "",
     thumbnail: raw.thumbnail ?? null,
     duration: raw.duration ?? 0,

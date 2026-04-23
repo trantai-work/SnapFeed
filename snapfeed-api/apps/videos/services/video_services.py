@@ -1,4 +1,6 @@
-from typing import Optional
+from __future__ import annotations
+
+from typing import Optional, Tuple
 
 from django.db.models import OuterRef, QuerySet, Subquery
 from django.db.models import F, Sum, Count, FloatField, ExpressionWrapper
@@ -9,6 +11,11 @@ from apps.recommendation.models import VideoEmbedding
 from apps.users.models import User
 from apps.videos.exceptions import VideoWithS3KeyNotFound
 from apps.videos.models import Video
+from django.db.models import Case, IntegerField, Value, When
+
+from apps.videos.documents import VideoDocument
+from apps.videos.constants import VIDEO_SEARCH_DEFAULT_SIZE
+from utils.search_cursor import decode_search_after_cursor, encode_search_after_cursor
 
 
 def get_video_by_s3_key(video_s3_key: str) -> Video:
@@ -90,3 +97,58 @@ def get_default_feeds() -> QuerySet[Video]:
     feeds = trending_pool[:25]
 
     return feeds
+
+
+def search_videos(
+    *,
+    keyword: str,
+    base_qs: QuerySet[Video],
+    size: int = VIDEO_SEARCH_DEFAULT_SIZE,
+    cursor: str | None = None,
+) -> Tuple[QuerySet[Video], str | None]:
+    """
+    Search videos via Elasticsearch (title, description, tags) using `search_after`.
+
+    Returns:
+      (queryset, next_cursor)
+    """
+
+    s = (
+        VideoDocument.search()
+        .query(
+            "multi_match",
+            query=keyword,
+            fields=["title^3", "description", "tags^2"],
+            type="best_fields",
+            operator="and",
+        )
+        # Stable sort + tie-breaker for search_after.
+        .sort({"_score": "desc"}, {"id": "desc"})
+        .extra(size=size)
+    )
+
+    if cursor:
+        s = s.extra(search_after=decode_search_after_cursor(cursor))
+
+    resp = s.execute()
+
+    hits = resp.hits
+    ids = [int(hit.meta.id) for hit in hits]
+
+    if not ids:
+        return base_qs.none(), None
+
+    order = Case(
+        *[When(pk=pk, then=Value(idx)) for idx, pk in enumerate(ids)],
+        output_field=IntegerField(),
+    )
+    qs = base_qs.filter(pk__in=ids).order_by(order)
+
+    next_cursor = None
+    last_hit = hits[-1] if hits else None
+    if last_hit is not None and hasattr(last_hit.meta, "sort"):
+        sort_values = getattr(last_hit.meta, "sort", None)
+        if isinstance(sort_values, (list, tuple)):
+            next_cursor = encode_search_after_cursor(list(sort_values))
+
+    return qs, next_cursor

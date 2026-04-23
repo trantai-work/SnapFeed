@@ -39,9 +39,13 @@ export const videosApi = {
     return data;
   },
 
-  createVideo: async ({ description, videoKey, thumbnail, duration }) => {
+  createVideo: async ({ title, description, tags, videoKey, thumbnail, duration }) => {
     const formData = new FormData();
+    if (title !== undefined) formData.append("title", title ?? "");
     if (description !== undefined) formData.append("description", description ?? "");
+    if (Array.isArray(tags)) {
+      for (const t of tags) formData.append("tags_input", String(t ?? ""));
+    }
     if (videoKey !== undefined) formData.append("video_key", videoKey ?? "");
     if (thumbnail) formData.append("thumbnail", thumbnail);
     if (duration !== undefined && duration !== null) {
@@ -58,5 +62,21 @@ export const videosApi = {
   reactToVideo: async (videoId, reaction) => {
     const data = await api.put(`/videos/${videoId}/react`, { reaction });
     return data;
+  },
+
+  /** GET /videos/search?keyword=...&cursor=...&size=... */
+  search: async ({ keyword, cursor = null, size = 20 } = {}) => {
+    const q = String(keyword ?? "").trim();
+    if (!q) return { results: [], nextCursor: null };
+
+    const params = { keyword: q, size };
+    if (cursor) params.cursor = cursor;
+
+    const data = await api.get("/videos/search", { params });
+    const rawResults = Array.isArray(data?.results) ? data.results : [];
+    return {
+      results: rawResults.map(normalizeFeedItem).filter(Boolean),
+      nextCursor: data?.nextCursor ?? data?.next_cursor ?? null,
+    };
   },
 };

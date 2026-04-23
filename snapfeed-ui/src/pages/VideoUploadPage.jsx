@@ -17,12 +17,16 @@ export default function VideoUploadPage() {
   const {
     videoFile,
     coverFile,
+    title,
     description,
+    tagsText,
     videoPreviewUrl,
     coverPreviewUrl,
     setVideo,
     setCover,
+    setTitle,
     setDescription,
+    setTagsText,
     reset,
   } = useUploadDraft();
 
@@ -172,7 +176,12 @@ export default function VideoUploadPage() {
       }
 
       await videosApi.createVideo({
+        title,
         description,
+        tags: String(tagsText || "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
         videoKey,
         thumbnail: thumbnailFile,
         duration,
@@ -317,6 +326,16 @@ export default function VideoUploadPage() {
                   <div className="font-semibold mb-2">Chi tiết</div>
 
                   <div className="rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
+                    <div className="text-sm font-semibold">Tiêu đề</div>
+                    <input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Tiêu đề video..."
+                      className="mt-2 w-full rounded-lg border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-pink-400 focus:ring-2 focus:ring-pink-500/20 dark:border-white/10 dark:text-white dark:placeholder:text-zinc-500"
+                    />
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
                     <div className="text-sm font-semibold">Mô tả</div>
                     <textarea
                       value={description}
@@ -326,6 +345,19 @@ export default function VideoUploadPage() {
                     />
                     <div className="mt-2 flex items-center justify-end text-xs text-gray-500 dark:text-zinc-400">
                       <div>{Math.min(description.length, 4000)}/4000</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
+                    <div className="text-sm font-semibold">Tags</div>
+                    <input
+                      value={tagsText}
+                      onChange={(e) => setTagsText(e.target.value)}
+                      placeholder="vd: travel, food, vlog"
+                      className="mt-2 w-full rounded-lg border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-pink-400 focus:ring-2 focus:ring-pink-500/20 dark:border-white/10 dark:text-white dark:placeholder:text-zinc-500"
+                    />
+                    <div className="mt-2 text-xs text-gray-500 dark:text-zinc-400">
+                      Ngăn cách tag bằng dấu phẩy.
                     </div>
                   </div>
 

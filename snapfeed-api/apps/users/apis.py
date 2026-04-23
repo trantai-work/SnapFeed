@@ -1,10 +1,12 @@
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from rest_framework.decorators import action
 
+from apps.users.constants import USER_SEARCH_DEFAULT_SIZE, USER_SEARCH_MAX_SIZE
 from apps.users.models import User
 from apps.users.serializers import UserSerializer
+from apps.users.services import user_services
 from apps.videos.models import Video
 from apps.videos.pagination import VideCursorPagination
 from apps.videos.permissions import ViewVideoPermissions
@@ -69,6 +71,7 @@ class UserViewSet(BaseAPIViewSet):
         qs = (
             Video.objects.filter(user=user)
             .select_related("user")
+            .prefetch_related("tags")
             .order_by("-created_at", "-id")
         )
 
@@ -95,6 +98,7 @@ class UserViewSet(BaseAPIViewSet):
         qs = (
             Video.objects.filter(reactions__user=user)
             .select_related("user")
+            .prefetch_related("tags")
             .order_by("-created_at", "-id")
             .distinct()
         )
@@ -104,4 +108,55 @@ class UserViewSet(BaseAPIViewSet):
             queryset=qs,
             serializer_class=VideoSerializer,
             pagination_class=VideCursorPagination,
+        )
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="keyword",
+                description="Search query",
+                required=True,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="size",
+                description="Result size",
+                required=False,
+                type=int,
+            ),
+        ]
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="search",
+        permission_classes=[],
+        pagination_class=None,
+    )
+    def search(self, request):
+        """
+        Search users by keyword (Elasticsearch).
+        """
+
+        keyword = (request.query_params.get("keyword") or "").strip()
+        if not keyword:
+            return self.response_ok({"results": [], "next_cursor": None})
+
+        cursor = (request.query_params.get("cursor") or "").strip() or None
+        size_raw = (request.query_params.get("size") or "").strip()
+        size = USER_SEARCH_DEFAULT_SIZE
+        if size_raw:
+            try:
+                size = max(1, min(USER_SEARCH_MAX_SIZE, int(size_raw)))
+            except ValueError:
+                size = USER_SEARCH_DEFAULT_SIZE
+
+        qs, next_cursor = user_services.search_users(
+            keyword=keyword, base_qs=self.get_queryset(), size=size, cursor=cursor
+        )
+        return self.response_ok(
+            {
+                "results": self.get_serializer(qs, many=True).data,
+                "next": next_cursor,
+            }
         )

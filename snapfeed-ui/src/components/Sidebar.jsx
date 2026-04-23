@@ -23,10 +23,12 @@ import { conversationsApi } from "../api/conversations.api";
 import { commentsApi } from "../api/comments.api";
 import { onAuthModalOpen } from "../utils/authModalBus";
 import { authApi } from "../api";
+import { videosApi } from "../api/video.api";
 import { useRealtimeSocket } from "../context/RealtimeSocketContext";
 import { useChatUnread } from "../context/ChatUnreadContext";
 import { useChatUI } from "../context/ChatUIContext";
 import ThemeToggle from "./ThemeToggle";
+import { getUserAvatarUrl, getUserDisplayName } from "../utils/feedItem";
 
 function classNames(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -46,6 +48,8 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
   const [unreadCount, setUnreadCount] = useState(0);
   const unreadFetchLock = useRef(false);
   const [incomingRecipient, setIncomingRecipient] = useState(null);
+
+  const [searchQ, setSearchQ] = useState("");
   const recentProvider = useMemo(() => {
     return window.localStorage.getItem("auth_recent_provider") || null;
   }, []);
@@ -53,6 +57,8 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
   useEffect(() => {
     return onAuthModalOpen(() => setAuthOpen(true));
   }, []);
+
+
 
   useEffect(() => {
     if (!notificationsOpen) return;
@@ -266,13 +272,24 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
               />
             </button>
 
-            <div className="mb-4 flex items-center rounded-full bg-gray-100 px-4 py-2 dark:bg-gray-800">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const q = String(searchQ || "").trim();
+                if (!q) return;
+                navigate(`/search?q=${encodeURIComponent(q)}`);
+                onMobileClose();
+              }}
+              className="mb-4 flex items-center rounded-full bg-gray-100 px-4 py-2 dark:bg-gray-800"
+            >
               <Search size={16} className="text-gray-500 dark:text-gray-400" />
               <input
                 placeholder="Tìm kiếm"
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
                 className="ml-2 w-full bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-500 dark:text-white dark:placeholder:text-gray-500"
               />
-            </div>
+            </form>
 
             <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto">
               {menu.map((item, index) => {
@@ -418,7 +435,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                           {user?.firstName || ""} {user?.lastName || user?.username}
                         </div>
                         <div className="truncate text-xs text-gray-600 dark:text-white/60">
-                          @{user?.username || ""}
+                          {user?.username || ""}
                         </div>
                       </div>
                     </button>
