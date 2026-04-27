@@ -11,6 +11,7 @@ import { useAuth } from "../context/AuthContext";
 import { openAuthModal } from "../utils/authModalBus";
 import CommentReactButton from "./CommentReactButton";
 import { MessageCircle } from "lucide-react";
+import HLSVideoPlayer from "./HLSVideoPlayer";
 
 function classNames(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -45,6 +46,10 @@ export default function VideoViewerPanel({
     () => buildVideoSrc(videoState?.videoKey ?? video?.videoKey),
     [video?.videoKey, videoState?.videoKey]
   );
+  const hlsUrl = useMemo(() => {
+    const v = videoState || video;
+    return v?.status === "ready" && v?.hlsPlaylistUrl ? v.hlsPlaylistUrl : null;
+  }, [video, videoState]);
   const poster = videoState?.thumbnail || video?.thumbnail || undefined;
 
   const close = useCallback(() => onClose?.(), [onClose]);
@@ -213,9 +218,10 @@ export default function VideoViewerPanel({
               )}
             >
               {src ? (
-                <video
+                <HLSVideoPlayer
                   className="h-full w-full object-contain"
                   src={src}
+                  hlsUrl={hlsUrl}
                   poster={poster}
                   controls
                   playsInline

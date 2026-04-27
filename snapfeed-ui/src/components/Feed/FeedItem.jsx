@@ -14,6 +14,7 @@ import { FeedActions } from "./FeedActions";
 import { FeedDescription } from "./FeedDescription";
 import { FeedVideoMobileBar } from "./FeedVideoMobileBar";
 import { openAuthModal } from "../../utils/authModalBus";
+import HLSVideoPlayer from "../HLSVideoPlayer";
 
 function FeedItemComponent({
   item,
@@ -28,7 +29,11 @@ function FeedItemComponent({
   const { isAuthenticated, user } = useAuth();
   const videoRef = useRef(null);
   const reactInFlightRef = useRef(false);
+  
+  // Use HLS URL if available and status is ready, otherwise fallback to direct mp4
+  const hlsUrl = item.status === "ready" && item.hlsPlaylistUrl ? item.hlsPlaylistUrl : null;
   const src = buildVideoSrc(item.videoKey);
+  
   const poster = item.thumbnail || undefined;
   const displayName = getUserDisplayName(item);
   const avatarUrl = getUserAvatarUrl(item);
@@ -105,10 +110,11 @@ function FeedItemComponent({
         <div className="flex h-full min-h-0 max-h-full w-full min-w-0 max-w-full items-stretch lg:w-fit">
           <div className="feed-video-wrap group relative h-full min-h-0 w-full min-w-0 shrink overflow-visible rounded-none bg-white dark:bg-black lg:max-w-full lg:overflow-hidden lg:rounded-2xl lg:w-fit lg:bg-white dark:lg:bg-black">
             {src ? (
-              <video
-                ref={videoRef}
+              <HLSVideoPlayer
+                videoRef={videoRef}
                 className="feed-video block h-full w-full max-h-full max-w-full object-contain max-lg:cursor-pointer"
                 src={src}
+                hlsUrl={hlsUrl}
                 poster={poster}
                 loop
                 playsInline

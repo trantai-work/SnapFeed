@@ -1,7 +1,7 @@
 from django.core.validators import FileExtensionValidator
 from django.db import models
 
-from apps.videos.constants import Reactions
+from apps.videos.constants import Reactions, VideoStatus
 from core.models import BaseModel
 from apps.users.models import User
 
@@ -30,6 +30,12 @@ class Video(BaseModel):
     view_count = models.PositiveIntegerField(default=0)
     comment_count = models.PositiveIntegerField(default=0)
     reaction_count = models.PositiveIntegerField(default=0)
+    hls_playlist_url = models.CharField(max_length=500, blank=True, null=True)
+    status = models.CharField(
+        max_length=20,
+        choices=VideoStatus.choices(),
+        default=VideoStatus.PROCESSING.value,
+    )
 
     class Meta:
         db_table = "videos"

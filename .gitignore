@@ -9,3 +9,6 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Test
+test-page/

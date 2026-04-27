@@ -29,6 +29,8 @@ _ERROR_MESSAGES = {
         "invalid_conversation": "Invalid conversation.",
         "can_not_follow_yourself": "Cannot follow yourself.",
         "you_havent_followed_this_user": "You haven't followed this user.",
+        "video_s3_key_is_required": "Video S3 key is requried.",
+        "invalid_video_status": "Invalid video status.",
     },
     "vi": {
         "common": {
@@ -57,6 +59,8 @@ _ERROR_MESSAGES = {
         "invalid_conversation": "Đoạn chat không hợp lệ.",
         "can_not_follow_yourself": "Không thể theo dõi chính mình.",
         "you_havent_followed_this_user": "Bạn chưa theo dõi người này.",
+        "video_s3_key_is_required": "Thiếu video s3 key.",
+        "invalid_video_status": "Invalid video status.",
     },
 }
 
