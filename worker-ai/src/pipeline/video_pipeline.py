@@ -69,11 +69,10 @@ class VideoPipeline:
             )
             print(f"Video status updated: {update_status_response.status_code}")
             
-            # TEMPORARY: Comment out for re-encoding old videos (they already have embeddings)
-            # embedding = extract_embedding(local_video_path)
-            # print(f"Embedding extracted: dim={len(embedding)}")
-            # backend_response = self._send_to_backend(s3_key, embedding)
-            # print(f"Backend response: {backend_response.status_code}")
+            embedding = extract_embedding(local_video_path)
+            print(f"Embedding extracted: dim={len(embedding)}")
+            backend_response = self._send_to_backend(s3_key, embedding)
+            print(f"Backend response: {backend_response.status_code}")
             
             return {
                 'success': True,
@@ -81,7 +80,7 @@ class VideoPipeline:
                 'hls_playlist_key': upload_result['playlist_key'],
                 'hls_playlist_url': upload_result['playlist_url'],
                 'segment_count': len(upload_result['segment_urls']),
-                # 'backend_status': backend_response.status_code
+                'backend_status': backend_response.status_code
             }
             
         except Exception as e:
