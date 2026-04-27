@@ -4,14 +4,10 @@ import { CheckCircle2, ImagePlus, RefreshCcw, Upload, X, Loader2 } from "lucide-
 import { uploadToS3, videosApi } from "../api/video.api";
 import { useMessageBox } from "../components/MessageBox";
 import { useUploadDraft } from "../context/UploadDraftContext";
-import ThemeToggle from "../components/ThemeToggle";
-import logo from "../assets/logo.png";
-import logoLightMode from "../assets/logo_light_mode.png";
-import { useTheme } from "../context/ThemeContext";
+import Sidebar from "../components/Sidebar";
 import { getVideoDurationSeconds, getVideoFirstFrameJpegFile } from "../utils/video";
 
 export default function VideoUploadPage() {
-  const { theme } = useTheme();
   const navigate = useNavigate();
   const { show } = useMessageBox();
   const {
@@ -72,12 +68,6 @@ export default function VideoUploadPage() {
   }, [videoFile]);
 
   const effectiveCoverPreviewUrl = coverPreviewUrl || defaultCoverPreviewUrl;
-
-  const fileLabel = useMemo(() => {
-    if (!videoFile) return "";
-    const mb = (videoFile.size / (1024 * 1024)).toFixed(2);
-    return `${videoFile.name} (${mb}MB)`;
-  }, [videoFile]);
 
   const onPickVideo = () => {
     const el = pickVideoRef.current;
@@ -175,7 +165,7 @@ export default function VideoUploadPage() {
         }
       }
 
-      await videosApi.createVideo({
+      const createdVideo = await videosApi.createVideo({
         title,
         description,
         tags: String(tagsText || "")
@@ -187,11 +177,54 @@ export default function VideoUploadPage() {
         duration,
       });
 
+      const videoId = createdVideo?.id;
+      if (!videoId) throw new Error("Không nhận được video ID từ server.");
+
+      // Polling to wait for video status = 'ready'
       show({
         status: "success",
-        title: "Tải lên thành công",
-        message: "Video đã được đăng tải.",
+        title: "Đang xử lý video",
+        message: "Video đang được xử lý, vui lòng chờ...",
+        duration: 3000,
       });
+
+      const maxAttempts = 60;
+      let attempts = 0;
+      let videoReady = false;
+
+      while (attempts < maxAttempts && !videoReady) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        
+        try {
+          const videoData = await videosApi.getById(videoId);
+          
+          if (videoData?.status === "ready") {
+            videoReady = true;
+            break;
+          } else if (videoData?.status === "failed") {
+            throw new Error("Video xử lý thất bại.");
+          }
+          
+          attempts++;
+        } catch (pollError) {
+          console.error("Polling error:", pollError);
+          attempts++;
+        }
+      }
+
+      if (!videoReady) {
+        show({
+          status: "warning",
+          title: "Video đang xử lý",
+          message: "Video đang được xử lý, bạn có thể xem sau.",
+        });
+      } else {
+        show({
+          status: "success",
+          title: "Tải lên thành công",
+          message: "Video đã sẵn sàng để xem.",
+        });
+      }
 
       reset();
       navigate("/");
@@ -206,46 +239,27 @@ export default function VideoUploadPage() {
     }
   };
 
-  const barClass =
-    "border-gray-200 bg-gray-50 dark:border-zinc-800 dark:bg-zinc-900";
-
   if (!videoFile) {
     return (
-      <div className="h-screen overflow-hidden bg-gray-50 transition-colors dark:bg-zinc-950">
-        <div
-          className={`fixed top-0 right-0 left-0 z-20 flex h-[72px] items-center justify-between border-b px-3 sm:px-6 ${barClass}`}
-        >
-          <img
-            src={theme === "light" ? logoLightMode : logo}
-            alt="SnapFeed"
-            className="h-10 w-auto max-w-[min(220px,50vw)] object-contain object-left sm:h-11"
-          />
-          <ThemeToggle />
-        </div>
-
-        <div
-          className={`fixed top-[72px] bottom-0 left-0 z-10 hidden w-[260px] border-r lg:block ${barClass}`}
-        />
-
-        {/* Main scroll area */}
-        <div className="pt-[72px] lg:pl-[260px] h-full">
-          <div className="h-[calc(100vh-72px)] overflow-y-auto p-3 sm:p-6">
-            <div className="max-w-5xl mx-auto mt-4">
-              <div className="rounded-2xl bg-white p-4 text-gray-900 shadow-sm dark:bg-zinc-900 dark:text-white sm:p-8">
-                <div className="text-lg font-semibold">
-                  Chưa có video để tải lên
-                </div>
-                <div className="mt-1 text-sm text-gray-600 dark:text-zinc-400">
-                  Vui lòng chọn video ở trang Upload trước.
-                </div>
-                <button
-                  type="button"
-                  className="mt-4 px-4 py-2 rounded-lg bg-pink-500 hover:bg-pink-600 text-white font-semibold cursor-pointer disabled:cursor-not-allowed"
-                  onClick={() => navigate("/upload")}
-                >
-                  Đi tới Upload
-                </button>
+      <div className="flex h-screen overflow-hidden bg-gray-50 transition-colors dark:bg-zinc-950">
+        <Sidebar />
+        
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6">
+          <div className="max-w-5xl mx-auto mt-4">
+            <div className="rounded-2xl bg-white p-4 text-gray-900 shadow-sm dark:bg-zinc-900 dark:text-white sm:p-8">
+              <div className="text-lg font-semibold">
+                Chưa có video để tải lên
               </div>
+              <div className="mt-1 text-sm text-gray-600 dark:text-zinc-400">
+                Vui lòng chọn video ở trang Upload trước.
+              </div>
+              <button
+                type="button"
+                className="mt-4 px-4 py-2 rounded-lg bg-pink-500 hover:bg-pink-600 text-white font-semibold cursor-pointer disabled:cursor-not-allowed"
+                onClick={() => navigate("/upload")}
+              >
+                Đi tới Upload
+              </button>
             </div>
           </div>
         </div>
@@ -254,8 +268,9 @@ export default function VideoUploadPage() {
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-gray-50 transition-colors dark:bg-zinc-950">
-      {/* Loading Overlay */}
+    <div className="flex h-screen overflow-hidden bg-gray-50 transition-colors dark:bg-zinc-950">
+      <Sidebar />
+      
       {isUploading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="rounded-2xl bg-white px-8 py-6 shadow-2xl dark:bg-zinc-900">
@@ -274,209 +289,187 @@ export default function VideoUploadPage() {
         </div>
       )}
 
-      <div
-        className={`fixed top-0 right-0 left-0 z-20 flex h-[72px] items-center justify-between border-b px-3 sm:px-6 ${barClass}`}
-      >
-        <img
-          src={theme === "light" ? logoLightMode : logo}
-          alt="SnapFeed"
-          className="h-10 w-auto max-w-[min(220px,50vw)] object-contain object-left sm:h-11"
-        />
-        <ThemeToggle />
-      </div>
-
-      <div
-        className={`fixed top-[72px] bottom-0 left-0 z-10 hidden w-[260px] border-r lg:block ${barClass}`}
-      />
-
-      {/* Main scroll area */}
-      <div className="pt-[72px] lg:pl-[260px] h-full">
-        <div className="h-[calc(100vh-72px)] overflow-y-auto p-3 sm:p-6">
-          <div className="mx-auto mt-4 max-w-6xl">
-            <div className="rounded-2xl bg-white p-4 text-gray-900 shadow-sm dark:bg-zinc-900 dark:text-white sm:p-6 md:p-8">
-              {/* Header */}
-              <div>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="font-semibold truncate">{videoFile.name}</div>
-                      <span className="shrink-0 rounded-full bg-gray-100 px-2 text-[11px] leading-5 text-gray-600 dark:bg-zinc-800 dark:text-zinc-300">
-                        {videoFile.type || "video/mp4"}
-                      </span>
-                    </div>
-
-                    <div className="mt-2 flex items-center gap-2 text-xs text-gray-600 dark:text-zinc-400">
-                      <CheckCircle2 size={14} className="text-emerald-600" />
-                      <span className="truncate">
-                        Đã tải lên ({(videoFile.size / (1024 * 1024)).toFixed(2)}MB)
-                      </span>
-                    </div>
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6">
+        <div className="mx-auto mt-4 max-w-6xl">
+          <div className="rounded-2xl bg-white p-4 text-gray-900 shadow-sm dark:bg-zinc-900 dark:text-white sm:p-6 md:p-8">
+            <div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="font-semibold truncate">{videoFile.name}</div>
+                    <span className="shrink-0 rounded-full bg-gray-100 px-2 text-[11px] leading-5 text-gray-600 dark:bg-zinc-800 dark:text-zinc-300">
+                      {videoFile.type || "video/mp4"}
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <input
-                      ref={pickVideoRef}
-                      type="file"
-                      accept="video/*"
-                      className="hidden"
-                      onChange={(e) => acceptVideo(e.target.files?.[0])}
-                    />
-                    <button
-                      type="button"
-                      onClick={onPickVideo}
-                      disabled={isUploading}
-                      className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700"
-                    >
-                      <RefreshCcw size={16} className="text-gray-700 dark:text-zinc-300" />
-                      Thay thế
-                    </button>
+                  <div className="mt-2 flex items-center gap-2 text-xs text-gray-600 dark:text-zinc-400">
+                    <CheckCircle2 size={14} className="text-emerald-600" />
+                    <span className="truncate">
+                      Đã tải lên ({(videoFile.size / (1024 * 1024)).toFixed(2)}MB)
+                    </span>
                   </div>
                 </div>
 
-                <div className="mt-3 h-[3px] w-full overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700">
-                  <div className="h-full bg-emerald-500 w-full" />
+                <div className="flex items-center gap-2 shrink-0">
+                  <input
+                    ref={pickVideoRef}
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={(e) => acceptVideo(e.target.files?.[0])}
+                  />
+                  <button
+                    type="button"
+                    onClick={onPickVideo}
+                    disabled={isUploading}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                  >
+                    <RefreshCcw size={16} className="text-gray-700 dark:text-zinc-300" />
+                    Thay thế
+                  </button>
                 </div>
               </div>
 
-              {/* Content */}
-              <div className="mt-6">
-                {/* Details */}
-                <div>
-                  <div className="font-semibold mb-2">Chi tiết</div>
+              <div className="mt-3 h-[3px] w-full overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700">
+                <div className="h-full bg-emerald-500 w-full" />
+              </div>
+            </div>
 
-                  <div className="rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
-                    <div className="text-sm font-semibold">Tiêu đề</div>
-                    <input
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Tiêu đề video..."
-                      className="mt-2 w-full rounded-lg border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-pink-400 focus:ring-2 focus:ring-pink-500/20 dark:border-white/10 dark:text-white dark:placeholder:text-zinc-500"
-                    />
+            <div className="mt-6">
+              <div>
+                <div className="font-semibold mb-2">Chi tiết</div>
+
+                <div className="rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
+                  <div className="text-sm font-semibold">Tiêu đề</div>
+                  <input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Tiêu đề video..."
+                    className="mt-2 w-full rounded-lg border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-pink-400 focus:ring-2 focus:ring-pink-500/20 dark:border-white/10 dark:text-white dark:placeholder:text-zinc-500"
+                  />
+                </div>
+
+                <div className="mt-4 rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
+                  <div className="text-sm font-semibold">Mô tả</div>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Mô tả video của bạn..."
+                    className="mt-2 min-h-[130px] w-full resize-y bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-zinc-500"
+                  />
+                  <div className="mt-2 flex items-center justify-end text-xs text-gray-500 dark:text-zinc-400">
+                    <div>{Math.min(description.length, 4000)}/4000</div>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
+                  <div className="text-sm font-semibold">Tags</div>
+                  <input
+                    value={tagsText}
+                    onChange={(e) => setTagsText(e.target.value)}
+                    placeholder="vd: travel, food, vlog"
+                    className="mt-2 w-full rounded-lg border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-pink-400 focus:ring-2 focus:ring-pink-500/20 dark:border-white/10 dark:text-white dark:placeholder:text-zinc-500"
+                  />
+                  <div className="mt-2 text-xs text-gray-500 dark:text-zinc-400">
+                    Ngăn cách tag bằng dấu phẩy.
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm font-semibold">Ảnh bìa</div>
+                    {coverFile ? (
+                      <button
+                        type="button"
+                        onClick={() => setCover(null)}
+                        className="flex cursor-pointer items-center gap-1 text-xs text-gray-600 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-white"
+                      >
+                        <X size={14} /> Xóa
+                      </button>
+                    ) : null}
                   </div>
 
-                  <div className="mt-4 rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
-                    <div className="text-sm font-semibold">Mô tả</div>
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Mô tả video của bạn..."
-                      className="mt-2 min-h-[130px] w-full resize-y bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-zinc-500"
-                    />
-                    <div className="mt-2 flex items-center justify-end text-xs text-gray-500 dark:text-zinc-400">
-                      <div>{Math.min(description.length, 4000)}/4000</div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
-                    <div className="text-sm font-semibold">Tags</div>
-                    <input
-                      value={tagsText}
-                      onChange={(e) => setTagsText(e.target.value)}
-                      placeholder="vd: travel, food, vlog"
-                      className="mt-2 w-full rounded-lg border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-pink-400 focus:ring-2 focus:ring-pink-500/20 dark:border-white/10 dark:text-white dark:placeholder:text-zinc-500"
-                    />
-                    <div className="mt-2 text-xs text-gray-500 dark:text-zinc-400">
-                      Ngăn cách tag bằng dấu phẩy.
-                    </div>
-                  </div>
-
-                  <div className="mt-4 rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="text-sm font-semibold">Ảnh bìa</div>
-                      {coverFile ? (
-                        <button
-                          type="button"
-                          onClick={() => setCover(null)}
-                          className="flex cursor-pointer items-center gap-1 text-xs text-gray-600 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-white"
-                        >
-                          <X size={14} /> Xóa
-                        </button>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-3 flex items-start gap-5">
-                      <div className="w-36 sm:w-44">
-                        <div className="aspect-[9/16] overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800">
-                          {effectiveCoverPreviewUrl ? (
-                            <img
-                              src={effectiveCoverPreviewUrl}
-                              alt="cover"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-gray-400 dark:text-zinc-500">
-                              <ImagePlus size={18} />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex-1">
-                        <input
-                          ref={pickCoverRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => acceptCover(e.target.files?.[0])}
-                        />
-                        <button
-                          type="button"
-                          onClick={onPickCover}
-                          className="cursor-pointer rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold hover:bg-gray-50 disabled:cursor-not-allowed dark:border-zinc-600 dark:hover:bg-zinc-800"
-                          disabled={isUploading}
-                        >
-                          Chọn ảnh bìa
-                        </button>
-                        <div className="mt-2 text-xs text-gray-500 dark:text-zinc-400">
-                          Chọn ảnh bìa để hiển thị cho video (tùy chọn).
-                        </div>
+                  <div className="mt-3 flex items-start gap-5">
+                    <div className="w-36 sm:w-44">
+                      <div className="aspect-[9/16] overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800">
+                        {effectiveCoverPreviewUrl ? (
+                          <img
+                            src={effectiveCoverPreviewUrl}
+                            alt="cover"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-gray-400 dark:text-zinc-500">
+                            <ImagePlus size={18} />
+                          </div>
+                        )}
                       </div>
                     </div>
+
+                    <div className="flex-1">
+                      <input
+                        ref={pickCoverRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => acceptCover(e.target.files?.[0])}
+                      />
+                      <button
+                        type="button"
+                        onClick={onPickCover}
+                        className="cursor-pointer rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold hover:bg-gray-50 disabled:cursor-not-allowed dark:border-zinc-600 dark:hover:bg-zinc-800"
+                        disabled={isUploading}
+                      >
+                        Chọn ảnh bìa
+                      </button>
+                      <div className="mt-2 text-xs text-gray-500 dark:text-zinc-400">
+                        Chọn ảnh bìa để hiển thị cho video (tùy chọn).
+                      </div>
+                    </div>
                   </div>
-
                 </div>
+              </div>
 
-                <div className="mt-6 rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
-                  <div className="text-sm font-semibold">Xem trước</div>
+              <div className="mt-6 rounded-xl border border-gray-200 p-4 dark:border-zinc-600">
+                <div className="text-sm font-semibold">Xem trước</div>
 
-                  <div className="mt-3 flex items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-black dark:border-zinc-600">
-                    <video
-                      src={videoPreviewUrl}
-                      className="w-full max-h-[70vh] object-contain"
-                      controls
-                      playsInline
-                    />
-                  </div>
+                <div className="mt-3 flex items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-black dark:border-zinc-600">
+                  <video
+                    src={videoPreviewUrl}
+                    className="w-full max-h-[70vh] object-contain"
+                    controls
+                    playsInline
+                  />
                 </div>
+              </div>
 
-                <div className="mt-6 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={onCancel}
-                    disabled={isUploading}
-                    className="cursor-pointer rounded-lg border border-gray-200 px-5 py-2.5 font-semibold hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:hover:bg-zinc-800"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onSubmit}
-                    disabled={isUploading}
-                    className="px-5 py-2.5 rounded-lg bg-pink-500 hover:bg-pink-600 text-white font-semibold disabled:opacity-60 flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    {isUploading ? (
-                      <>
-                        <Loader2 size={18} className="animate-spin" />
-                        Đang tải lên...
-                      </>
-                    ) : (
-                      <>
-                        <Upload size={18} />
-                        Đăng tải
-                      </>
-                    )}
-                  </button>
-                </div>
+              <div className="mt-6 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  disabled={isUploading}
+                  className="cursor-pointer rounded-lg border border-gray-200 px-5 py-2.5 font-semibold hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={onSubmit}
+                  disabled={isUploading}
+                  className="px-5 py-2.5 rounded-lg bg-pink-500 hover:bg-pink-600 text-white font-semibold disabled:opacity-60 flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Đang tải lên...
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={18} />
+                      Đăng tải
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
@@ -485,4 +478,3 @@ export default function VideoUploadPage() {
     </div>
   );
 }
-

@@ -10,6 +10,7 @@ from apps.videos.constants import (
     MAX_VIDEO_UPLOAD_SIZE,
     VIDEO_SEARCH_DEFAULT_SIZE,
     VIDEO_SEARCH_MAX_SIZE,
+    VideoStatus,
 )
 from apps.videos.models import Video, VideoReaction
 from apps.videos.permissions import (
@@ -25,6 +26,7 @@ from apps.notifications.services import notification_services
 from apps.videos.services import reaction_services, s3_services, video_services
 from apps.videos.services import tag_services
 from core.apis import BaseAPIViewSet
+from core.messages import ERROR_MESSAGES
 from core.permissions import FullDjangoModelPermissions
 from utils import random
 
@@ -260,3 +262,45 @@ class VideoViewSet(
                 context={**self.get_serializer_context(), "reaction_count": count},
             ).data
         )
+
+    @action(
+        detail=False,
+        methods=["patch"],
+        url_path="update-status-by-key",
+        permission_classes=[],
+    )
+    def update_status_by_key(self, request):
+        """
+        Update video status and HLS playlist URL by S3 key (for worker-ai only).
+        """
+
+        api_key = request.headers.get("X-API-KEY")
+
+        if not api_key:
+            return self.response_error(message=ERROR_MESSAGES["lack_of_api_key"])
+
+        if api_key != settings.API_KEY:
+            return self.response_error(message=ERROR_MESSAGES["invalid_api_key"])
+
+        video_s3_key = request.data.get("video_s3_key")
+        if not video_s3_key:
+            return self.response_error(
+                message=ERROR_MESSAGES["video_s3_key_is_required"]
+            )
+
+        video = video_services.get_video_by_s3_key(video_s3_key)
+
+        status = request.data.get("status")
+        hls_playlist_url = request.data.get("hls_playlist_url")
+
+        if status and status not in [s.value for s in VideoStatus]:
+            return self.response_error(message=ERROR_MESSAGES["invalid_video_status"])
+
+        if status:
+            video.status = status
+        if hls_playlist_url:
+            video.hls_playlist_url = hls_playlist_url
+
+        video.save(update_fields=["status", "hls_playlist_url", "updated_at"])
+
+        return self.response_ok(self.get_serializer(video).data)
