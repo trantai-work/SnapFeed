@@ -3,6 +3,7 @@ from django.db.models import Prefetch
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import action
 import boto3
+from botocore.config import Config
 from rest_framework import mixins
 
 from apps.videos.constants import (
@@ -107,7 +108,11 @@ class VideoViewSet(
         uuid_file_name = random.add_uuid_to_filename(file_name)
         s3_key = f"videos/{request.user.id}/{uuid_file_name}"
 
-        s3_client = boto3.client("s3")
+        s3_client = boto3.client(
+            "s3",
+            region_name=settings.AWS_DEFAULT_REGION,
+            config=Config(s3={"addressing_style": "path"}),
+        )
 
         presigned_post = s3_client.generate_presigned_post(
             Bucket=settings.AWS_STORAGE_BUCKET_NAME,

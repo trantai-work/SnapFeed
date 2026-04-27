@@ -23,6 +23,7 @@ class Video(BaseModel):
         upload_to="thumbnails/",
         null=True,
         blank=True,
+        max_length=255,
         validators=[FileExtensionValidator(["jpg", "jpeg", "png"])],
     )
     duration = models.PositiveIntegerField(help_text="Video duration in seconds")
