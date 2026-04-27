@@ -10,8 +10,13 @@ sqs = boto3.client("sqs")
 
 
 def worker_loop():
-    bucket_name = os.getenv("AWS_STORAGE_BUCKET_NAME", "snapfeed-dev-568137441159-ap-southeast-1-an")
-    region_name = os.getenv("AWS_DEFAULT_REGION", "ap-southeast-1")
+    bucket_name = os.getenv("AWS_STORAGE_BUCKET_NAME")
+    region_name = os.getenv("AWS_DEFAULT_REGION")
+    
+    if not bucket_name:
+        raise ValueError("AWS_STORAGE_BUCKET_NAME environment variable is required")
+    if not region_name:
+        raise ValueError("AWS_DEFAULT_REGION environment variable is required")
     
     pipeline = VideoPipeline(
         bucket_name=bucket_name,
@@ -24,6 +29,7 @@ def worker_loop():
     )
     
     print(f"Worker started. Listening to queue: {QUEUE_URL}")
+    print(f"Bucket: {bucket_name}, Region: {region_name}")
     
     while True:
         try:
