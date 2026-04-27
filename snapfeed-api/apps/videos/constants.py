@@ -10,6 +10,12 @@ class Reactions(EnumChoices):
     ANGRY = "angry"
 
 
+class VideoStatus(EnumChoices):
+    PROCESSING = "processing"
+    READY = "ready"
+    FAILED = "failed"
+
+
 REACT_VIDEO_DEFAULT_LABEL = "👍"
 
 REACT_VIDEO_LABELS_MAP: dict[str, str] = {

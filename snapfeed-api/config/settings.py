@@ -261,6 +261,9 @@ AWS_DEFAULT_REGION = env("AWS_DEFAULT_REGION")
 AWS_S3_FILE_OVERWRITE = False
 AWS_QUERYSTRING_AUTH = False  # Public video -> False, if video is private, use True
 
+# AWS SQS
+SQS_QUEUE_URL = env("SQS_QUEUE_URL", default="")
+
 STORAGES = {
     "default": {
         # All media files will be stored under "media/" folder on S3
