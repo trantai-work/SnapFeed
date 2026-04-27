@@ -8,6 +8,7 @@ class NotificationCategory(EnumChoices):
 
     REACT = "react"
     COMMENT = "comment"
+    FOLLOW = "follow"
     SYSTEM = "system"
 
 
@@ -19,6 +20,11 @@ REACT_VIDEO_NOTIFICATION_MESSAGE_TEMPLATE = (
 COMMENT_VIDEO_NOTIFICATION_TITLE = "Bình luận mới trên video"
 COMMENT_VIDEO_NOTIFICATION_MESSAGE_TEMPLATE = (
     '{first_name} {last_name} đã bình luận: "{comment_excerpt}"'
+)
+
+FOLLOW_NOTIFICATION_TITLE = "Người theo dõi mới"
+FOLLOW_NOTIFICATION_MESSAGE_TEMPLATE = (
+    "{first_name} {last_name} đã bắt đầu theo dõi bạn."
 )
 
 NOTIFICATIONS_USER_GROUP_PREFIX = "notifications.user"

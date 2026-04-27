@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2, ImagePlus, RefreshCcw, Upload, X } from "lucide-react";
+import { CheckCircle2, ImagePlus, RefreshCcw, Upload, X, Loader2 } from "lucide-react";
 import { uploadToS3, videosApi } from "../api/video.api";
 import { useMessageBox } from "../components/MessageBox";
 import { useUploadDraft } from "../context/UploadDraftContext";
@@ -255,6 +255,25 @@ export default function VideoUploadPage() {
 
   return (
     <div className="h-screen overflow-hidden bg-gray-50 transition-colors dark:bg-zinc-950">
+      {/* Loading Overlay */}
+      {isUploading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="rounded-2xl bg-white px-8 py-6 shadow-2xl dark:bg-zinc-900">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 size={48} className="animate-spin text-pink-500" />
+              <div className="text-center">
+                <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Đang tải lên video
+                </div>
+                <div className="mt-1 text-sm text-gray-600 dark:text-zinc-400">
+                  Vui lòng chờ trong giây lát...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div
         className={`fixed top-0 right-0 left-0 z-20 flex h-[72px] items-center justify-between border-b px-3 sm:px-6 ${barClass}`}
       >
@@ -445,8 +464,17 @@ export default function VideoUploadPage() {
                     disabled={isUploading}
                     className="px-5 py-2.5 rounded-lg bg-pink-500 hover:bg-pink-600 text-white font-semibold disabled:opacity-60 flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed"
                   >
-                    <Upload size={18} />
-                    Đăng tải
+                    {isUploading ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        Đang tải lên...
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={18} />
+                        Đăng tải
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

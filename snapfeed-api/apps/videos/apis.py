@@ -3,6 +3,7 @@ from django.db.models import Prefetch
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import action
 import boto3
+from botocore.config import Config
 from rest_framework import mixins
 
 from apps.videos.constants import (
@@ -39,6 +40,9 @@ class VideoViewSet(
     permission_classes = [FullDjangoModelPermissions]
 
     def get_queryset(self):
+        from django.db.models import Exists, OuterRef
+        from apps.users.models import UserFollow
+
         qs = Video.objects.select_related("user").prefetch_related("tags").all()
         user = getattr(self.request, "user", None)
         if user and user.is_authenticated:
@@ -47,6 +51,15 @@ class VideoViewSet(
                     "reactions",
                     queryset=VideoReaction.objects.filter(user=user),
                     to_attr="_prefetched_user_reactions",
+                )
+            )
+            # Annotate is_following for video owner
+            qs = qs.annotate(
+                is_following_owner=Exists(
+                    UserFollow.objects.filter(
+                        follower=user,
+                        following=OuterRef("user_id"),
+                    )
                 )
             )
         return qs
@@ -95,7 +108,11 @@ class VideoViewSet(
         uuid_file_name = random.add_uuid_to_filename(file_name)
         s3_key = f"videos/{request.user.id}/{uuid_file_name}"
 
-        s3_client = boto3.client("s3")
+        s3_client = boto3.client(
+            "s3",
+            region_name=settings.AWS_DEFAULT_REGION,
+            config=Config(s3={"addressing_style": "path"}),
+        )
 
         presigned_post = s3_client.generate_presigned_post(
             Bucket=settings.AWS_STORAGE_BUCKET_NAME,

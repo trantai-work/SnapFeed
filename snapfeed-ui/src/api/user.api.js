@@ -59,4 +59,48 @@ export const usersApi = {
       nextCursor: data?.nextCursor ?? data?.next_cursor ?? null,
     };
   },
+
+  /** POST /users/:id/follow */
+  follow: async (userId) => {
+    const data = await api.post(`/users/${userId}/follow`);
+    return data;
+  },
+
+  /** DELETE /users/:id/unfollow */
+  unfollow: async (userId) => {
+    const data = await api.delete(`/users/${userId}/unfollow`);
+    return data;
+  },
+
+  /** GET /users/:id/followers?q=...&cursor=... */
+  followers: async (userId, { q = "", cursor = null } = {}) => {
+    const params = {};
+    if (q) params.q = q;
+    if (cursor) params.cursor = cursor;
+
+    const data = await api.get(`/users/${userId}/followers`, { params });
+    const rawResults = Array.isArray(data?.results) ? data.results : [];
+    return {
+      next: data?.next ?? null,
+      previous: data?.previous ?? null,
+      nextCursor: cursorFromNextLink(data?.next),
+      results: rawResults.filter(Boolean),
+    };
+  },
+
+  /** GET /users/:id/following?q=...&cursor=... */
+  following: async (userId, { q = "", cursor = null } = {}) => {
+    const params = {};
+    if (q) params.q = q;
+    if (cursor) params.cursor = cursor;
+
+    const data = await api.get(`/users/${userId}/following`, { params });
+    const rawResults = Array.isArray(data?.results) ? data.results : [];
+    return {
+      next: data?.next ?? null,
+      previous: data?.previous ?? null,
+      nextCursor: cursorFromNextLink(data?.next),
+      results: rawResults.filter(Boolean),
+    };
+  },
 };

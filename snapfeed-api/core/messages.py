@@ -27,6 +27,8 @@ _ERROR_MESSAGES = {
         "text_comment_too_long": "Comment text is too long",
         "user_not_in_conversation": "User not in conversation.",
         "invalid_conversation": "Invalid conversation.",
+        "can_not_follow_yourself": "Cannot follow yourself.",
+        "you_havent_followed_this_user": "You haven't followed this user.",
     },
     "vi": {
         "common": {
@@ -53,6 +55,8 @@ _ERROR_MESSAGES = {
         "text_comment_too_long": "Nội dung bình luận quá dài",
         "user_not_in_conversation": "Người dùng không nằm trong đoạn chat.",
         "invalid_conversation": "Đoạn chat không hợp lệ.",
+        "can_not_follow_yourself": "Không thể theo dõi chính mình.",
+        "you_havent_followed_this_user": "Bạn chưa theo dõi người này.",
     },
 }
 

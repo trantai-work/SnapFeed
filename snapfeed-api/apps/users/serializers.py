@@ -5,6 +5,9 @@ from apps.users.models import User
 
 class UserSerializer(serializers.ModelSerializer):
     like_count = serializers.SerializerMethodField()
+    follower_count = serializers.SerializerMethodField()
+    following_count = serializers.SerializerMethodField()
+    is_following = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -16,6 +19,9 @@ class UserSerializer(serializers.ModelSerializer):
             "last_name",
             "avatar_url",
             "like_count",
+            "follower_count",
+            "following_count",
+            "is_following",
         ]
         read_only_fields = [
             "id",
@@ -25,6 +31,9 @@ class UserSerializer(serializers.ModelSerializer):
             "last_name",
             "avatar_url",
             "like_count",
+            "follower_count",
+            "following_count",
+            "is_following",
         ]
 
     def get_like_count(self, obj: User) -> int:
@@ -34,3 +43,29 @@ class UserSerializer(serializers.ModelSerializer):
 
         # IMPORTANT: Must be annotated on queryset. No DB fallback here to avoid N+1 queries.
         return int(getattr(obj, "like_count", 0) or 0)
+
+    def get_follower_count(self, obj: User) -> int:
+        """
+        Number of followers.
+        """
+
+        return int(getattr(obj, "follower_count", 0) or 0)
+
+    def get_following_count(self, obj: User) -> int:
+        """
+        Number of users this user is following.
+        """
+
+        return int(getattr(obj, "following_count", 0) or 0)
+
+    def get_is_following(self, obj: User) -> bool:
+        """
+        Whether the current request user is following this user.
+        """
+
+        request = self.context.get("request")
+        if not request or not request.user or not request.user.is_authenticated:
+            return False
+        if request.user.id == obj.id:
+            return False
+        return getattr(obj, "is_following", False)
