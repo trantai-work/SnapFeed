@@ -10,6 +10,7 @@ class VideoSerializer(serializers.ModelSerializer):
     user_last_name = serializers.CharField(source="user.last_name", read_only=True)
     title = serializers.CharField(required=False, allow_blank=True, default="")
     my_reaction = serializers.SerializerMethodField()
+    is_following = serializers.SerializerMethodField()
     tags = serializers.SerializerMethodField()
     tags_input = serializers.ListField(
         child=serializers.CharField(max_length=50),
@@ -36,6 +37,7 @@ class VideoSerializer(serializers.ModelSerializer):
             "comment_count",
             "reaction_count",
             "my_reaction",
+            "is_following",
         ]
         read_only_fields = [
             "id",
@@ -44,6 +46,7 @@ class VideoSerializer(serializers.ModelSerializer):
             "comment_count",
             "reaction_count",
             "my_reaction",
+            "is_following",
         ]
 
     def get_my_reaction(self, obj):
@@ -57,6 +60,23 @@ class VideoSerializer(serializers.ModelSerializer):
 
         row = VideoReaction.objects.filter(user=request.user, video_id=obj.pk).first()
         return row.reaction if row else None
+
+    def get_is_following(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+
+        # Check if annotation exists
+        if hasattr(obj, "is_following_owner"):
+            return obj.is_following_owner
+
+        # Fallback: check if following the video owner
+        from apps.users.models import UserFollow
+
+        return UserFollow.objects.filter(
+            follower=request.user,
+            following=obj.user,
+        ).exists()
 
     def get_tags(self, obj):
         prefetched_cache = getattr(obj, "_prefetched_objects_cache", None) or {}

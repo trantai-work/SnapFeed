@@ -10,6 +10,8 @@ from apps.comments.models import VideoComment
 from apps.notifications.constants import (
     COMMENT_VIDEO_NOTIFICATION_MESSAGE_TEMPLATE,
     COMMENT_VIDEO_NOTIFICATION_TITLE,
+    FOLLOW_NOTIFICATION_MESSAGE_TEMPLATE,
+    FOLLOW_NOTIFICATION_TITLE,
     NotificationCategory,
     REACT_VIDEO_NOTIFICATION_MESSAGE_TEMPLATE,
     REACT_VIDEO_NOTIFICATION_TITLE,
@@ -177,6 +179,30 @@ def notify_video_comment(
         recipient_users=recipient_users,
         actor=actor,
         target=comment,
+    )
+
+
+def create_follow_notification(
+    follower: User,
+    following: User,
+) -> Notification | None:
+    """
+    Notify when someone follows a user.
+    """
+
+    title = FOLLOW_NOTIFICATION_TITLE
+    message = _format_notification_message(
+        FOLLOW_NOTIFICATION_MESSAGE_TEMPLATE,
+        actor=follower,
+    )
+
+    return create_notification_with_recipients(
+        category=NotificationCategory.FOLLOW.value,
+        title=title,
+        message=message,
+        recipient_users=[following],
+        actor=follower,
+        target=follower,  # Target is the follower user
     )
 
 

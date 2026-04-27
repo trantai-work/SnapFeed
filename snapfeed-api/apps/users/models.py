@@ -46,3 +46,45 @@ class User(AbstractUser, BaseModel):
         """
 
         self.groups.clear()
+
+
+class UserFollow(BaseModel):
+    """
+    User follow relationship.
+
+    - follower: user who follows
+    - following: user being followed
+    """
+
+    follower = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="following",  # user.following.all()
+    )
+    following = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="followers",  # user.followers.all()
+    )
+
+    class Meta:
+        db_table = "user_follows"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["follower", "following"],
+                name="unique_follower_following",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(follower=models.F("following")),
+                name="prevent_self_follow",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["follower"]),
+            models.Index(fields=["following"]),
+            models.Index(fields=["follower", "-created_at"]),
+            models.Index(fields=["following", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.follower_id} -> {self.following_id}"

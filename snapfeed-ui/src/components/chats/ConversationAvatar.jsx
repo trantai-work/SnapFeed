@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { getDirectOtherParticipant, pickStable } from "../../utils/chat";
 
 function GroupAvatars({ users, seed }) {
@@ -41,6 +42,7 @@ function GroupAvatars({ users, seed }) {
 }
 
 export default function ConversationAvatar({ conv, meId }) {
+  const navigate = useNavigate();
   const participants = Array.isArray(conv?.participants) ? conv.participants : [];
 
   if (conv?.type === "group") {
@@ -54,12 +56,18 @@ export default function ConversationAvatar({ conv, meId }) {
         <img
           src={other.avatarUrl}
           alt=""
-          className="h-11 w-11 shrink-0 rounded-full object-cover"
+          className="h-11 w-11 shrink-0 cursor-pointer rounded-full object-cover transition hover:opacity-80"
           referrerPolicy="no-referrer"
+          onClick={() => other?.id && navigate(`/profile/${other.id}`)}
         />
       );
     }
-    return <div className="h-11 w-11 shrink-0 rounded-full bg-gray-300 dark:bg-white/10" />;
+    return (
+      <div
+        className="h-11 w-11 shrink-0 cursor-pointer rounded-full bg-gray-300 transition hover:opacity-80 dark:bg-white/10"
+        onClick={() => other?.id && navigate(`/profile/${other.id}`)}
+      />
+    );
   }
 
   const me = participants[0] ?? null;
@@ -68,11 +76,17 @@ export default function ConversationAvatar({ conv, meId }) {
       <img
         src={me.avatarUrl}
         alt=""
-        className="h-11 w-11 shrink-0 rounded-full object-cover"
+        className="h-11 w-11 shrink-0 cursor-pointer rounded-full object-cover transition hover:opacity-80"
         referrerPolicy="no-referrer"
+        onClick={() => me?.id && navigate(`/profile/${me.id}`)}
       />
     );
   }
-  return <div className="h-11 w-11 shrink-0 rounded-full bg-gray-300 dark:bg-white/10" />;
+  return (
+    <div
+      className="h-11 w-11 shrink-0 cursor-pointer rounded-full bg-gray-300 transition hover:opacity-80 dark:bg-white/10"
+      onClick={() => me?.id && navigate(`/profile/${me.id}`)}
+    />
+  );
 }
 

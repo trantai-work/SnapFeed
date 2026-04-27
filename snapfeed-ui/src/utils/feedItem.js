@@ -16,6 +16,7 @@ export function normalizeFeedItem(raw) {
     commentCount: raw.commentCount ?? raw.comment_count ?? 0,
     reactionCount: raw.reactionCount ?? raw.reaction_count ?? 0,
     myReaction: raw.myReaction ?? raw.my_reaction ?? null,
+    isFollowing: raw.isFollowing ?? raw.is_following ?? false,
     userFirstName: raw.userFirstName ?? raw.user_first_name ?? "",
     userLastName: raw.userLastName ?? raw.user_last_name ?? "",
     userAvatar: raw.userAvatar ?? raw.user_avatar ?? null,

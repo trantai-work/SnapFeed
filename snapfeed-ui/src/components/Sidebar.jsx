@@ -101,6 +101,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
       if (payload?.recipient?.notification) {
         const n = payload.recipient.notification;
         const actorId = n?.actor?.id ?? null;
+        const actorAvatarUrl = n?.actor?.avatarUrl ?? n?.actor?.avatar_url ?? null;
         const target = n?.target ?? null;
         const recipientId = payload.recipient?.id ?? null;
         show({
@@ -110,7 +111,8 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
           duration: 6500,
           onClick: async (meta) => {
             const target = meta?.target ?? null;
-            if (!target?.type || !target?.id) return;
+            const actorId = meta?.actorId ?? null;
+            
             setNotificationsOpen(false);
             if (meta?.recipientId) {
               try {
@@ -120,17 +122,33 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                 // Ignore markRead failure; navigation intent is still valid.
               }
             }
-            if (target.type === "videos.video") {
+            
+            // Handle video notifications
+            if (target?.type === "videos.video" && target?.id) {
               navigate("/profile", { state: { openVideoId: target.id } });
               return;
             }
-            if (target.type === "comments.videocomment") {
+            
+            // Handle comment notifications
+            if (target?.type === "comments.videocomment" && target?.id) {
               const c = await commentsApi.getById(target.id);
               const vid = c?.video;
               if (vid) navigate("/profile", { state: { openVideoId: vid } });
+              return;
+            }
+            
+            // Handle follow notifications (target is user) or any notification with actor
+            if (target?.type === "users.user" && target?.id) {
+              navigate(`/profile/${target.id}`);
+              return;
+            }
+            
+            // Fallback: navigate to actor's profile if available
+            if (actorId) {
+              navigate(`/profile/${actorId}`);
             }
           },
-          meta: { actorId, target, recipientId },
+          meta: { actorId, target, recipientId, avatarUrl: actorAvatarUrl },
         });
       }
     });
@@ -296,6 +314,9 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                 const Icon = item.icon;
                 const requiresAuth = !item.public;
                 if (item.path === "notifications") {
+                  const actorAvatarUrl = incomingRecipient?.notification?.actor?.avatarUrl;
+                  const showAvatar = actorAvatarUrl && unreadCount > 0;
+                  
                   return (
                     <button
                       key={index}
@@ -316,7 +337,16 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                       )}
                     >
                       <span className="relative">
-                        <Icon size={20} />
+                        {showAvatar ? (
+                          <img
+                            src={actorAvatarUrl}
+                            alt="Thông báo"
+                            className="h-5 w-5 rounded-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <Icon size={20} />
+                        )}
                         {unreadCount > 0 ? (
                           <span
                             className="absolute -right-2.5 -top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[0.65rem] font-bold leading-none text-white shadow-sm ring-2 ring-white dark:ring-black"

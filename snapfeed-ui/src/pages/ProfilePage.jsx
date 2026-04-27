@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { Grid3X3, Heart, MessageCircle, Play, Send } from "lucide-react";
+import { Grid3X3, Heart, MessageCircle, Play, Send, UserPlus, UserCheck, Users } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { conversationsApi, usersApi } from "../api";
 import { formatCount } from "../utils/format";
 import { buildVideoSrc } from "../utils/feedVideo";
 import VideoViewerPanel from "../components/VideoViewerPanel";
+import UserListModal from "../components/UserListModal";
 import { videosApi } from "../api/video.api";
 
 function classNames(...xs) {
@@ -25,7 +26,7 @@ export default function ProfilePage() {
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const [tab, setTab] = useState("videos"); // videos | liked
+  const [tab, setTab] = useState("videos"); // videos | liked | followers | following
   const [videos, setVideos] = useState([]);
   const [videosLoading, setVideosLoading] = useState(false);
   const [videosError, setVideosError] = useState("");
@@ -40,6 +41,8 @@ export default function ProfilePage() {
   const [profileUser, setProfileUser] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState("");
+  const [userListModal, setUserListModal] = useState({ open: false, type: null });
+  const [followLoading, setFollowLoading] = useState(false);
 
   const routeUserId = useMemo(() => {
     const raw = params?.id;
@@ -69,6 +72,49 @@ export default function ProfilePage() {
     effectiveUser?.like_count ??
     effectiveUser?.totalLikes ??
     0;
+  const followerCount = effectiveUser?.followerCount ?? effectiveUser?.follower_count ?? 0;
+  const followingCount = effectiveUser?.followingCount ?? effectiveUser?.following_count ?? 0;
+  const isFollowing = effectiveUser?.isFollowing ?? effectiveUser?.is_following ?? false;
+
+  const handleFollow = async () => {
+    if (!routeUserId || followLoading) return;
+    setFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await usersApi.unfollow(routeUserId);
+        // Update local state optimistically
+        setProfileUser((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            isFollowing: false,
+            is_following: false,
+            followerCount: Math.max(0, (prev.followerCount ?? prev.follower_count ?? 0) - 1),
+            follower_count: Math.max(0, (prev.followerCount ?? prev.follower_count ?? 0) - 1),
+          };
+        });
+      } else {
+        await usersApi.follow(routeUserId);
+        // Update local state optimistically
+        setProfileUser((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            isFollowing: true,
+            is_following: true,
+            followerCount: (prev.followerCount ?? prev.follower_count ?? 0) + 1,
+            follower_count: (prev.followerCount ?? prev.follower_count ?? 0) + 1,
+          };
+        });
+      }
+    } catch (error) {
+      console.error("Follow error:", error);
+      // Revert on error
+      await loadProfileUser();
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   const loadUserVideos = useCallback(
     async ({ reset } = {}) => {
@@ -245,6 +291,22 @@ export default function ProfilePage() {
             </div>
 
             <div className="mt-3 flex items-center gap-6 text-sm">
+              <button
+                type="button"
+                onClick={() => setUserListModal({ open: true, type: "following" })}
+                className="cursor-pointer text-zinc-900 transition hover:text-pink-600 dark:text-white dark:hover:text-pink-400"
+              >
+                <span className="font-bold">{formatCompactNumber(followingCount)}</span>{" "}
+                <span className="text-zinc-500 dark:text-white/55">Đang theo dõi</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserListModal({ open: true, type: "followers" })}
+                className="cursor-pointer text-zinc-900 transition hover:text-pink-600 dark:text-white dark:hover:text-pink-400"
+              >
+                <span className="font-bold">{formatCompactNumber(followerCount)}</span>{" "}
+                <span className="text-zinc-500 dark:text-white/55">Người theo dõi</span>
+              </button>
               <div className="text-zinc-900 dark:text-white">
                 <span className="font-bold">{formatCompactNumber(likeCount)}</span>{" "}
                 <span className="text-zinc-500 dark:text-white/55">Lượt thích</span>
@@ -255,6 +317,32 @@ export default function ProfilePage() {
 
         {isViewingOtherUser ? (
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={followLoading}
+              onClick={handleFollow}
+              className={classNames(
+                "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition",
+                "cursor-pointer",
+                isFollowing
+                  ? "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                  : "bg-pink-600 text-white hover:bg-pink-500 active:bg-pink-700",
+                "disabled:cursor-not-allowed disabled:opacity-70"
+              )}
+              aria-label={isFollowing ? "Bỏ theo dõi" : "Theo dõi"}
+            >
+              {isFollowing ? (
+                <>
+                  <UserCheck size={16} strokeWidth={2} aria-hidden />
+                  {followLoading ? "Đang xử lý..." : "Hủy theo dõi"}
+                </>
+              ) : (
+                <>
+                  <UserPlus size={16} strokeWidth={2} aria-hidden />
+                  {followLoading ? "Đang xử lý..." : "Theo dõi"}
+                </>
+              )}
+            </button>
             <button
               type="button"
               disabled={dmStarting}
@@ -277,7 +365,7 @@ export default function ProfilePage() {
               className={classNames(
                 "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition",
                 "cursor-pointer",
-                "bg-pink-600 text-white hover:bg-pink-500 active:bg-pink-700",
+                "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20",
                 "disabled:cursor-not-allowed disabled:opacity-70"
               )}
               aria-label="Nhắn tin"
@@ -323,6 +411,42 @@ export default function ProfilePage() {
           >
             Đã thích
             {tab === "liked" ? (
+              <span className="absolute inset-x-0 -bottom-px h-[2px] rounded-full bg-pink-500" />
+            ) : null}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTab("following")}
+            className={classNames(
+              "relative -mb-px rounded-lg px-2 pb-3 pt-2 text-sm font-semibold transition-colors",
+              "hover:bg-zinc-100 active:bg-zinc-200 dark:hover:bg-white/10 dark:active:bg-white/15",
+              "cursor-pointer",
+              tab === "following"
+                ? "text-zinc-900 dark:text-white"
+                : "text-zinc-500 hover:text-zinc-700 dark:text-white/55 dark:hover:text-white/80"
+            )}
+          >
+            Đang theo dõi
+            {tab === "following" ? (
+              <span className="absolute inset-x-0 -bottom-px h-[2px] rounded-full bg-pink-500" />
+            ) : null}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTab("followers")}
+            className={classNames(
+              "relative -mb-px rounded-lg px-2 pb-3 pt-2 text-sm font-semibold transition-colors",
+              "hover:bg-zinc-100 active:bg-zinc-200 dark:hover:bg-white/10 dark:active:bg-white/15",
+              "cursor-pointer",
+              tab === "followers"
+                ? "text-zinc-900 dark:text-white"
+                : "text-zinc-500 hover:text-zinc-700 dark:text-white/55 dark:hover:text-white/80"
+            )}
+          >
+            Người theo dõi
+            {tab === "followers" ? (
               <span className="absolute inset-x-0 -bottom-px h-[2px] rounded-full bg-pink-500" />
             ) : null}
           </button>
@@ -441,7 +565,7 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
-      ) : (
+      ) : tab === "liked" ? (
         <div className="mt-5">
           {likedError ? (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
@@ -546,7 +670,35 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
-      )}
+      ) : tab === "following" ? (
+        <div className="mt-5">
+          <UserListModal
+            open={true}
+            onClose={() => setTab("videos")}
+            userId={effectiveUserId}
+            type="following"
+            title="Đang theo dõi"
+          />
+        </div>
+      ) : tab === "followers" ? (
+        <div className="mt-5">
+          <UserListModal
+            open={true}
+            onClose={() => setTab("videos")}
+            userId={effectiveUserId}
+            type="followers"
+            title="Người theo dõi"
+          />
+        </div>
+      ) : null}
+
+      <UserListModal
+        open={userListModal.open}
+        onClose={() => setUserListModal({ open: false, type: null })}
+        userId={effectiveUserId}
+        type={userListModal.type}
+        title={userListModal.type === "followers" ? "Người theo dõi" : "Đang theo dõi"}
+      />
 
       <VideoViewerPanel
         open={!!selectedVideo}
