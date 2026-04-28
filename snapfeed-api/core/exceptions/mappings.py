@@ -16,6 +16,11 @@ from apps.videos.exceptions import (
     NotVideoOwnerError,
     S3ObjectNotFoundError,
     VideoWithS3KeyNotFound,
+    MultipartUploadInitError,
+    MultipartUploadPartUrlError,
+    MultipartUploadCompleteError,
+    InvalidPartNumberError,
+    MultipartUploadAbortError,
 )
 from core.exceptions.handler_helpers import extract_validation_messages
 from core.messages import ERROR_MESSAGES
@@ -61,4 +66,9 @@ DOMAIN_EXCEPTION_STATUS_MAP = {
     UserNotInConversationError: status.HTTP_400_BAD_REQUEST,
     CannotFollowYourselfError: status.HTTP_400_BAD_REQUEST,
     HaveNotFollowUserError: status.HTTP_400_BAD_REQUEST,
+    MultipartUploadInitError: status.HTTP_400_BAD_REQUEST,
+    MultipartUploadPartUrlError: status.HTTP_400_BAD_REQUEST,
+    MultipartUploadCompleteError: status.HTTP_400_BAD_REQUEST,
+    InvalidPartNumberError: status.HTTP_400_BAD_REQUEST,
+    MultipartUploadAbortError: status.HTTP_400_BAD_REQUEST,
 }

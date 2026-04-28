@@ -94,6 +94,33 @@ class PresignedUrlSerializer(serializers.Serializer):
     content_type = serializers.ChoiceField(choices=AllowedVideoContentTypes.choices())
 
 
+class InitiateMultipartUploadSerializer(serializers.Serializer):
+    file_name = serializers.CharField()
+    content_type = serializers.ChoiceField(choices=AllowedVideoContentTypes.choices())
+
+
+class GeneratePartPresignedUrlSerializer(serializers.Serializer):
+    s3_key = serializers.CharField()
+    upload_id = serializers.CharField()
+    part_number = serializers.IntegerField(min_value=1, max_value=10000)
+
+
+class UploadedPartSerializer(serializers.Serializer):
+    part_number = serializers.IntegerField(min_value=1, max_value=10000)
+    etag = serializers.CharField()
+
+
+class CompleteMultipartUploadSerializer(serializers.Serializer):
+    s3_key = serializers.CharField()
+    upload_id = serializers.CharField()
+    parts = UploadedPartSerializer(many=True)
+
+
+class AbortMultipartUploadSerializer(serializers.Serializer):
+    s3_key = serializers.CharField()
+    upload_id = serializers.CharField()
+
+
 class VideoReactionSerializer(serializers.ModelSerializer):
     reaction = serializers.ChoiceField(choices=Reactions.choices())
     reaction_count = serializers.SerializerMethodField()

@@ -2,12 +2,9 @@ from django.conf import settings
 from django.db.models import Prefetch
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import action
-import boto3
-from botocore.config import Config
 from rest_framework import mixins
 
 from apps.videos.constants import (
-    MAX_VIDEO_UPLOAD_SIZE,
     VIDEO_SEARCH_DEFAULT_SIZE,
     VIDEO_SEARCH_MAX_SIZE,
     VideoStatus,
@@ -21,6 +18,10 @@ from apps.videos.serializers import (
     PresignedUrlSerializer,
     VideoSerializer,
     VideoReactionSerializer,
+    InitiateMultipartUploadSerializer,
+    GeneratePartPresignedUrlSerializer,
+    CompleteMultipartUploadSerializer,
+    AbortMultipartUploadSerializer,
 )
 from apps.notifications.services import notification_services
 from apps.videos.services import reaction_services, s3_services, video_services
@@ -99,7 +100,7 @@ class VideoViewSet(
     )
     def generate_presigned_url(self, request):
         """
-        Generate a S3 presigned URL.
+        Generate a S3 presigned URL (single-part upload).
         """
 
         serializer = self.get_serializer(data=request.data)
@@ -110,24 +111,127 @@ class VideoViewSet(
         uuid_file_name = random.add_uuid_to_filename(file_name)
         s3_key = f"videos/{request.user.id}/{uuid_file_name}"
 
-        s3_client = boto3.client(
-            "s3",
-            region_name=settings.AWS_DEFAULT_REGION,
-            config=Config(s3={"addressing_style": "path"}),
-        )
-
-        presigned_post = s3_client.generate_presigned_post(
-            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-            Key=s3_key,
-            Fields={"Content-Type": content_type},
-            Conditions=[
-                {"Content-Type": content_type},
-                ["content-length-range", 1, MAX_VIDEO_UPLOAD_SIZE],
-            ],
-            ExpiresIn=3600,
+        presigned_post = s3_services.generate_presigned_post(
+            s3_key=s3_key,
+            content_type=content_type,
         )
 
         return self.response_ok(presigned_post)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="multipart/initiate",
+        permission_classes=[GeneratePresignedUrlPermission],
+        serializer_class=InitiateMultipartUploadSerializer,
+    )
+    def initiate_multipart_upload(self, request):
+        """
+        Initiate a multipart upload session.
+        Returns upload_id and s3_key to be used in subsequent part uploads.
+        """
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        file_name = serializer.validated_data["file_name"]
+        content_type = serializer.validated_data["content_type"]
+
+        uuid_file_name = random.add_uuid_to_filename(file_name)
+        s3_key = f"videos/{request.user.id}/{uuid_file_name}"
+
+        upload_id = s3_services.initiate_multipart_upload(
+            s3_key=s3_key,
+            content_type=content_type,
+        )
+
+        return self.response_ok({"upload_id": upload_id, "s3_key": s3_key})
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="multipart/presigned-url",
+        permission_classes=[GeneratePresignedUrlPermission],
+        serializer_class=GeneratePartPresignedUrlSerializer,
+    )
+    def generate_part_presigned_url(self, request):
+        """
+        Generate a presigned URL for uploading a single part.
+        Client PUTs the chunk to this URL and saves the ETag from the response header.
+        """
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        s3_key = serializer.validated_data["s3_key"]
+        upload_id = serializer.validated_data["upload_id"]
+        part_number = serializer.validated_data["part_number"]
+
+        s3_services.validate_s3_key_format(s3_key, request.user.id)
+
+        presigned_url = s3_services.generate_part_presigned_url(
+            s3_key=s3_key,
+            upload_id=upload_id,
+            part_number=part_number,
+        )
+
+        return self.response_ok(
+            {"presigned_url": presigned_url, "part_number": part_number}
+        )
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="multipart/complete",
+        permission_classes=[GeneratePresignedUrlPermission],
+        serializer_class=CompleteMultipartUploadSerializer,
+    )
+    def complete_multipart_upload(self, request):
+        """
+        Complete a multipart upload by assembling all uploaded parts.
+        `parts` is a list of { part_number, etag } collected from each part upload response.
+        """
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        s3_key = serializer.validated_data["s3_key"]
+        upload_id = serializer.validated_data["upload_id"]
+        parts = serializer.validated_data["parts"]
+
+        s3_services.validate_s3_key_format(s3_key, request.user.id)
+
+        s3_services.complete_multipart_upload(
+            s3_key=s3_key,
+            upload_id=upload_id,
+            parts=parts,
+        )
+
+        return self.response_ok({"s3_key": s3_key})
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="multipart/abort",
+        permission_classes=[GeneratePresignedUrlPermission],
+        serializer_class=AbortMultipartUploadSerializer,
+    )
+    def abort_multipart_upload(self, request):
+        """
+        Abort a multipart upload session and clean up all uploaded parts from S3.
+        Should be called when the upload is cancelled or fails on the client side.
+        """
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        s3_key = serializer.validated_data["s3_key"]
+        upload_id = serializer.validated_data["upload_id"]
+
+        s3_services.validate_s3_key_format(s3_key, request.user.id)
+
+        s3_services.abort_multipart_upload(
+            s3_key=s3_key,
+            upload_id=upload_id,
+        )
+
+        return self.response_ok({"s3_key": s3_key})
 
     @action(
         detail=False,
