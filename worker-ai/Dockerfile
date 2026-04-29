@@ -21,4 +21,4 @@ RUN pip install --upgrade pip && pip install -r requirements.docker.txt
 
 COPY . .
 
-CMD ["python", "main.py"]
+CMD ["python", "-u", "main.py"]

@@ -375,7 +375,7 @@ class VideoViewSet(
     )
     def update_status_by_key(self, request):
         """
-        Update video status and HLS playlist URL by S3 key (for worker-ai only).
+        Update video status and HLS playlist key by S3 key (for worker-ai only).
         """
 
         api_key = request.headers.get("X-API-KEY")
@@ -395,16 +395,16 @@ class VideoViewSet(
         video = video_services.get_video_by_s3_key(video_s3_key)
 
         status = request.data.get("status")
-        hls_playlist_url = request.data.get("hls_playlist_url")
+        hls_playlist_key = request.data.get("hls_playlist_key")
 
         if status and status not in [s.value for s in VideoStatus]:
             return self.response_error(message=ERROR_MESSAGES["invalid_video_status"])
 
         if status:
             video.status = status
-        if hls_playlist_url:
-            video.hls_playlist_url = hls_playlist_url
+        if hls_playlist_key:
+            video.hls_playlist_key = hls_playlist_key
 
-        video.save(update_fields=["status", "hls_playlist_url", "updated_at"])
+        video.save(update_fields=["status", "hls_playlist_key", "updated_at"])
 
         return self.response_ok(self.get_serializer(video).data)

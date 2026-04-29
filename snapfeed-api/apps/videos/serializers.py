@@ -38,7 +38,7 @@ class VideoSerializer(serializers.ModelSerializer):
             "reaction_count",
             "my_reaction",
             "is_following",
-            "hls_playlist_url",
+            "hls_playlist_key",
             "status",
         ]
         read_only_fields = [
@@ -49,7 +49,7 @@ class VideoSerializer(serializers.ModelSerializer):
             "reaction_count",
             "my_reaction",
             "is_following",
-            "hls_playlist_url",
+            "hls_playlist_key",
             "status",
         ]
 

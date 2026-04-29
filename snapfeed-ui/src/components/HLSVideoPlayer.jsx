@@ -37,11 +37,17 @@ export default function HLSVideoPlayer({
     // If HLS URL (m3u8) and browser doesn't support HLS natively
     if (streamUrl.includes(".m3u8")) {
       if (Hls.isSupported()) {
-        // Use hls.js
+        // Use hls.js with default settings for S3 direct
         const hls = new Hls({
           enableWorker: true,
           lowLatencyMode: false,
           backBufferLength: 90,
+          maxBufferLength: 30,        // Buffer 30 giây (default)
+          maxMaxBufferLength: 600,    // Max 600 giây (default)
+          maxBufferSize: 60 * 1000 * 1000, // 60MB (default)
+          xhrSetup: function(xhr) {
+            xhr.withCredentials = false;
+          }
         });
 
         hls.loadSource(streamUrl);
@@ -54,7 +60,7 @@ export default function HLSVideoPlayer({
           }
         });
 
-        hls.on(Hls.Events.ERROR, (event, data) => {
+        hls.on(Hls.Events.ERROR, (_event, data) => {
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
