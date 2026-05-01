@@ -1,10 +1,17 @@
 import time
 import os
+import logging
 import boto3
 
 from src.worker.worker import handle_message
 from src.pipeline.video_pipeline import VideoPipeline
 from config import QUEUE_URL, BACKEND_CREATE_EMBEDDING_URL, BACKEND_UPDATE_STATUS_URL, API_KEY, DOWNLOAD_DIR
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 sqs = boto3.client("sqs")
 
@@ -28,8 +35,8 @@ def worker_loop():
         hls_output_dir="./hls_output"
     )
     
-    print(f"Worker started. Listening to queue: {QUEUE_URL}")
-    print(f"Bucket: {bucket_name}, Region: {region_name}")
+    logger.info("Worker started. Listening to queue: %s", QUEUE_URL)
+    logger.info("Bucket: %s, Region: %s", bucket_name, region_name)
     
     while True:
         try:
@@ -54,10 +61,10 @@ def worker_loop():
                     )
 
                 except Exception as e:
-                    print(f"Error processing message: {e}")
+                    logger.error("Error processing message: %s", e)
 
         except Exception as e:
-            print(f"Error in worker loop: {e}")
+            logger.error("Error in worker loop: %s", e)
             time.sleep(5)
 
 

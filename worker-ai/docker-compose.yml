@@ -11,9 +11,10 @@ services:
       - .env
     environment:
       - HF_HOME=/cache/hf
+      - PYTHONUNBUFFERED=1
     volumes:
       - hf_cache:/cache/hf
-    command: ["python", "main.py"]
+    command: ["python", "-u", "main.py"]
 
 volumes:
   hf_cache:

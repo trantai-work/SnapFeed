@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, ImagePlus, RefreshCcw, Upload, X, Loader2 } from "lucide-react";
-import { uploadToS3, videosApi } from "../api/video.api";
+import { videosApi } from "../api/video.api";
 import { useMessageBox } from "../components/MessageBox";
 import { useUploadDraft } from "../context/UploadDraftContext";
 import Sidebar from "../components/Sidebar";
 import { getVideoDurationSeconds, getVideoFirstFrameJpegFile } from "../utils/video";
+import { multipartUpload } from "../utils/multipartUpload";
 
 export default function VideoUploadPage() {
   const navigate = useNavigate();
@@ -29,6 +30,8 @@ export default function VideoUploadPage() {
   const pickVideoRef = useRef(null);
   const pickCoverRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const abortControllerRef = useRef(null);
   const [defaultCoverFile, setDefaultCoverFile] = useState(null);
   const [defaultCoverPreviewUrl, setDefaultCoverPreviewUrl] = useState("");
 
@@ -111,6 +114,10 @@ export default function VideoUploadPage() {
   };
 
   const onCancel = () => {
+    if (isUploading) {
+      abortControllerRef.current?.abort();
+      return;
+    }
     reset();
     navigate("/upload");
   };
@@ -128,6 +135,9 @@ export default function VideoUploadPage() {
 
     try {
       setIsUploading(true);
+      setUploadProgress(0);
+      abortControllerRef.current = new AbortController();
+
       show({
         status: "success",
         title: "Đang đăng tải",
@@ -135,35 +145,29 @@ export default function VideoUploadPage() {
         duration: 2000,
       });
 
-      const presign = await videosApi.generatePresignedUrl({
-        fileName: videoFile.name,
-        contentType: videoFile.type || "video/mp4",
-      });
-
-      const { url, fields } = presign || {};
-      if (!url || !fields) throw new Error("Presigned data không hợp lệ.");
-
-      await uploadToS3({ url, fields, file: videoFile });
-
-      const videoKey = fields?.key;
-      if (!videoKey) throw new Error("Thiếu videoKey từ presigned response.");
-
-      const duration = await getVideoDurationSeconds(videoFile);
-
-      let thumbnailFile = coverFile || defaultCoverFile || undefined;
-      if (!thumbnailFile) {
-        try {
-          thumbnailFile = await getVideoFirstFrameJpegFile(videoFile, {
-            fileNameBase: videoFile.name.replace(/\.[^/.]+$/, ""),
-          });
-        } catch (err) {
-          show({
-            status: "warning",
-            title: "Không tạo được ảnh bìa",
-            message: "Sẽ đăng video mà không có thumbnail.",
-          });
-        }
-      }
+      const [videoKey, duration, thumbnailFile] = await Promise.all([
+        multipartUpload({
+          file: videoFile,
+          onProgress: setUploadProgress,
+          abortSignal: abortControllerRef.current.signal,
+        }),
+        getVideoDurationSeconds(videoFile),
+        (async () => {
+          if (coverFile || defaultCoverFile) return coverFile || defaultCoverFile;
+          try {
+            return await getVideoFirstFrameJpegFile(videoFile, {
+              fileNameBase: videoFile.name.replace(/\.[^/.]+$/, ""),
+            });
+          } catch {
+            show({
+              status: "warning",
+              title: "Không tạo được ảnh bìa",
+              message: "Sẽ đăng video mà không có thumbnail.",
+            });
+            return undefined;
+          }
+        })(),
+      ]);
 
       const createdVideo = await videosApi.createVideo({
         title,
@@ -180,62 +184,34 @@ export default function VideoUploadPage() {
       const videoId = createdVideo?.id;
       if (!videoId) throw new Error("Không nhận được video ID từ server.");
 
-      // Polling to wait for video status = 'ready'
       show({
         status: "success",
-        title: "Đang xử lý video",
-        message: "Video đang được xử lý, vui lòng chờ...",
-        duration: 3000,
+        title: "Tải lên thành công",
+        message: "Video đã được đăng tải.",
       });
-
-      const maxAttempts = 60;
-      let attempts = 0;
-      let videoReady = false;
-
-      while (attempts < maxAttempts && !videoReady) {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        
-        try {
-          const videoData = await videosApi.getById(videoId);
-          
-          if (videoData?.status === "ready") {
-            videoReady = true;
-            break;
-          } else if (videoData?.status === "failed") {
-            throw new Error("Video xử lý thất bại.");
-          }
-          
-          attempts++;
-        } catch (pollError) {
-          console.error("Polling error:", pollError);
-          attempts++;
-        }
-      }
-
-      if (!videoReady) {
-        show({
-          status: "warning",
-          title: "Video đang xử lý",
-          message: "Video đang được xử lý, bạn có thể xem sau.",
-        });
-      } else {
-        show({
-          status: "success",
-          title: "Tải lên thành công",
-          message: "Video đã sẵn sàng để xem.",
-        });
-      }
 
       reset();
       navigate("/");
     } catch (e) {
-      show({
-        status: "error",
-        title: "Upload thất bại",
-        message: e?.message || "Vui lòng thử lại.",
-      });
+      if (e?.message === "Upload cancelled") {
+        show({
+          status: "warning",
+          title: "Đã hủy",
+          message: "Upload đã bị hủy.",
+        });
+        reset();
+        navigate("/upload");
+      } else {
+        show({
+          status: "error",
+          title: "Upload thất bại",
+          message: e?.message || "Vui lòng thử lại.",
+        });
+      }
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
+      abortControllerRef.current = null;
     }
   };
 
@@ -273,16 +249,29 @@ export default function VideoUploadPage() {
       
       {isUploading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="rounded-2xl bg-white px-8 py-6 shadow-2xl dark:bg-zinc-900">
+          <div className="rounded-2xl bg-white px-8 py-6 shadow-2xl dark:bg-zinc-900 w-80">
             <div className="flex flex-col items-center gap-4">
               <Loader2 size={48} className="animate-spin text-pink-500" />
-              <div className="text-center">
+              <div className="text-center w-full">
                 <div className="text-lg font-semibold text-gray-900 dark:text-white">
                   Đang tải lên video
                 </div>
                 <div className="mt-1 text-sm text-gray-600 dark:text-zinc-400">
-                  Vui lòng chờ trong giây lát...
+                  {uploadProgress < 100 ? `${uploadProgress}%` : "Đang xử lý..."}
                 </div>
+                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700">
+                  <div
+                    className="h-full bg-pink-500 transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => abortControllerRef.current?.abort()}
+                  className="mt-4 text-xs text-gray-500 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-white cursor-pointer"
+                >
+                  Hủy upload
+                </button>
               </div>
             </div>
           </div>
@@ -331,7 +320,10 @@ export default function VideoUploadPage() {
               </div>
 
               <div className="mt-3 h-[3px] w-full overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700">
-                <div className="h-full bg-emerald-500 w-full" />
+                <div
+                  className="h-full bg-emerald-500 transition-all duration-300"
+                  style={{ width: isUploading ? `${uploadProgress}%` : "100%" }}
+                />
               </div>
             </div>
 

@@ -23,6 +23,38 @@ export const uploadToS3 = async ({ url, fields, file }) => {
   return response;
 };
 
+/**
+ * Upload a single part directly to S3 via presigned URL.
+ * Returns the ETag from the response header.
+ */
+export const uploadPartToS3 = async ({ presignedUrl, chunk, onProgress }) => {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(e.loaded, e.total);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const etag = xhr.getResponseHeader("ETag");
+        if (!etag) return reject(new ApiError("Missing ETag from S3 part response"));
+        resolve(etag);
+      } else {
+        reject(new ApiError(`S3 part upload failed with status ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () => reject(new ApiError("S3 part upload network error"));
+    xhr.onabort = () => reject(new ApiError("S3 part upload aborted"));
+
+    xhr.open("PUT", presignedUrl);
+    xhr.send(chunk);
+  });
+};
+
 export const videosApi = {
   /** GET /videos/:id */
   getById: async (videoId) => {
@@ -37,6 +69,39 @@ export const videosApi = {
       contentType,
     });
     return data;
+  },
+
+  initiateMultipartUpload: async ({ fileName, contentType }) => {
+    const data = await api.post("/videos/multipart/initiate", {
+      file_name: fileName,
+      content_type: contentType,
+    });
+    return data; // { uploadId, s3Key }
+  },
+
+  generatePartPresignedUrl: async ({ s3Key, uploadId, partNumber }) => {
+    const data = await api.post("/videos/multipart/presigned-url", {
+      s3_key: s3Key,
+      upload_id: uploadId,
+      part_number: partNumber,
+    });
+    return data; // { presignedUrl, partNumber }
+  },
+
+  completeMultipartUpload: async ({ s3Key, uploadId, parts }) => {
+    const data = await api.post("/videos/multipart/complete", {
+      s3_key: s3Key,
+      upload_id: uploadId,
+      parts: parts.map((p) => ({ part_number: p.partNumber, etag: p.etag })),
+    });
+    return data; // { s3Key }
+  },
+
+  abortMultipartUpload: async ({ s3Key, uploadId }) => {
+    await api.post("/videos/multipart/abort", {
+      s3_key: s3Key,
+      upload_id: uploadId,
+    });
   },
 
   createVideo: async ({ title, description, tags, videoKey, thumbnail, duration }) => {

@@ -31,7 +31,9 @@ function FeedItemComponent({
   const reactInFlightRef = useRef(false);
   
   // Use HLS URL if available and status is ready, otherwise fallback to direct mp4
-  const hlsUrl = item.status === "ready" && item.hlsPlaylistUrl ? item.hlsPlaylistUrl : null;
+  const hlsUrl = item.status === "ready" && item.hlsPlaylistKey 
+    ? buildVideoSrc(item.hlsPlaylistKey) 
+    : null;
   const src = buildVideoSrc(item.videoKey);
   
   const poster = item.thumbnail || undefined;

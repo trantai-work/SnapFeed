@@ -30,7 +30,7 @@ class Video(BaseModel):
     view_count = models.PositiveIntegerField(default=0)
     comment_count = models.PositiveIntegerField(default=0)
     reaction_count = models.PositiveIntegerField(default=0)
-    hls_playlist_url = models.CharField(max_length=500, blank=True, null=True)
+    hls_playlist_key = models.CharField(max_length=500, blank=True, null=True)
     status = models.CharField(
         max_length=20,
         choices=VideoStatus.choices(),
