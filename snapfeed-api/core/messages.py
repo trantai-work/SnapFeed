@@ -31,6 +31,11 @@ _ERROR_MESSAGES = {
         "you_havent_followed_this_user": "You haven't followed this user.",
         "video_s3_key_is_required": "Video S3 key is requried.",
         "invalid_video_status": "Invalid video status.",
+        "multipart_upload_init_failed": "Failed to initiate multipart upload.",
+        "multipart_upload_part_url_failed": "Failed to generate presigned URL for part.",
+        "multipart_upload_complete_failed": "Failed to complete multipart upload.",
+        "multipart_upload_abort_failed": "Failed to abort multipart upload.",
+        "invalid_part_number": "Part number must be between 1 and 10000.",
     },
     "vi": {
         "common": {
@@ -61,6 +66,11 @@ _ERROR_MESSAGES = {
         "you_havent_followed_this_user": "Bạn chưa theo dõi người này.",
         "video_s3_key_is_required": "Thiếu video s3 key.",
         "invalid_video_status": "Invalid video status.",
+        "multipart_upload_init_failed": "Khởi tạo multipart upload thất bại.",
+        "multipart_upload_part_url_failed": "Tạo presigned URL cho part thất bại.",
+        "multipart_upload_complete_failed": "Hoàn tất multipart upload thất bại.",
+        "multipart_upload_abort_failed": "Hủy multipart upload thất bại.",
+        "invalid_part_number": "Part number phải nằm trong khoảng 1 đến 10000.",
     },
 }
 

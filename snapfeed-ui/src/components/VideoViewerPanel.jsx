@@ -48,7 +48,9 @@ export default function VideoViewerPanel({
   );
   const hlsUrl = useMemo(() => {
     const v = videoState || video;
-    return v?.status === "ready" && v?.hlsPlaylistUrl ? v.hlsPlaylistUrl : null;
+    return v?.status === "ready" && v?.hlsPlaylistKey 
+      ? buildVideoSrc(v.hlsPlaylistKey)
+      : null;
   }, [video, videoState]);
   const poster = videoState?.thumbnail || video?.thumbnail || undefined;
 

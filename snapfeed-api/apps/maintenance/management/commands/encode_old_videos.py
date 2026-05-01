@@ -11,10 +11,10 @@ class Command(BaseCommand):
     help = "Send old videos to SQS queue for HLS encoding"
 
     def handle(self, *args, **options):
-        videos = Video.objects.filter(hls_playlist_url__isnull=True).order_by("id")
+        videos = Video.objects.filter(hls_playlist_key__isnull=True).order_by("id")
         total = videos.count()
 
-        self.stdout.write(f"Found {total} videos without HLS playlist URL")
+        self.stdout.write(f"Found {total} videos without HLS playlist key")
 
         if total == 0:
             self.stdout.write(self.style.SUCCESS("No videos to process"))

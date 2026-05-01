@@ -20,7 +20,7 @@ export function normalizeFeedItem(raw) {
     userFirstName: raw.userFirstName ?? raw.user_first_name ?? "",
     userLastName: raw.userLastName ?? raw.user_last_name ?? "",
     userAvatar: raw.userAvatar ?? raw.user_avatar ?? null,
-    hlsPlaylistUrl: raw.hlsPlaylistUrl ?? raw.hls_playlist_url ?? null,
+    hlsPlaylistKey: raw.hlsPlaylistKey ?? null,
     status: raw.status ?? null,
   };
 }
