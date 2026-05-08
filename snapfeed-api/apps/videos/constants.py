@@ -33,7 +33,7 @@ class AllowedVideoContentTypes(EnumChoices):
     mov = "video/quicktime"
 
 
-MAX_VIDEO_UPLOAD_SIZE = 3 * 1024 * 1024 * 1024  # 3GB
+MAX_VIDEO_UPLOAD_SIZE = 500 * 1024 * 1024  # 500MB
 
 # Video search (Elasticsearch) pagination
 VIDEO_SEARCH_DEFAULT_SIZE = 20

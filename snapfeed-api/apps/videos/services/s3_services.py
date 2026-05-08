@@ -195,3 +195,32 @@ def abort_multipart_upload(s3_key: str, upload_id: str) -> None:
             e,
         )
         raise MultipartUploadAbortError()
+
+
+def delete_s3_object(key: str) -> None:
+    """Delete a single object from S3."""
+    s3 = _get_s3_client()
+    try:
+        s3.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=key)
+        logger.info("Deleted S3 object: %s", key)
+    except ClientError as e:
+        logger.warning("Failed to delete S3 object %s: %s", key, e)
+
+
+def delete_s3_directory(prefix: str) -> None:
+    """Delete all S3 objects under a given prefix (e.g. HLS directory)."""
+    s3 = _get_s3_client()
+    try:
+        paginator = s3.get_paginator("list_objects_v2")
+        for page in paginator.paginate(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME, Prefix=prefix
+        ):
+            objects = [{"Key": obj["Key"]} for obj in page.get("Contents", [])]
+            if objects:
+                s3.delete_objects(
+                    Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                    Delete={"Objects": objects},
+                )
+                logger.info("Deleted %d S3 objects under %s", len(objects), prefix)
+    except ClientError as e:
+        logger.warning("Failed to delete S3 directory %s: %s", prefix, e)
