@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.db.models import F
 
+from apps.recommendation.services.embedding_services import update_user_embedding
 from apps.videos.models import Video, VideoView
 
 MIN_WATCH_TIME = 5  # seconds — for videos longer than this threshold
@@ -53,5 +54,8 @@ def record_video_view(*, user, video: Video, watch_time: int) -> VideoView | Non
         elif watch_time > view.watch_time:
             view.watch_time = watch_time
             view.save(update_fields=["watch_time", "updated_at"])
+
+    if view is not None:
+        update_user_embedding(user=user, video=video)
 
     return view

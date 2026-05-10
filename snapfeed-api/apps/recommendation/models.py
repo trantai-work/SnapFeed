@@ -33,6 +33,7 @@ class UserEmbedding(BaseModel):
         User, on_delete=models.CASCADE, related_name="embedding"
     )
     embedding = VectorField(dimensions=768)
+    accumulated_weight = models.FloatField(default=0.0)
 
     class Meta:
         db_table = "user_embeddings"

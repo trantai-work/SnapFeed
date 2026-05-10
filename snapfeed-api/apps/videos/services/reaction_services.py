@@ -3,6 +3,7 @@ from django.db.models import F
 from django.db.models.functions import Greatest
 from safedelete.models import HARD_DELETE
 
+from apps.recommendation.services.embedding_services import update_user_embedding
 from apps.videos.constants import REACT_VIDEO_DEFAULT_LABEL, REACT_VIDEO_LABELS_MAP
 from apps.videos.models import Video, VideoReaction
 
@@ -40,17 +41,21 @@ def set_video_reaction(
                     reaction_count=Greatest(F("reaction_count") - 1, 0)
                 )
                 locked.refresh_from_db(fields=["reaction_count"])
-                return None, locked.reaction_count, False
-
-            existing.reaction = reaction
-            existing.save()
+                result = None, locked.reaction_count, False
+            else:
+                existing.reaction = reaction
+                existing.save()
+                locked.refresh_from_db(fields=["reaction_count"])
+                result = existing, locked.reaction_count, False
+        else:
+            VideoReaction.objects.create(user=user, video=locked, reaction=reaction)
+            Video.objects.filter(pk=locked.pk).update(
+                reaction_count=F("reaction_count") + 1
+            )
             locked.refresh_from_db(fields=["reaction_count"])
-            return existing, locked.reaction_count, False
+            row = VideoReaction.objects.get(user=user, video_id=locked.pk)
+            result = row, locked.reaction_count, True
 
-        VideoReaction.objects.create(user=user, video=locked, reaction=reaction)
-        Video.objects.filter(pk=locked.pk).update(
-            reaction_count=F("reaction_count") + 1
-        )
-        locked.refresh_from_db(fields=["reaction_count"])
-        row = VideoReaction.objects.get(user=user, video_id=locked.pk)
-        return row, locked.reaction_count, True
+    update_user_embedding(user=user, video=video)
+
+    return result
