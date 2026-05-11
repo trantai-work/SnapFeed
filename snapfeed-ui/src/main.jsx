@@ -10,6 +10,7 @@ import { ChatUIProvider } from "./context/ChatUIContext";
 import { MessageBoxProvider } from "./components/MessageBox";
 import { UploadDraftProvider } from "./context/UploadDraftContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { VideoCallProvider } from "./context/VideoCallContext";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <BrowserRouter>
@@ -20,7 +21,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <ChatUIProvider>
               <MessageBoxProvider>
                 <UploadDraftProvider>
-                  <App />
+                  <VideoCallProvider>
+                    <App />
+                  </VideoCallProvider>
                 </UploadDraftProvider>
               </MessageBoxProvider>
             </ChatUIProvider>

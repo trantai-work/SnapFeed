@@ -108,3 +108,29 @@ def push_message_created(message: Message) -> None:
             "Failed to push message.created realtime event",
             extra={"message_id": getattr(message, "id", None)},
         )
+
+
+def push_call_signaling(*, sender_id: int, recipient_id: int, data: dict) -> None:
+    """
+    Relay WebRTC signaling data (offer, answer, ice-candidate) to the recipient.
+    """
+    try:
+        channel_layer = get_channel_layer()
+        if not channel_layer:
+            return
+
+        async_to_sync(channel_layer.group_send)(
+            f"{CHAT_USER_INBOX_GROUP_PREFIX}.{recipient_id}",
+            {
+                "type": "call_signaling",
+                "payload": {
+                    "senderId": sender_id,
+                    "data": data,
+                },
+            },
+        )
+    except Exception:
+        logger.exception(
+            "Failed to push call.signaling realtime event",
+            extra={"sender_id": sender_id, "recipient_id": recipient_id},
+        )

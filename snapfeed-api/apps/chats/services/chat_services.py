@@ -63,6 +63,7 @@ def annotate_conversations_for_user(user: User):
     base = base.annotate(
         last_message_id=Subquery(last_msg.values("id")[:1]),
         last_message_content=Subquery(last_msg.values("content")[:1]),
+        last_message_attachment_type=Subquery(last_msg.values("attachment_type")[:1]),
         last_message_created_at=Subquery(last_msg.values("created_at")[:1]),
         last_message_sender_id=Subquery(last_msg.values("sender_id")[:1]),
         last_message_sender_username=Subquery(last_msg.values("sender__username")[:1]),
@@ -147,11 +148,23 @@ def get_or_create_direct_conversation(me: User, other: User) -> Conversation:
     return conv
 
 
-def create_message(conversation: Conversation, sender: User, content: str) -> Message:
+def create_message(
+    conversation: Conversation,
+    sender: User,
+    content: str | None = None,
+    attachment_key: str | None = None,
+    attachment_name: str | None = None,
+    attachment_size: int | None = None,
+    attachment_type: str | None = None,
+) -> Message:
     msg = Message.objects.create(
         conversation_id=conversation.id,
         sender=sender,
         content=content,
+        attachment_key=attachment_key,
+        attachment_name=attachment_name,
+        attachment_size=attachment_size,
+        attachment_type=attachment_type,
     )
     Conversation.objects.filter(id=conversation.id).update(
         last_message_at=msg.created_at

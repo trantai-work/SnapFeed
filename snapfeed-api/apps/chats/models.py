@@ -74,7 +74,18 @@ class Message(BaseModel):
     sender = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="sent_messages"
     )
-    content = models.TextField(null=False, blank=False)
+    content = models.TextField(null=True, blank=True)
+
+    # Attachment fields (mutually exclusive with content)
+    attachment_key = models.CharField(max_length=500, null=True, blank=True)
+    attachment_name = models.CharField(max_length=255, null=True, blank=True)
+    attachment_size = models.PositiveIntegerField(null=True, blank=True)
+    attachment_type = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        choices=[("image", "Image"), ("file", "File")],
+    )
 
     class Meta:
         db_table = "messages"

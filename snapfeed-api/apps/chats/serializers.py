@@ -30,8 +30,26 @@ class MessageSerializer(serializers.ModelSerializer):
             "conversation",
             "sender",
             "content",
+            "attachment_key",
+            "attachment_name",
+            "attachment_size",
+            "attachment_type",
             "created_at",
         )
+        read_only_fields = ("id", "sender", "created_at")
+
+
+class AttachmentUploadSerializer(serializers.Serializer):
+    conversation = serializers.PrimaryKeyRelatedField(
+        queryset=Conversation.objects.all()
+    )
+    file_name = serializers.CharField(max_length=255)
+    content_type = serializers.CharField(max_length=100)
+
+
+class AttachmentDownloadSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    filename = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
 
 class ConversationSerializer(serializers.ModelSerializer):
@@ -64,6 +82,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         return {
             "id": last_id,
             "content": getattr(obj, "last_message_content", None),
+            "attachment_type": getattr(obj, "last_message_attachment_type", None),
             "created_at": getattr(obj, "last_message_created_at", None),
             "sender_id": getattr(obj, "last_message_sender_id", None),
             "sender": {

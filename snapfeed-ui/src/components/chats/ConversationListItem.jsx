@@ -18,10 +18,21 @@ export default function ConversationListItem({ active = false, conv, meId, onCli
   const lastContent = String(
     conv?.lastMessage?.content ?? conv?.last_message?.content ?? ""
   ).trim();
-  const subtitle = lastContent
+  const attachmentType = conv?.lastMessage?.attachmentType ?? conv?.last_message?.attachment_type ?? null;
+  
+  let subtitleText = lastContent;
+  if (lastContent.startsWith("[CALL_MISSED]")) {
+    subtitleText = "Cuộc gọi nhỡ";
+  } else if (lastContent.startsWith("[CALL_ENDED]")) {
+    subtitleText = "Cuộc gọi video";
+  } else if (!lastContent && attachmentType) {
+    subtitleText = attachmentType === "image" ? "Đã gửi một ảnh" : "Đã gửi một file đính kèm";
+  }
+
+  const subtitle = subtitleText
     ? isMine
-      ? `Bạn: ${lastContent}`
-      : lastContent
+      ? `Bạn: ${subtitleText}`
+      : subtitleText
     : "Chưa có tin nhắn";
   const timeSrc =
     conv?.lastMessage?.createdAt ??
