@@ -3,6 +3,7 @@ from django.db.models import Prefetch
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import action
 from rest_framework import mixins
+from rest_framework.exceptions import PermissionDenied
 
 from apps.videos.constants import (
     VIDEO_SEARCH_DEFAULT_SIZE,
@@ -18,17 +19,23 @@ from apps.videos.serializers import (
     PresignedUrlSerializer,
     VideoSerializer,
     VideoReactionSerializer,
+    VideoViewSerializer,
     InitiateMultipartUploadSerializer,
     GeneratePartPresignedUrlSerializer,
     CompleteMultipartUploadSerializer,
     AbortMultipartUploadSerializer,
 )
 from apps.notifications.services import notification_services
-from apps.videos.services import reaction_services, s3_services, video_services
+from apps.videos.services import (
+    reaction_services,
+    s3_services,
+    video_services,
+    view_services,
+)
 from apps.videos.services import tag_services
 from core.apis import BaseAPIViewSet
 from core.messages import ERROR_MESSAGES
-from core.permissions import FullDjangoModelPermissions
+from core.permissions import FullDjangoModelPermissions, IsUserAuthenticated
 from utils import random
 
 
@@ -36,6 +43,7 @@ from utils import random
 class VideoViewSet(
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
     BaseAPIViewSet,
 ):
     serializer_class = VideoSerializer
@@ -91,6 +99,12 @@ class VideoViewSet(
                 video._prefetched_objects_cache = {}
                 prefetched = video._prefetched_objects_cache
             prefetched["tags"] = final_tags
+
+    def perform_destroy(self, instance):
+        """Hard delete video and all associated S3 files."""
+        if instance.user_id != self.request.user.id:
+            raise PermissionDenied()
+        video_services.delete_video(instance)
 
     @action(
         detail=False,
@@ -365,6 +379,72 @@ class VideoViewSet(
                 reaction_row,
                 context={**self.get_serializer_context(), "reaction_count": count},
             ).data
+        )
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="metadata-by-key",
+        permission_classes=[],
+    )
+    def get_by_key(self, request):
+        """
+        Get video metadata by S3 key (for worker-ai only).
+        """
+
+        api_key = request.headers.get("X-API-KEY")
+
+        if not api_key:
+            return self.response_error(message=ERROR_MESSAGES["lack_of_api_key"])
+
+        if api_key != settings.API_KEY:
+            return self.response_error(message=ERROR_MESSAGES["invalid_api_key"])
+
+        video_key = request.query_params.get("video_key")
+        if not video_key:
+            return self.response_error(
+                message=ERROR_MESSAGES["video_s3_key_is_required"]
+            )
+
+        video = video_services.get_video_by_s3_key(video_key)
+        video = Video.objects.prefetch_related("tags").get(pk=video.pk)
+
+        return self.response_ok(self.get_serializer(video).data)
+
+    @action(
+        detail=True,
+        methods=["put"],
+        url_path="view",
+        permission_classes=[IsUserAuthenticated],
+    )
+    def record_view(self, request, pk=None):
+        """
+        Record or update a video view for the authenticated user.
+        Updates watch_time to max(existing, new).
+        """
+
+        video = self.get_object()
+        serializer = VideoViewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        view = view_services.record_video_view(
+            user=request.user,
+            video=video,
+            watch_time=serializer.validated_data["watch_time"],
+        )
+
+        if view is None:
+            return self.response_ok({"recorded": False})
+
+        video.refresh_from_db(fields=["view_count"])
+
+        return self.response_ok(
+            {
+                "recorded": True,
+                "video": video.id,
+                "watch_time": view.watch_time,
+                "view_count": video.view_count,
+            }
         )
 
     @action(

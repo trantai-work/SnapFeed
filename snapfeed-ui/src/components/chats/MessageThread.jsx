@@ -1,10 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Loader2, SendHorizontal } from "lucide-react";
+import { Loader2, SendHorizontal, Paperclip, X } from "lucide-react";
 import { messagesApi } from "../../api";
 import MessageBubble from "./MessageBubble";
 import ConversationAvatar from "./ConversationAvatar";
 import { buildConversationName } from "../../utils/chat";
 import { useRealtimeSocket } from "../../context/RealtimeSocketContext";
+import { useMessageBox } from "../MessageBox";
+import { useVideoCall } from "../../context/VideoCallContext";
+import { Video } from "lucide-react";
 
 export default function MessageThread({
   conversation,
@@ -13,25 +16,36 @@ export default function MessageThread({
   onLatestIncomingMessageId,
   showHeader = true,
 }) {
+  const { startCall } = useVideoCall();
   const convId = conversation?.id ?? null;
   const { subscribe } = useRealtimeSocket();
+  const { show } = useMessageBox();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [items, setItems] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [draft, setDraft] = useState("");
+  const [attachment, setAttachment] = useState(null);
   const [sending, setSending] = useState(false);
   const loadMoreLockRef = useRef(false);
   const scrollRef = useRef(null);
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
   const lastConvIdRef = useRef(null);
 
   const toIdNum = (v) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
   };
+
+  const recipient = useMemo(() => {
+    if (conversation?.type !== "direct") return null;
+    const other = conversation.participants?.find((p) => toIdNum(p.id) !== toIdNum(meId)) || 
+                  conversation.participants?.find((p) => toIdNum(p.user?.id) !== toIdNum(meId));
+    return other?.user || other;
+  }, [conversation, meId]);
 
   const parseMsgTime = (m) => {
     const raw = m?.createdAt ?? m?.created_at ?? null;
@@ -95,12 +109,51 @@ export default function MessageThread({
 
   const send = async () => {
     const text = draft.trim();
-    if (!text || !convId || sending) return;
+    if ((!text && !attachment) || !convId || sending) return;
     setSending(true);
     try {
+      let attachmentKey = undefined;
+      let attachmentName = undefined;
+      let attachmentSize = undefined;
+      let attachmentType = undefined;
+
+      if (attachment) {
+        // 1. Get presigned URL
+        const presignedRes = await messagesApi.getUploadPresignedUrl({
+          conversationId: convId,
+          fileName: attachment.name,
+          contentType: attachment.type || "application/octet-stream",
+        });
+
+        // 2. Upload to S3
+        const formData = new FormData();
+        for (const [key, value] of Object.entries(presignedRes.fields || {})) {
+          formData.append(key, value);
+        }
+        formData.append("file", attachment);
+
+        const uploadRes = await fetch(presignedRes.url, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error("Upload failed");
+        }
+
+        attachmentKey = presignedRes?.fields?.key || presignedRes?.s3Key || presignedRes?.s3_key;
+        attachmentName = attachment.name;
+        attachmentSize = attachment.size;
+        attachmentType = attachment.type?.startsWith("image/") ? "image" : "file";
+      }
+
       const created = await messagesApi.create({
         conversationId: convId,
         content: text,
+        attachmentKey,
+        attachmentName,
+        attachmentSize,
+        attachmentType,
       });
       const createdId = toIdNum(created?.id);
       setItems((prev) => {
@@ -111,6 +164,7 @@ export default function MessageThread({
         return [...arr, created];
       });
       setDraft("");
+      setAttachment(null);
       onMessageSent?.(created);
     } catch (e) {
       console.error(e);
@@ -306,6 +360,19 @@ export default function MessageThread({
                   : "Trò chuyện"}
             </div>
           </div>
+
+          {conversation?.type === "direct" && recipient && (
+            <button
+              onClick={() => {
+                console.log("[MessageThread] Calling startCall with convId:", convId);
+                startCall(recipient, convId);
+              }}
+              className="mr-2 flex h-12 w-12 items-center justify-center rounded-full text-gray-500 hover:bg-black/5 hover:text-gray-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white transition-all cursor-pointer active:scale-90"
+              title="Cuộc gọi video"
+            >
+              <Video className="h-6 w-6" />
+            </button>
+          )}
         </header>
       ) : null}
 
@@ -361,7 +428,54 @@ export default function MessageThread({
       </div>
 
       <div className="shrink-0 border-t border-gray-200 bg-white/70 px-4 py-3 backdrop-blur-md dark:border-white/10 dark:bg-black/30">
+        {attachment && (
+          <div className="mb-2 flex items-center gap-2 rounded-lg bg-black/5 px-3 py-2 dark:bg-white/10 max-w-sm">
+            <Paperclip className="h-4 w-4 shrink-0 text-gray-500 dark:text-white/60" />
+            <div className="flex-1 truncate text-sm text-gray-700 dark:text-white/80">
+              {attachment.name}
+            </div>
+            <button
+              type="button"
+              onClick={() => setAttachment(null)}
+              className="shrink-0 rounded-full p-1 text-gray-500 hover:bg-black/10 hover:text-gray-900 dark:text-white/60 dark:hover:bg-white/20 dark:hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         <div className="flex items-end gap-2">
+          <button
+            type="button"
+            className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-2xl text-gray-500 transition hover:bg-black/5 hover:text-gray-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={sending}
+            aria-label="Đính kèm file"
+          >
+            <Paperclip className="h-5 w-5" />
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+                if (file.size > MAX_SIZE) {
+                  show({
+                    status: "error",
+                    title: "File quá lớn",
+                    message: `Kích thước tối đa là 50MB. File của bạn: ${(file.size / 1024 / 1024).toFixed(1)}MB`,
+                    duration: 5000,
+                  });
+                  e.target.value = "";
+                  return;
+                }
+                setAttachment(file);
+              }
+              e.target.value = "";
+            }}
+          />
           <div className="flex-1 rounded-2xl bg-white/80 ring-1 ring-black/5 backdrop-blur-md dark:bg-white/10 dark:ring-white/10">
             <textarea
               ref={textareaRef}
@@ -382,10 +496,10 @@ export default function MessageThread({
             type="button"
             className="grid h-11 w-11 cursor-pointer place-items-center rounded-2xl bg-sky-500 text-white shadow-sm transition hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Gửi"
-            disabled={!draft.trim() || sending}
+            disabled={(!draft.trim() && !attachment) || sending}
             onClick={() => void send()}
           >
-            <SendHorizontal className="h-5 w-5" />
+            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5" />}
           </button>
         </div>
       </div>

@@ -1,21 +1,38 @@
 from __future__ import annotations
 
+import logging
 from typing import Optional, Tuple
 
-from django.db.models import OuterRef, QuerySet, Subquery
-from django.db.models import F, Sum, Count, FloatField, ExpressionWrapper
-from django.db.models.functions import Now, Random, Extract
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import (
+    Case,
+    ExpressionWrapper,
+    F,
+    FloatField,
+    IntegerField,
+    OuterRef,
+    QuerySet,
+    Subquery,
+    Sum,
+    Count,
+    Value,
+    When,
+)
+from django.db.models.functions import Extract, Now, Random
 from pgvector.django import CosineDistance
+from safedelete.models import HARD_DELETE
 
+from apps.notifications.models import Notification
 from apps.recommendation.models import VideoEmbedding
 from apps.users.models import User
+from apps.videos.constants import VIDEO_SEARCH_DEFAULT_SIZE
+from apps.videos.documents import VideoDocument
 from apps.videos.exceptions import VideoWithS3KeyNotFound
 from apps.videos.models import Video
-from django.db.models import Case, IntegerField, Value, When
-
-from apps.videos.documents import VideoDocument
-from apps.videos.constants import VIDEO_SEARCH_DEFAULT_SIZE
+from apps.videos.services.s3_services import delete_s3_object, delete_s3_directory
 from utils.search_cursor import decode_search_after_cursor, encode_search_after_cursor
+
+logger = logging.getLogger(__name__)
 
 
 def get_video_by_s3_key(video_s3_key: str) -> Video:
@@ -122,7 +139,6 @@ def search_videos(
             type="best_fields",
             operator="and",
         )
-        # Stable sort + tie-breaker for search_after.
         .sort({"_score": "desc"}, {"id": "desc"})
         .extra(size=size)
     )
@@ -131,7 +147,6 @@ def search_videos(
         s = s.extra(search_after=decode_search_after_cursor(cursor))
 
     resp = s.execute()
-
     hits = resp.hits
     ids = [int(hit.meta.id) for hit in hits]
 
@@ -152,3 +167,35 @@ def search_videos(
             next_cursor = encode_search_after_cursor(list(sort_values))
 
     return qs, next_cursor
+
+
+def delete_video(video: Video) -> None:
+    """
+    Hard delete a video and all associated data:
+    - Notifications referencing this video
+    - S3 files (video, HLS segments, thumbnail)
+    - Video DB record (cascades to reactions, views, comments, embedding)
+    """
+
+    # Delete notifications referencing this video
+    content_type = ContentType.objects.get_for_model(Video)
+    Notification.objects.filter(
+        target_content_type=content_type,
+        target_object_id=video.pk,
+    ).delete()
+
+    # Delete S3 files
+    if video.video_key:
+        delete_s3_object(video.video_key)
+
+    if video.hls_playlist_key:
+        prefix = "/".join(video.hls_playlist_key.split("/")[:-1]) + "/"
+        delete_s3_directory(prefix)
+
+    if video.thumbnail:
+        video.thumbnail.delete(save=False)
+
+    # Hard delete (cascades to reactions, views, comments, embedding)
+    pk = video.pk
+    video.delete(force_policy=HARD_DELETE)
+    logger.info("Hard deleted video pk=%s", pk)

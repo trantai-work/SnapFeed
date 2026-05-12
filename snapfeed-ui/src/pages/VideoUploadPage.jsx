@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, ImagePlus, RefreshCcw, Upload, X, Loader2 } from "lucide-react";
-import { videosApi } from "../api/video.api";
+import { videosApi, presignedPostUpload } from "../api/video.api";
 import { useMessageBox } from "../components/MessageBox";
 import { useUploadDraft } from "../context/UploadDraftContext";
 import Sidebar from "../components/Sidebar";
 import { getVideoDurationSeconds, getVideoFirstFrameJpegFile } from "../utils/video";
-import { multipartUpload } from "../utils/multipartUpload";
 
 export default function VideoUploadPage() {
   const navigate = useNavigate();
@@ -146,7 +145,7 @@ export default function VideoUploadPage() {
       });
 
       const [videoKey, duration, thumbnailFile] = await Promise.all([
-        multipartUpload({
+        presignedPostUpload({
           file: videoFile,
           onProgress: setUploadProgress,
           abortSignal: abortControllerRef.current.signal,

@@ -173,7 +173,8 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
       if (senderId != null && user?.id != null && Number(senderId) === Number(user.id)) return;
 
       const content = String(msg?.content ?? "").trim();
-      if (!content) return;
+      const hasAttachment = Boolean(msg?.attachmentKey || msg?.attachment_key);
+      if (!content && !hasAttachment) return;
 
       const sender =
         msg?.sender?.firstName || msg?.sender?.lastName
@@ -182,6 +183,14 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
             ? `@${msg.sender.username}`
             : "Tin nhắn mới";
       const senderAvatarUrl = msg?.sender?.avatarUrl ?? msg?.sender?.avatar_url ?? null;
+
+      let displayMessage = content;
+      if (!content && hasAttachment) {
+        const type = msg?.attachmentType || msg?.attachment_type;
+        displayMessage = type === "image" ? "Đã gửi một ảnh" : "Đã gửi một file đính kèm";
+      } else if (content.length > 140) {
+        displayMessage = `${content.slice(0, 140)}…`;
+      }
 
       const convId =
         payload?.conversationId ?? msg?.conversation ?? msg?.conversationId ?? null;
@@ -193,7 +202,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
       show({
         status: "notification",
         title: sender,
-        message: content.length > 140 ? `${content.slice(0, 140)}…` : content,
+        message: displayMessage,
         duration: 6500,
         onClick: async () => {
           if (!convId) return;

@@ -9,7 +9,10 @@ from rest_framework.exceptions import (
 
 from rest_framework_simplejwt.exceptions import InvalidToken
 
-from apps.chats.exceptions import UserNotInConversationError
+from apps.chats.exceptions import (
+    UserNotInConversationError,
+    AttachmentAccessDeniedError,
+)
 from apps.users.exceptions import CannotFollowYourselfError, HaveNotFollowUserError
 from apps.videos.exceptions import (
     InvalidS3KeyFormatError,
@@ -71,4 +74,5 @@ DOMAIN_EXCEPTION_STATUS_MAP = {
     MultipartUploadCompleteError: status.HTTP_400_BAD_REQUEST,
     InvalidPartNumberError: status.HTTP_400_BAD_REQUEST,
     MultipartUploadAbortError: status.HTTP_400_BAD_REQUEST,
+    AttachmentAccessDeniedError: status.HTTP_403_FORBIDDEN,
 }

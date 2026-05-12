@@ -5,6 +5,9 @@ from django.contrib.auth.models import AnonymousUser
 from apps.chats.constants import CHAT_USER_INBOX_GROUP_PREFIX
 from apps.notifications.constants import NOTIFICATIONS_USER_GROUP_PREFIX
 from core.base_consumers import BaseAsyncJsonWebsocketConsumer
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class RealtimeConsumer(BaseAsyncJsonWebsocketConsumer):
@@ -51,3 +54,34 @@ class RealtimeConsumer(BaseAsyncJsonWebsocketConsumer):
         await self.send_json(
             {"type": "notification.read", "payload": event.get("payload")}
         )
+
+    # ---- video call signaling
+    async def call_signaling(self, event):
+        payload = event.get("payload")
+        logger.info(
+            f"[WebRTC] Outgoing signaling to User {self.user.id}. Data: {payload.get('data')}"
+        )
+        await self.send_json({"type": "call.signaling", "payload": payload})
+
+    async def receive_json(self, content, **kwargs):
+        msg_type = content.get("type")
+        payload = content.get("payload")
+
+        if msg_type == "call.signaling":
+            recipient_id = payload.get("recipientId")
+            data = payload.get("data")
+            logger.info(
+                f"[WebRTC] Incoming signaling from User {self.user.id} to {recipient_id}. Data: {data}"
+            )
+
+            if recipient_id and data:
+                await self.channel_layer.group_send(
+                    f"{CHAT_USER_INBOX_GROUP_PREFIX}.{recipient_id}",
+                    {
+                        "type": "call_signaling",
+                        "payload": {
+                            "senderId": self.user.id,
+                            "data": data,
+                        },
+                    },
+                )

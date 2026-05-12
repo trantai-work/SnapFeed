@@ -138,3 +138,7 @@ class VideoReactionSerializer(serializers.ModelSerializer):
         if v is not None:
             return v.reaction_count
         return None
+
+
+class VideoViewSerializer(serializers.Serializer):
+    watch_time = serializers.IntegerField(min_value=0)

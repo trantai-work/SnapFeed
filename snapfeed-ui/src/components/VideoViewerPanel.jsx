@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 import CommentsPanel from "./CommentsPanel";
 import { commentsApi } from "../api/comments.api";
-import { videosApi } from "../api/video.api";
+import { videosApi, isValidView } from "../api/video.api";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { buildVideoSrc } from "../utils/feedVideo";
 import { formatCount } from "../utils/format";
@@ -24,13 +24,16 @@ export default function VideoViewerPanel({
   video,
   onClose,
   onCommentCreated,
+  onDelete,
 }) {
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [videoState, setVideoState] = useState(null);
   const [reacting, setReacting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [mobileCommentsOpen, setMobileCommentsOpen] = useState(false);
 
@@ -40,8 +43,36 @@ export default function VideoViewerPanel({
   const [composerBottom, setComposerBottom] = useState(0);
   const [incomingComment, setIncomingComment] = useState(null);
   const composerRef = useRef(null);
+  const videoRef = useRef(null);
+  const maxWatchTimeRef = useRef(0);
 
   const videoId = videoState?.id ?? video?.id ?? null;
+
+  // Track watch time via timeupdate on the video element
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onTimeUpdate = () => {
+      const t = Math.floor(v.currentTime);
+      if (t > maxWatchTimeRef.current) maxWatchTimeRef.current = t;
+    };
+    v.addEventListener("timeupdate", onTimeUpdate);
+    return () => v.removeEventListener("timeupdate", onTimeUpdate);
+  });
+
+  // Report watch time when panel closes
+  useEffect(() => {
+    if (open) {
+      maxWatchTimeRef.current = 0;
+      return;
+    }
+    if (!isAuthenticated || !videoId || maxWatchTimeRef.current <= 0) return;
+    const watchTime = maxWatchTimeRef.current;
+    const duration = videoState?.duration ?? video?.duration ?? 0;
+    if (!isValidView(watchTime, duration)) return;
+    const id = videoId;
+    videosApi.recordView({ videoId: id, watchTime }).catch(() => {});
+  }, [open, videoId, isAuthenticated]);
   const src = useMemo(
     () => buildVideoSrc(videoState?.videoKey ?? video?.videoKey),
     [video?.videoKey, videoState?.videoKey]
@@ -55,6 +86,23 @@ export default function VideoViewerPanel({
   const poster = videoState?.thumbnail || video?.thumbnail || undefined;
 
   const close = useCallback(() => onClose?.(), [onClose]);
+
+  const isOwner = isAuthenticated && user?.id === (videoState?.user ?? video?.user);
+
+  const handleDelete = useCallback(async () => {
+    if (!videoId || deleting) return;
+    setDeleting(true);
+    try {
+      await videosApi.deleteVideo(videoId);
+      onDelete?.(videoId);
+      close();
+    } catch {
+      // ignore
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  }, [videoId, deleting, close, onDelete]);
 
   const authorName = useMemo(() => {
     return getUserDisplayName(videoState || video || {});
@@ -196,7 +244,17 @@ export default function VideoViewerPanel({
         aria-modal="true"
       >
         <div className="flex h-full min-h-0 flex-col">
-          <div className="flex items-center justify-between border-b border-zinc-200/80 px-4 py-3 dark:border-white/10">
+          <div className="flex items-center justify-end gap-2 border-b border-zinc-200/80 px-4 py-3 dark:border-white/10">
+            {isOwner && (
+              <button
+                type="button"
+                aria-label="Xóa video"
+                onClick={() => setConfirmDelete(true)}
+                className="grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-zinc-100 text-red-500 hover:bg-red-50 active:bg-red-100 dark:bg-white/10 dark:text-red-400 dark:hover:bg-red-500/20"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
             <button
               type="button"
               aria-label="Đóng"
@@ -205,7 +263,6 @@ export default function VideoViewerPanel({
             >
               <X size={18} />
             </button>
-            <div className="h-9 w-9" aria-hidden />
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
@@ -228,6 +285,7 @@ export default function VideoViewerPanel({
                   controls
                   playsInline
                   preload="metadata"
+                  videoRef={videoRef}
                 />
               ) : (
                 <div className="px-4 py-10 text-center text-sm text-white/70">
@@ -441,6 +499,36 @@ export default function VideoViewerPanel({
           </div>
         </div>
       ) : null}
+
+      {/* Delete confirm dialog */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setConfirmDelete(false)} />
+          <div className="relative z-10 w-80 rounded-2xl bg-white p-6 shadow-2xl dark:bg-zinc-900">
+            <div className="text-base font-semibold text-gray-900 dark:text-white">Xóa video?</div>
+            <div className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+              Video sẽ bị xóa vĩnh viễn và không thể khôi phục.
+            </div>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="cursor-pointer rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="cursor-pointer rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-60"
+              >
+                {deleting ? "Đang xóa..." : "Xóa"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
