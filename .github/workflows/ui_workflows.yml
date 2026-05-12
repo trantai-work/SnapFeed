@@ -38,6 +38,9 @@ jobs:
             --build-arg VITE_GOOGLE_CLIENT_ID="${{ vars.VITE_GOOGLE_CLIENT_ID }}" \
             --build-arg VITE_GOOGLE_REDIRECT_URI="${{ vars.VITE_GOOGLE_REDIRECT_URI }}" \
             --build-arg VITE_S3_BUCKET_URL="${{ vars.VITE_S3_BUCKET_URL }}" \
+            --build-arg VITE_TURN_SERVER_URL="${{ vars.VITE_TURN_SERVER_URL }}" \
+            --build-arg VITE_TURN_USER="${{ vars.VITE_TURN_USER }}" \
+            --build-arg VITE_TURN_PASS="${{ vars.VITE_TURN_PASS }}" \
             -t "$IMAGE:$TAG" -t "$IMAGE:latest" \
             ./snapfeed-ui
           docker push "$IMAGE:$TAG"
