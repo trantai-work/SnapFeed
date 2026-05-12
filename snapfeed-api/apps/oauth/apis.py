@@ -46,13 +46,39 @@ class OAuthViewSet(BaseAPIViewSet):
             },
         )
 
-        id_token_str = token_response.json().get("id_token")
+        if not token_response.ok:
+            logger.error(
+                "Google token exchange failed: status=%s response=%s",
+                token_response.status_code,
+                token_response.text,
+            )
+            return self.response_error(
+                message=ERROR_MESSAGES["google_token_exchange_failed"],
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
-        payload = id_token.verify_oauth2_token(
-            id_token_str,
-            google_requests.Request(),
-            settings.GOOGLE_CLIENT_ID,
-        )
+        token_data = token_response.json()
+        id_token_str = token_data.get("id_token")
+
+        if not id_token_str:
+            logger.error("Google token response missing id_token: %s", token_data)
+            return self.response_error(
+                message=ERROR_MESSAGES["google_token_exchange_failed"],
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            payload = id_token.verify_oauth2_token(
+                id_token_str,
+                google_requests.Request(),
+                settings.GOOGLE_CLIENT_ID,
+            )
+        except Exception as exc:
+            logger.error("Google id_token verification failed: %s", exc)
+            return self.response_error(
+                message=ERROR_MESSAGES["invalid_google_token"],
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
         provider_user_id = payload.get("sub")
 
