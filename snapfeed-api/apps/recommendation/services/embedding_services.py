@@ -18,13 +18,19 @@ def _get_reaction_multiplier(user: User, video: Video) -> float:
         .values_list("reaction", flat=True)
         .first()
     )
+    if reaction is None:
+        return 1.0
+
     try:
         return REACTION_EMBEDDING_MULTIPLIERS[reaction]
     except KeyError as exc:
-        raise ValueError(
-            f"Unknown or missing reaction for user embedding: reaction={reaction!r} "
-            f"user_id={user.pk} video_id={video.pk}"
-        ) from exc
+        logger.warning(
+            "Unknown reaction type found for user embedding: reaction=%r user_id=%s video_id=%s. Defaulting to 1.0",
+            reaction,
+            user.pk,
+            video.pk,
+        )
+        return 1.0
 
 
 def _compute_watch_ratio(watch_time: int, duration: int) -> float:
