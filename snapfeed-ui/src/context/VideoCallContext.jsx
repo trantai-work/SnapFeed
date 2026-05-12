@@ -33,7 +33,7 @@ export function VideoCallProvider({ children }) {
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [remoteIsMuted, setRemoteIsMuted] = useState(false);
   const [remoteIsVideoOff, setRemoteIsVideoOff] = useState(false);
-  
+
   const activeConversationIdRef = useRef(null);
   const startTimeRef = useRef(null);
   const ringingStartTimeRef = useRef(null);
@@ -113,7 +113,7 @@ export function VideoCallProvider({ children }) {
                 console.warn(`[WebRTC] KẾT NỐI THÀNH CÔNG!`);
                 console.warn(`[WebRTC] Loại đường truyền: ${type?.toUpperCase()}`);
                 console.warn(`[WebRTC] IP đang dùng: ${ip}`);
-                
+
                 if (type === 'relay') {
                   console.warn("[WebRTC] Đang sử dụng TURN SERVER để chuyển tiếp dữ liệu (Khác mạng + Tường lửa gắt).");
                 } else if (type === 'srflx') {
@@ -165,7 +165,7 @@ export function VideoCallProvider({ children }) {
       let content = "";
       if (type === 'missed') content = `[CALL_MISSED] ${duration}`;
       else if (type === 'ended') content = `[CALL_ENDED] ${duration}`;
-      
+
       if (content) {
         console.log("[VideoCall] Calling messagesApi.create...", { cid, content });
         const response = await messagesApi.create({ conversationId: cid, content });
@@ -189,8 +189,8 @@ export function VideoCallProvider({ children }) {
           const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
           saveCallLog('ended', duration);
         } else {
-          const ringDuration = ringingStartTimeRef.current 
-            ? Math.floor((Date.now() - ringingStartTimeRef.current) / 1000) 
+          const ringDuration = ringingStartTimeRef.current
+            ? Math.floor((Date.now() - ringingStartTimeRef.current) / 1000)
             : 0;
           saveCallLog('missed', ringDuration);
         }
@@ -241,13 +241,13 @@ export function VideoCallProvider({ children }) {
       isCallerRef.current = true;
       ringingStartTimeRef.current = Date.now();
       console.log("[VideoCall] Set activeConversationIdRef to:", activeConversationIdRef.current);
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true
-        } 
+        }
       });
       console.log("[VideoCall] Media stream obtained");
       localStreamRef.current = stream;
@@ -269,8 +269,8 @@ export function VideoCallProvider({ children }) {
           data: { type: 'hangup' }
         });
 
-        const ringDuration = ringingStartTimeRef.current 
-          ? Math.floor((Date.now() - ringingStartTimeRef.current) / 1000) 
+        const ringDuration = ringingStartTimeRef.current
+          ? Math.floor((Date.now() - ringingStartTimeRef.current) / 1000)
           : 0;
         saveCallLog('missed', ringDuration);
 
@@ -300,14 +300,14 @@ export function VideoCallProvider({ children }) {
     if (!remoteUser) return;
     try {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true
-        } 
+        }
       });
       localStreamRef.current = stream;
       setLocalStream(stream);
@@ -345,8 +345,8 @@ export function VideoCallProvider({ children }) {
         data: { type: 'reject' }
       });
     }
-    const ringDuration = ringingStartTimeRef.current 
-      ? Math.floor((Date.now() - ringingStartTimeRef.current) / 1000) 
+    const ringDuration = ringingStartTimeRef.current
+      ? Math.floor((Date.now() - ringingStartTimeRef.current) / 1000)
       : 0;
     saveCallLog('missed', ringDuration);
     cleanup();
@@ -360,15 +360,15 @@ export function VideoCallProvider({ children }) {
         data: { type: 'hangup' }
       });
     }
-    
+
     if (startTimeRef.current) {
       const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
       console.log("[VideoCall] Call was active, duration:", duration);
       saveCallLog('ended', duration);
     } else {
       console.log("[VideoCall] Call was not active, marking as missed");
-      const ringDuration = ringingStartTimeRef.current 
-        ? Math.floor((Date.now() - ringingStartTimeRef.current) / 1000) 
+      const ringDuration = ringingStartTimeRef.current
+        ? Math.floor((Date.now() - ringingStartTimeRef.current) / 1000)
         : 0;
       saveCallLog('missed', ringDuration);
     }
@@ -414,8 +414,8 @@ export function VideoCallProvider({ children }) {
         case 'reject':
         case 'busy':
           if (data.type === 'reject') {
-            const ringDuration = ringingStartTimeRef.current 
-              ? Math.floor((Date.now() - ringingStartTimeRef.current) / 1000) 
+            const ringDuration = ringingStartTimeRef.current
+              ? Math.floor((Date.now() - ringingStartTimeRef.current) / 1000)
               : 0;
             saveCallLog('missed', ringDuration);
           }
@@ -426,8 +426,8 @@ export function VideoCallProvider({ children }) {
             const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
             saveCallLog('ended', duration);
           } else {
-            const ringDuration = ringingStartTimeRef.current 
-              ? Math.floor((Date.now() - ringingStartTimeRef.current) / 1000) 
+            const ringDuration = ringingStartTimeRef.current
+              ? Math.floor((Date.now() - ringingStartTimeRef.current) / 1000)
               : 0;
             saveCallLog('missed', ringDuration);
           }
