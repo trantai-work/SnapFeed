@@ -4,6 +4,8 @@ import { UploadCloud, FileVideo, MonitorPlay, Frame, Ratio } from "lucide-react"
 import { useMessageBox } from "../MessageBox";
 import { useUploadDraft } from "../../context/UploadDraftContext";
 
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB — must match backend policy
+
 export default function UploadContent() {
   const navigate = useNavigate();
   const inputRef = useRef(null);
@@ -23,6 +25,7 @@ export default function UploadContent() {
 
   const acceptFile = async (f) => {
     if (!f) return;
+
     const isMp4 =
       String(f.type).toLowerCase() === "video/mp4" ||
       String(f.name).toLowerCase().endsWith(".mp4");
@@ -31,6 +34,17 @@ export default function UploadContent() {
       inputRef.current && (inputRef.current.value = "");
       setFile(null);
       show({ status: "warning", message: "Không hỗ trợ file có định dạng này" });
+      return;
+    }
+
+    if (f.size > MAX_VIDEO_SIZE) {
+      inputRef.current && (inputRef.current.value = "");
+      setFile(null);
+      show({
+        status: "warning",
+        title: "File quá lớn",
+        message: `Video không được vượt quá 500MB. File của bạn: ${(f.size / (1024 * 1024)).toFixed(1)}MB`,
+      });
       return;
     }
 
@@ -124,7 +138,7 @@ export default function UploadContent() {
             <InfoCard
               icon={<FileVideo size={20} className="text-gray-700 dark:text-zinc-300" />}
               title="Dung lượng và thời lượng"
-              desc="Dung lượng tối đa: 3 GB"
+              desc="Dung lượng tối đa: 500 MB"
             />
             <InfoCard
               icon={<Frame size={20} className="text-gray-700 dark:text-zinc-300" />}

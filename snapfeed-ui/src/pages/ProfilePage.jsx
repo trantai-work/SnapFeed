@@ -704,6 +704,10 @@ export default function ProfilePage() {
         open={!!selectedVideo}
         video={selectedVideo}
         onClose={() => setSelectedVideo(null)}
+        onDelete={(deletedId) => {
+          setVideos((prev) => prev.filter((v) => v.id !== deletedId));
+          setSelectedVideo(null);
+        }}
         onCommentCreated={() => {
           // best-effort UI update for profile grid comment count
           setVideos((prev) =>

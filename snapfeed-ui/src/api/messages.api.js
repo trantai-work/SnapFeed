@@ -23,12 +23,35 @@ export const messagesApi = {
   },
 
   /** POST /chats/messages */
-  async create({ conversationId, content } = {}) {
+  async create({ conversationId, content, attachmentKey, attachmentName, attachmentSize, attachmentType } = {}) {
     if (!conversationId) {
       throw new Error("conversationId is required");
     }
-    const payload = { conversation: conversationId, content: String(content ?? "") };
+    const payload = {
+      conversation: conversationId,
+      content: String(content ?? ""),
+      attachmentKey,
+      attachmentName,
+      attachmentSize,
+      attachmentType,
+    };
     return await api.post("/chats/messages", payload);
+  },
+
+  /** POST /chats/messages/attachment/presigned-upload/ */
+  async getUploadPresignedUrl({ conversationId, fileName, contentType }) {
+    return await api.post("/chats/messages/attachment/presigned-upload", {
+      conversation: conversationId,
+      fileName,
+      contentType,
+    });
+  },
+
+  /** GET /chats/messages/attachment/presigned-download/ */
+  async getDownloadPresignedUrl(key, downloadFilename = null) {
+    const params = { key };
+    if (downloadFilename) params.filename = downloadFilename;
+    return await api.get("/chats/messages/attachment/presigned-download", { params });
   },
 };
 

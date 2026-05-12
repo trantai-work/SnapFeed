@@ -2,58 +2,93 @@ import api from "./api";
 import ApiError from "./ApiError";
 import { normalizeFeedItem } from "../utils/feedItem";
 
-export const uploadToS3 = async ({ url, fields, file }) => {
-  const formData = new FormData();
-  // append S3 fields
-  Object.entries(fields).forEach(([key, value]) => {
-    formData.append(key, value);
-  });
-  // append the file as 'file'
-  formData.append("file", file);
-
-  const response = await fetch(url, {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    throw new ApiError("S3 upload failed", { status: response.status });
-  }
-
-  return response;
-};
-
-/**
- * Upload a single part directly to S3 via presigned URL.
- * Returns the ETag from the response header.
- */
-export const uploadPartToS3 = async ({ presignedUrl, chunk, onProgress }) => {
+export const uploadToS3 = async ({ url, fields, file, onProgress }) => {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
-        onProgress(e.loaded, e.total);
+        onProgress(Math.round((e.loaded / e.total) * 100));
       }
     };
 
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        const etag = xhr.getResponseHeader("ETag");
-        if (!etag) return reject(new ApiError("Missing ETag from S3 part response"));
-        resolve(etag);
+        resolve();
+      } else if (xhr.status === 400 || xhr.status === 403) {
+        // S3 returns 400 EntityTooLarge when file exceeds content-length-range policy
+        const isTooBig =
+          xhr.responseText?.includes("EntityTooLarge") ||
+          xhr.responseText?.includes("MaxSizeExceeded");
+        if (isTooBig) {
+          reject(new ApiError("File vượt quá giới hạn 500MB cho phép"));
+        } else {
+          reject(new ApiError(`S3 upload failed with status ${xhr.status}`));
+        }
       } else {
-        reject(new ApiError(`S3 part upload failed with status ${xhr.status}`));
+        reject(new ApiError(`S3 upload failed with status ${xhr.status}`));
       }
     };
 
-    xhr.onerror = () => reject(new ApiError("S3 part upload network error"));
-    xhr.onabort = () => reject(new ApiError("S3 part upload aborted"));
+    xhr.onerror = () => reject(new ApiError("S3 upload network error"));
+    xhr.onabort = () => reject(new ApiError("Upload cancelled"));
 
-    xhr.open("PUT", presignedUrl);
-    xhr.send(chunk);
+    const formData = new FormData();
+    Object.entries(fields).forEach(([key, value]) => formData.append(key, value));
+    formData.append("file", file);
+
+    xhr.open("POST", url);
+    xhr.send(formData);
   });
 };
+
+/**
+ * Upload a file to S3 using presigned POST (single-part).
+ * S3 enforces the 500MB size limit via content-length-range policy.
+ *
+ * @param {Object} options
+ * @param {File}     options.file         - The file to upload
+ * @param {Function} options.onProgress   - Called with (percent: number)
+ * @param {Object}   options.abortSignal  - AbortSignal to cancel the upload
+ * @returns {Promise<string>}             - Resolves with the s3_key
+ */
+export async function presignedPostUpload({ file, onProgress, abortSignal }) {
+  if (abortSignal?.aborted) throw new Error("Upload cancelled");
+
+  const { url, fields } = await videosApi.generatePresignedUrl({
+    fileName: file.name,
+    contentType: file.type || "video/mp4",
+  });
+
+  // s3_key is stored in fields.key by S3 presigned POST format
+  const s3Key = fields?.key;
+  if (!s3Key) throw new ApiError("Missing S3 key from presigned URL response");
+
+  if (abortSignal?.aborted) throw new Error("Upload cancelled");
+
+  await new Promise((resolve, reject) => {
+    abortSignal?.addEventListener("abort", () => reject(new Error("Upload cancelled")));
+
+    uploadToS3({ url, fields, file, onProgress })
+      .then(resolve)
+      .catch(reject);
+  });
+
+  onProgress?.(100);
+  return s3Key;
+}
+
+/**
+ * Check if a watch_time qualifies as a valid view — mirrors backend logic.
+ * Short videos (duration <= 5s): must watch >= 50%
+ * Longer videos: must watch >= 5s AND >= 10%
+ */
+export function isValidView(watchTime, duration) {
+  if (!duration || duration <= 0) return false;
+  const ratio = watchTime / duration;
+  if (duration <= 5) return ratio >= 0.5;
+  return watchTime >= 5 && ratio >= 0.1;
+}
 
 export const videosApi = {
   /** GET /videos/:id */
@@ -68,40 +103,7 @@ export const videosApi = {
       fileName,
       contentType,
     });
-    return data;
-  },
-
-  initiateMultipartUpload: async ({ fileName, contentType }) => {
-    const data = await api.post("/videos/multipart/initiate", {
-      file_name: fileName,
-      content_type: contentType,
-    });
-    return data; // { uploadId, s3Key }
-  },
-
-  generatePartPresignedUrl: async ({ s3Key, uploadId, partNumber }) => {
-    const data = await api.post("/videos/multipart/presigned-url", {
-      s3_key: s3Key,
-      upload_id: uploadId,
-      part_number: partNumber,
-    });
-    return data; // { presignedUrl, partNumber }
-  },
-
-  completeMultipartUpload: async ({ s3Key, uploadId, parts }) => {
-    const data = await api.post("/videos/multipart/complete", {
-      s3_key: s3Key,
-      upload_id: uploadId,
-      parts: parts.map((p) => ({ part_number: p.partNumber, etag: p.etag })),
-    });
-    return data; // { s3Key }
-  },
-
-  abortMultipartUpload: async ({ s3Key, uploadId }) => {
-    await api.post("/videos/multipart/abort", {
-      s3_key: s3Key,
-      upload_id: uploadId,
-    });
+    return data; // { url, fields, s3Key }
   },
 
   createVideo: async ({ title, description, tags, videoKey, thumbnail, duration }) => {
@@ -119,6 +121,20 @@ export const videosApi = {
 
     const data = await api.post("/videos", formData);
     return data;
+  },
+
+  /**
+   * DELETE /videos/:id — hard delete a video (owner only).
+   */
+  deleteVideo: async (videoId) => {
+    await api.delete(`/videos/${videoId}`);
+  },
+
+  /**
+   * PUT /videos/:id/view — record watch time for a video.
+   */
+  recordView: async ({ videoId, watchTime }) => {
+    await api.put(`/videos/${videoId}/view`, { watch_time: watchTime });
   },
 
   /**

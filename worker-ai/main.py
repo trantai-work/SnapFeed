@@ -5,7 +5,7 @@ import boto3
 
 from src.worker.worker import handle_message
 from src.pipeline.video_pipeline import VideoPipeline
-from config import QUEUE_URL, BACKEND_CREATE_EMBEDDING_URL, BACKEND_UPDATE_STATUS_URL, API_KEY, DOWNLOAD_DIR
+from config import QUEUE_URL, BACKEND_CREATE_EMBEDDING_URL, BACKEND_UPDATE_STATUS_URL, API_KEY, DOWNLOAD_DIR, NEED_HLS, USE_EXTERNAL_HLS
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,6 +37,7 @@ def worker_loop():
     
     logger.info("Worker started. Listening to queue: %s", QUEUE_URL)
     logger.info("Bucket: %s, Region: %s", bucket_name, region_name)
+    logger.info("NEED_HLS=%s, USE_EXTERNAL_HLS=%s", NEED_HLS, USE_EXTERNAL_HLS)
     
     while True:
         try:

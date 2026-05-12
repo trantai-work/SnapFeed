@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import { formatCount } from "../../utils/format";
 import { buildVideoSrc } from "../../utils/feedVideo";
 import {
@@ -6,7 +6,7 @@ import {
   getUserDisplayName,
   normalizeReactApiResponse,
 } from "../../utils/feedItem";
-import { videosApi } from "../../api/video.api";
+import { videosApi, isValidView } from "../../api/video.api";
 import { useAuth } from "../../context/AuthContext";
 import { useAutoPlayVideo } from "../../hooks/useAutoPlayVideo";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
@@ -47,6 +47,30 @@ function FeedItemComponent({
   const showNativeControls = useMediaQuery("(min-width: 1024px)");
 
   useAutoPlayVideo(videoRef, scrollRootRef, instanceId || item.videoKey, isActive);
+
+  // Track watch time
+  const maxWatchTimeRef = useRef(0);
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onTimeUpdate = () => {
+      const t = Math.floor(v.currentTime);
+      if (t > maxWatchTimeRef.current) maxWatchTimeRef.current = t;
+    };
+    v.addEventListener("timeupdate", onTimeUpdate);
+    return () => v.removeEventListener("timeupdate", onTimeUpdate);
+  });
+
+  useEffect(() => {
+    if (isActive) {
+      maxWatchTimeRef.current = 0;
+      return;
+    }
+    if (!isAuthenticated || !item.id || maxWatchTimeRef.current <= 0) return;
+    if (!isValidView(maxWatchTimeRef.current, item.duration)) return;
+    const watchTime = maxWatchTimeRef.current;
+    videosApi.recordView({ videoId: item.id, watchTime }).catch(() => {});
+  }, [isActive, item.id, isAuthenticated]);
 
   const togglePlayMobile = useCallback(() => {
     const v = videoRef.current;
