@@ -5,21 +5,30 @@ import { messagesApi } from '../api';
 
 const VideoCallContext = createContext(null);
 
-const ICE_SERVERS = {
-  iceServers: [
+const _dependencies = (() => {
+  const servers = [
     {
       urls: [
         "stun:stun1.l.google.com:19302",
         "stun:stun2.l.google.com:19302",
       ],
     },
-    {
-      urls: import.meta.env.VITE_TURN_SERVER_URL,
-      username: import.meta.env.VITE_TURN_USER,
-      credential: import.meta.env.VITE_TURN_PASS,
-    },
-  ],
-};
+  ];
+  const turnUrl = import.meta.env.VITE_TURN_SERVER_URL;
+  if (turnUrl && turnUrl.trim()) {
+    servers.push({
+      urls: [turnUrl],
+      username: import.meta.env.VITE_TURN_USER || "",
+      credential: import.meta.env.VITE_TURN_PASS || "",
+    });
+    console.log("[WebRTC] TURN server configured:", turnUrl);
+  } else {
+    console.warn("[WebRTC] No TURN server configured — only STUN will be used.");
+  }
+  return servers;
+})();
+
+const ICE_SERVERS = { iceServers: _dependencies };
 
 export function VideoCallProvider({ children }) {
   const { subscribe, send } = useRealtimeSocket();
