@@ -53,5 +53,20 @@ services:
       api:
         condition: service_started
 
+  coturn:
+    image: coturn/coturn
+    container_name: snapfeed-coturn
+    restart: unless-stopped
+    ports:
+      - "${MAPPING_TURN_PORT}:3478"
+      - "${MAPPING_TURN_PORT}:3478/udp"
+    command:
+      - turnserver
+      - -n
+      - --log-file=stdout
+      - --lt-cred-mech
+      - --user=snapuser:snappassword
+      - --realm=snapfeed.cloud
+
 volumes:
   data_elasticsearch:

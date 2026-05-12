@@ -13,6 +13,11 @@ const ICE_SERVERS = {
         "stun:stun2.l.google.com:19302",
       ],
     },
+    {
+      urls: import.meta.env.VITE_TURN_SERVER_URL,
+      username: import.meta.env.VITE_TURN_USER,
+      credential: import.meta.env.VITE_TURN_PASS,
+    },
   ],
 };
 
@@ -86,10 +91,39 @@ export function VideoCallProvider({ children }) {
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        console.log("[VideoCall] Sending ICE candidate");
+        console.log("[VideoCall] Local ICE Candidate:", event.candidate.candidate);
         send('call.signaling', {
           recipientId,
           data: { type: 'candidate', candidate: event.candidate }
+        });
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log("[VideoCall] ICE Connection State:", pc.iceConnectionState);
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+        pc.getStats().then(stats => {
+          stats.forEach(report => {
+            if (report.type === 'transport') {
+              const pair = stats.get(report.selectedCandidatePairId);
+              if (pair) {
+                const local = stats.get(pair.localCandidateId);
+                const type = local?.candidateType;
+                const ip = local?.address || local?.ip;
+                console.warn(`[WebRTC] KẾT NỐI THÀNH CÔNG!`);
+                console.warn(`[WebRTC] Loại đường truyền: ${type?.toUpperCase()}`);
+                console.warn(`[WebRTC] IP đang dùng: ${ip}`);
+                
+                if (type === 'relay') {
+                  console.warn("[WebRTC] Đang sử dụng TURN SERVER để chuyển tiếp dữ liệu (Khác mạng + Tường lửa gắt).");
+                } else if (type === 'srflx') {
+                  console.warn("[WebRTC] Đang kết nối P2P trực tiếp qua IP Public (STUN).");
+                } else {
+                  console.warn("[WebRTC] Đang kết nối nội bộ (Mạng LAN/WiFi).");
+                }
+              }
+            }
+          });
         });
       }
     };
@@ -99,7 +133,7 @@ export function VideoCallProvider({ children }) {
     };
 
     pc.onconnectionstatechange = () => {
-      console.log("[VideoCall] Connection state:", pc.connectionState);
+      console.log("[VideoCall] Peer Connection State:", pc.connectionState);
       if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
         console.log("[VideoCall] Peer disconnected suddenly");
         cleanup();
