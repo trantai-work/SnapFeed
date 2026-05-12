@@ -185,7 +185,11 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
       const senderAvatarUrl = msg?.sender?.avatarUrl ?? msg?.sender?.avatar_url ?? null;
 
       let displayMessage = content;
-      if (!content && hasAttachment) {
+      if (content.startsWith("[CALL_MISSED]")) {
+        displayMessage = "Cuộc gọi nhỡ";
+      } else if (content.startsWith("[CALL_ENDED]")) {
+        displayMessage = "Cuộc gọi video";
+      } else if (!content && hasAttachment) {
         const type = msg?.attachmentType || msg?.attachment_type;
         displayMessage = type === "image" ? "Đã gửi một ảnh" : "Đã gửi một file đính kèm";
       } else if (content.length > 140) {
