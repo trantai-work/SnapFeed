@@ -8,6 +8,7 @@ import DeleteDataPage from "../pages/DeleteDataPage";
 import ProfilePage from "../pages/ProfilePage";
 import ChatsPage from "../pages/ChatsPage";
 import SearchPage from "../pages/SearchPage";
+import ExplorePage from "../pages/ExplorePage";
 
 function AppRoutes() {
   return (
@@ -19,6 +20,7 @@ function AppRoutes() {
         <Route path="profile/:id" element={<ProfilePage />} />
         <Route path="chats" element={<ChatsPage />} />
         <Route path="search" element={<SearchPage />} />
+        <Route path="explore" element={<ExplorePage />} />
       </Route>
 
       <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />

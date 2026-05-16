@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 
 import boto3
@@ -13,7 +14,12 @@ from django.db import transaction
 from apps.users.models import User
 from apps.videos.constants import AllowedVideoContentTypes, MAX_VIDEO_UPLOAD_SIZE
 from apps.videos.models import Video
+from apps.videos.services import tag_services
 from utils import random
+
+
+S3_UPLOAD_RETRY_COUNT = 3
+S3_UPLOAD_RETRY_BACKOFF_SECONDS = 2
 
 
 class Command(BaseCommand):
@@ -126,21 +132,12 @@ class Command(BaseCommand):
                     ExpiresIn=3600,
                 )
 
-                # Upload local file to S3 using the presigned POST.
-                with open(video_path, "rb") as f:
-                    files = {"file": (file_name, f, content_type)}
-                    resp = requests.post(
-                        presigned_post["url"],
-                        data=presigned_post["fields"],
-                        files=files,
-                        timeout=600,
-                    )
-
-                # S3 presigned POST returns 204 on success.
-                if resp.status_code not in (200, 201, 204):
-                    raise RuntimeError(
-                        f"S3 upload failed: status_code={resp.status_code}, body={resp.text[:500]}"
-                    )
+                self._upload_video_to_s3(
+                    video_path=video_path,
+                    file_name=file_name,
+                    content_type=content_type,
+                    presigned_post=presigned_post,
+                )
 
                 # Save metadata into DB: thumbnail from thumbnails/ + duration from durations.json.
                 if file_name not in durations_map:
@@ -149,6 +146,7 @@ class Command(BaseCommand):
                     )
 
                 duration_seconds = int(durations_map[file_name])
+                metadata = self._read_video_metadata(video_path)
 
                 thumb_filename = f"{video_path.stem}.jpg"
                 thumb_local_path = thumbnails_dir / thumb_filename
@@ -161,12 +159,19 @@ class Command(BaseCommand):
                     with transaction.atomic():
                         video = Video(
                             user=user,
+                            title=metadata["title"],
                             description="",
                             video_key=s3_key,
                             duration=duration_seconds,
                         )
+                        if metadata["description"] is not None:
+                            video.description = metadata["description"]
                         # ImageField writes to storage on save.
                         video.thumbnail.save(thumb_filename, thumbnail_file, save=True)
+                        tag_services.sync_video_tags_from_names(
+                            video=video,
+                            names=metadata["tags"],
+                        )
 
                 success_count += 1
             except Exception as exc:
@@ -180,3 +185,85 @@ class Command(BaseCommand):
                 f"Seed completed. success={success_count}, failed={failed_count}"
             )
         )
+
+    def _read_video_metadata(self, video_path: Path) -> dict:
+        metadata_path = video_path.with_suffix(".json")
+        metadata = {
+            "title": "",
+            "description": None,
+            "tags": None,
+        }
+
+        if not metadata_path.exists():
+            return metadata
+
+        try:
+            raw = json.loads(metadata_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            raise RuntimeError(f"Failed to read metadata file {metadata_path}: {exc}")
+
+        if not isinstance(raw, dict):
+            raise RuntimeError(f"Metadata file must be a JSON object: {metadata_path}")
+
+        title = raw.get("title")
+        if title is not None:
+            metadata["title"] = str(title).strip()[:255]
+
+        description = raw.get("description")
+        if description is not None:
+            metadata["description"] = str(description).strip()
+
+        tags = raw.get("tags")
+        if tags is not None:
+            if not isinstance(tags, list):
+                raise RuntimeError(f"Metadata tags must be a list: {metadata_path}")
+            metadata["tags"] = tags
+
+        return metadata
+
+    def _upload_video_to_s3(
+        self,
+        *,
+        video_path: Path,
+        file_name: str,
+        content_type: str,
+        presigned_post: dict,
+    ) -> None:
+        last_error = None
+
+        for attempt in range(1, S3_UPLOAD_RETRY_COUNT + 1):
+            try:
+                with open(video_path, "rb") as f:
+                    files = {"file": (file_name, f, content_type)}
+                    resp = requests.post(
+                        presigned_post["url"],
+                        data=presigned_post["fields"],
+                        files=files,
+                        timeout=600,
+                    )
+
+                # S3 presigned POST returns 204 on success.
+                if resp.status_code in (200, 201, 204):
+                    return
+
+                if 400 <= resp.status_code < 500:
+                    raise RuntimeError(
+                        f"S3 upload failed: status_code={resp.status_code}, body={resp.text[:500]}"
+                    )
+
+                last_error = RuntimeError(
+                    f"S3 upload failed: status_code={resp.status_code}, body={resp.text[:500]}"
+                )
+            except requests.RequestException as exc:
+                last_error = exc
+
+            if attempt < S3_UPLOAD_RETRY_COUNT:
+                sleep_seconds = S3_UPLOAD_RETRY_BACKOFF_SECONDS * attempt
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"S3 upload retry {attempt}/{S3_UPLOAD_RETRY_COUNT - 1} for {video_path.name}: {last_error}"
+                    )
+                )
+                time.sleep(sleep_seconds)
+
+        raise RuntimeError(f"S3 upload failed after retries: {last_error}")

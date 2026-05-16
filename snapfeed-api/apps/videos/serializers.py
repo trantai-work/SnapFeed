@@ -40,6 +40,7 @@ class VideoSerializer(serializers.ModelSerializer):
             "is_following",
             "hls_playlist_key",
             "status",
+            "created_at",
         ]
         read_only_fields = [
             "id",
@@ -51,6 +52,7 @@ class VideoSerializer(serializers.ModelSerializer):
             "is_following",
             "hls_playlist_key",
             "status",
+            "created_at",
         ]
 
     def get_my_reaction(self, obj):

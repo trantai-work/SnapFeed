@@ -5,7 +5,7 @@ import { commentsApi } from "../api/comments.api";
 import { videosApi, isValidView } from "../api/video.api";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { buildVideoSrc } from "../utils/feedVideo";
-import { formatCount } from "../utils/format";
+import { formatCount, formatRelativeTimeVi } from "../utils/format";
 import { getUserAvatarUrl, getUserDisplayName } from "../utils/feedItem";
 import { useAuth } from "../context/AuthContext";
 import { openAuthModal } from "../utils/authModalBus";
@@ -106,6 +106,10 @@ export default function VideoViewerPanel({
 
   const authorName = useMemo(() => {
     return getUserDisplayName(videoState || video || {});
+  }, [video, videoState]);
+
+  const createdAtLabel = useMemo(() => {
+    return formatRelativeTimeVi((videoState || video || {})?.createdAt);
   }, [video, videoState]);
 
   const authorAvatarUrl = useMemo(() => {
@@ -320,6 +324,11 @@ export default function VideoViewerPanel({
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-extrabold text-zinc-900 dark:text-white">
                         {authorName}
+                        {createdAtLabel ? (
+                          <span className="ml-1 font-semibold text-zinc-500 dark:text-white/55">
+                            · {createdAtLabel}
+                          </span>
+                        ) : null}
                       </div>
                       {videoState?.title ? (
                         <div className="mt-0.5 line-clamp-1 text-sm font-extrabold text-zinc-900 dark:text-white">

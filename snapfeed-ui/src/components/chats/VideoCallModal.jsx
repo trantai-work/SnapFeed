@@ -27,6 +27,7 @@ export default function VideoCallModal() {
   const [pos, setPos] = useState({ x: 32, y: 112 }); // Initial position (bottom-28 right-8)
   const draggingRef = useRef(false);
   const startPosRef = useRef({ x: 0, y: 0 });
+  const [localAspect, setLocalAspect] = useState(16 / 9); // fallback 16:9
 
   const handleMouseDown = (e) => {
     draggingRef.current = true;
@@ -37,33 +38,54 @@ export default function VideoCallModal() {
     e.preventDefault();
   };
 
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    draggingRef.current = true;
+    startPosRef.current = {
+      x: touch.clientX + pos.x,
+      y: touch.clientY + pos.y
+    };
+  };
+
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!draggingRef.current) return;
-
       const newX = startPosRef.current.x - e.clientX;
       const newY = startPosRef.current.y - e.clientY;
-
-      // Boundary constraints
-      const maxX = window.innerWidth - 208; // 208px is w-52
-      const maxY = window.innerHeight - 117; // aspect-video of 208px
-
+      const maxX = window.innerWidth - 208;
+      const maxY = window.innerHeight - 117;
       setPos({
         x: Math.max(0, Math.min(maxX, newX)),
         y: Math.max(0, Math.min(maxY, newY))
       });
     };
-    const handleMouseUp = () => {
+    const handleTouchMove = (e) => {
+      if (!draggingRef.current) return;
+      const touch = e.touches[0];
+      const newX = startPosRef.current.x - touch.clientX;
+      const newY = startPosRef.current.y - touch.clientY;
+      const maxX = window.innerWidth - 208;
+      const maxY = window.innerHeight - 117;
+      setPos({
+        x: Math.max(0, Math.min(maxX, newX)),
+        y: Math.max(0, Math.min(maxY, newY))
+      });
+    };
+    const handleEnd = () => {
       draggingRef.current = false;
     };
 
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleEnd);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleEnd);
     };
-  }, [pos.x, pos.y]);
+  }, []);
 
   useEffect(() => {
     if (localVideoRef.current && localStream && !isVideoOff) {
@@ -151,11 +173,14 @@ export default function VideoCallModal() {
       {localStream && (
         <div
           onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
           style={{
             right: `${pos.x}px`,
-            bottom: `${pos.y}px`
+            bottom: `${pos.y}px`,
+            width: 'clamp(120px, 28vw, 208px)',
+            aspectRatio: localAspect
           }}
-          className={`absolute w-52 aspect-video bg-black/60 backdrop-blur-2xl rounded-2xl overflow-hidden border border-white/10 shadow-2xl z-[60] group cursor-move ${callState === 'active' ? 'scale-100' : 'scale-105'}`}
+          className={`absolute bg-black/60 backdrop-blur-2xl rounded-2xl overflow-hidden border border-white/10 shadow-2xl z-[60] group cursor-move ${callState === 'active' ? 'scale-100' : 'scale-105'}`}
         >
           {isVideoOff ? (
             <div className="w-full h-full flex items-center justify-center bg-gray-900">
@@ -168,6 +193,12 @@ export default function VideoCallModal() {
               playsInline
               muted
               className="w-full h-full object-cover scale-x-[-1] pointer-events-none"
+              onLoadedMetadata={(e) => {
+                const v = e.target;
+                if (v.videoWidth && v.videoHeight) {
+                  setLocalAspect(v.videoWidth / v.videoHeight);
+                }
+              }}
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3 pointer-events-none">

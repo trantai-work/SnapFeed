@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, Loader2, MessageSquareText } from "lucide-react";
+import { ChevronLeft, Loader2, MessageSquareText, Video } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { conversationsApi } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useRealtimeSocket } from "../context/RealtimeSocketContext";
 import { useChatUnread } from "../context/ChatUnreadContext";
 import { useChatUI } from "../context/ChatUIContext";
+import { useVideoCall } from "../context/VideoCallContext";
 import ConversationListItem from "../components/chats/ConversationListItem";
 import MessageThread from "../components/chats/MessageThread";
 import { buildConversationName } from "../utils/chat";
@@ -19,6 +20,7 @@ export default function ChatsPage() {
   const { subscribe } = useRealtimeSocket();
   const { setConversationUnread } = useChatUnread();
   const { setActiveConversationId } = useChatUI();
+  const { startCall } = useVideoCall();
   const refreshInFlightRef = useRef(false);
   const lastReadPingRef = useRef(new Map()); // convId -> last time we pinged /read (ms)
 
@@ -401,6 +403,22 @@ export default function ChatsPage() {
                   : "Trò chuyện"}
             </div>
           </div>
+
+          {/* Video call button (mobile) */}
+          {resolvedSelectedConversation?.type === "direct" && (() => {
+            const parts = resolvedSelectedConversation?.participants || [];
+            const recipient = parts.find(p => (p?.id ?? p?.user?.id) !== meId) || null;
+            if (!recipient) return null;
+            return (
+              <button
+                onClick={() => startCall(recipient, resolvedSelectedConversation.id)}
+                className="mr-1 flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-black/5 hover:text-gray-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white transition-all cursor-pointer active:scale-90"
+                title="Cuộc gọi video"
+              >
+                <Video className="h-5 w-5" />
+              </button>
+            );
+          })()}
         </div>
 
         <div
