@@ -22,6 +22,7 @@ export function normalizeFeedItem(raw) {
     userAvatar: raw.userAvatar ?? raw.user_avatar ?? null,
     hlsPlaylistKey: raw.hlsPlaylistKey ?? null,
     status: raw.status ?? null,
+    createdAt: raw.createdAt ?? raw.created_at ?? null,
   };
 }
 

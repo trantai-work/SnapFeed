@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { fullName } from "../../utils/chat";
 import { messagesApi } from "../../api";
 import { FileIcon, X, Loader2, PhoneOff, Video } from "lucide-react";
@@ -44,25 +45,26 @@ function ChatAttachment({ attachmentKey, attachmentType, attachmentName, isMine 
             onClick={() => setIsFullscreen(true)}
           />
         </div>
-        {isFullscreen && (
+        {isFullscreen && createPortal(
           <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 cursor-zoom-out"
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 cursor-zoom-out animate-in fade-in duration-200"
             onClick={() => setIsFullscreen(false)}
           >
             <img
               src={url}
               alt={attachmentName || "Attachment"}
-              className="max-h-full max-w-full object-contain rounded-lg shadow-2xl cursor-default"
+              className="max-h-full max-w-full object-contain rounded-lg shadow-2xl cursor-default animate-in zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             />
             <button
-              className="absolute top-4 right-4 p-2 text-white/70 hover:text-white transition-colors cursor-pointer"
+              className="absolute top-6 right-6 p-3 text-white/70 hover:text-white transition-colors cursor-pointer bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-md"
               onClick={(e) => { e.stopPropagation(); setIsFullscreen(false); }}
               aria-label="Đóng"
             >
               <X className="h-8 w-8" />
             </button>
-          </div>
+          </div>,
+          document.body
         )}
       </>
     );

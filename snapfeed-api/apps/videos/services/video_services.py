@@ -18,7 +18,7 @@ from django.db.models import (
     Value,
     When,
 )
-from django.db.models.functions import Extract, Now, Random
+from django.db.models.functions import Coalesce, Extract, Now, Random
 from pgvector.django import CosineDistance
 from safedelete.models import HARD_DELETE
 
@@ -54,14 +54,27 @@ def get_seen_video(user: User) -> QuerySet[Video]:
     return Video.objects.filter(video_views__user=user).distinct()
 
 
+def get_following_videos(user: User) -> QuerySet[Video]:
+    """
+    Get latest videos from users that the given user follows.
+    """
+
+    return (
+        Video.objects.filter(user__followers__follower=user)
+        .select_related("user")
+        .prefetch_related("tags")
+        .order_by("-created_at", "-id")
+    )
+
+
 def get_trending_videos(limit: int = 25) -> QuerySet[Video]:
     """
     Get trending videos based on custom score.
     """
 
-    return (
+    qs = (
         Video.objects.annotate(
-            total_watch_time=Sum("video_views__watch_time"),
+            total_watch_time=Coalesce(Sum("video_views__watch_time"), 0),
             total_reactions=Count("reactions"),
             age_in_hours=ExpressionWrapper(
                 (Extract(Now() - F("created_at"), "epoch") / 3600.0),
@@ -79,8 +92,9 @@ def get_trending_videos(limit: int = 25) -> QuerySet[Video]:
                 output_field=FloatField(),
             )
         )
-        .order_by("-trending_score")
+        .order_by(F("trending_score").desc(nulls_last=True), "-created_at", "-id")
     )
+    return qs[:limit]
 
 
 def get_similar_videos(
@@ -110,8 +124,10 @@ def get_default_feeds() -> QuerySet[Video]:
     Get default feed for user.
     """
 
-    trending_pool = get_trending_videos(limit=1000).order_by(Random())
-    feeds = trending_pool[:25]
+    trending_pool_ids = list(
+        get_trending_videos(limit=100).values_list("id", flat=True)
+    )
+    feeds = Video.objects.filter(id__in=trending_pool_ids).order_by(Random())[:25]
 
     return feeds
 

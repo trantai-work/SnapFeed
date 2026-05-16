@@ -7,6 +7,7 @@ import {
   Upload,
   User,
   Search,
+  Compass,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -258,6 +259,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
 
   const menu = [
     { icon: HomeIcon, label: "Đề xuất", path: "/", public: true },
+    { icon: Compass, label: "Khám phá", path: "explore", public: true },
     { icon: Send, label: "Tin nhắn", path: "chats" },
     { icon: Bell, label: "Thông báo", path: "notifications" },
     { icon: Upload, label: "Tải lên", path: "upload" },
@@ -413,6 +415,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                   <NavLink
                     key={index}
                     to={item.path}
+                    end={item.path === "/"}
                     onClick={(e) => {
                       if (!isAuthenticated && requiresAuth) {
                         e.preventDefault();

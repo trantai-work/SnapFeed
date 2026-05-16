@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef } from "react";
-import { formatCount } from "../../utils/format";
+import { formatCount, formatRelativeTimeVi } from "../../utils/format";
 import { buildVideoSrc } from "../../utils/feedVideo";
 import {
   getUserAvatarUrl,
@@ -42,6 +42,7 @@ function FeedItemComponent({
   const viewLabel = formatCount(item.viewCount ?? 0);
   const reactionLabel = formatCount(item.reactionCount ?? 0);
   const commentLabel = formatCount(item.commentCount ?? 0);
+  const createdAtLabel = formatRelativeTimeVi(item.createdAt);
   const tags = Array.isArray(item?.tags) ? item.tags.filter(Boolean) : [];
 
   const showNativeControls = useMediaQuery("(min-width: 1024px)");
@@ -159,6 +160,9 @@ function FeedItemComponent({
             <div className="pointer-events-none absolute inset-x-0 bottom-20 z-10 max-w-[calc(100%-3.75rem)] p-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pr-14 sm:bottom-24 sm:max-w-[calc(100%-4rem)] sm:pr-16 lg:bottom-14 lg:max-w-full lg:pr-4">
               <p className="text-sm font-semibold text-white drop-shadow">
                 {displayName}
+                {createdAtLabel ? (
+                  <span className="font-medium text-white/80"> · {createdAtLabel}</span>
+                ) : null}
               </p>
               {item.title ? (
                 <p className="mt-0.5 line-clamp-1 text-sm font-extrabold text-white drop-shadow">
