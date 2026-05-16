@@ -282,6 +282,62 @@ class VideoViewSet(
 
         return self.response_ok(self.get_serializer(feeds, many=True).data)
 
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="trending",
+        permission_classes=[],
+        pagination_class=None,
+    )
+    def trending(self, request):
+        """
+        Get trending videos.
+        """
+
+        feeds = video_services.get_trending_videos(limit=50)
+        feeds = feeds.select_related("user").prefetch_related("tags")
+        user = request.user
+        if user.is_authenticated:
+            feeds = feeds.prefetch_related(
+                Prefetch(
+                    "reactions",
+                    queryset=VideoReaction.objects.filter(user=user),
+                    to_attr="_prefetched_user_reactions",
+                )
+            )
+
+        return self.response_ok(self.get_serializer(feeds, many=True).data)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="following",
+        permission_classes=[IsUserAuthenticated],
+        pagination_class=None,
+    )
+    def following(self, request):
+        """
+        Get videos from users that the current user follows.
+        """
+
+        seen_video_ids = video_services.get_seen_video(request.user).values_list(
+            "id", flat=True
+        )
+        feeds = video_services.get_following_videos(request.user).exclude(
+            id__in=seen_video_ids
+        )[:50]
+        feeds = feeds.select_related("user").prefetch_related("tags")
+        user = request.user
+        feeds = feeds.prefetch_related(
+            Prefetch(
+                "reactions",
+                queryset=VideoReaction.objects.filter(user=user),
+                to_attr="_prefetched_user_reactions",
+            )
+        )
+
+        return self.response_ok(self.get_serializer(feeds, many=True).data)
+
     @extend_schema(
         parameters=[
             OpenApiParameter(
