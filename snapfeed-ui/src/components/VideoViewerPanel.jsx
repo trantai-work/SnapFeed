@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { X, Trash2 } from "lucide-react";
+import { X, Trash2, Flag } from "lucide-react";
 import CommentsPanel from "./CommentsPanel";
+import ReportVideoModal from "./ReportVideoModal";
 import { commentsApi } from "../api/comments.api";
 import { videosApi, isValidView } from "../api/video.api";
 import { useMediaQuery } from "../hooks/useMediaQuery";
@@ -34,6 +35,7 @@ export default function VideoViewerPanel({
   const [reacting, setReacting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [mobileCommentsOpen, setMobileCommentsOpen] = useState(false);
 
@@ -259,6 +261,22 @@ export default function VideoViewerPanel({
                 <Trash2 size={16} />
               </button>
             )}
+            {!isOwner && videoId ? (
+              <button
+                type="button"
+                aria-label="Báo cáo video"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    openAuthModal();
+                    return;
+                  }
+                  setReportOpen(true);
+                }}
+                className="grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-zinc-100 text-zinc-700 hover:bg-rose-50 hover:text-rose-600 active:bg-rose-100 dark:bg-white/10 dark:text-white/75 dark:hover:bg-rose-500/20 dark:hover:text-rose-300"
+              >
+                <Flag size={16} />
+              </button>
+            ) : null}
             <button
               type="button"
               aria-label="Đóng"
@@ -538,6 +556,12 @@ export default function VideoViewerPanel({
           </div>
         </div>
       )}
+
+      <ReportVideoModal
+        open={reportOpen}
+        video={videoState || video}
+        onClose={() => setReportOpen(false)}
+      />
     </div>
   );
 }

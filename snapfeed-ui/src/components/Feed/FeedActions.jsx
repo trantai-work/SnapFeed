@@ -2,6 +2,7 @@ import { memo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Eye,
+  Flag,
   MessageCircle,
   User,
   UserCheck,
@@ -25,6 +26,7 @@ function FeedActionsComponent({
   currentUserId = null,
   onReact,
   onComment,
+  onReport,
   onRequireAuth,
   onFollowUpdate,
   overlay = false,
@@ -137,6 +139,22 @@ function FeedActionsComponent({
         </span>
         <span className={labelClass}>{commentLabel}</span>
       </button>
+      {profileUserId && currentUserId && profileUserId !== currentUserId ? (
+        <button
+          type="button"
+          className={actionBtn}
+          aria-label="Báo cáo video"
+          onClick={() => {
+            if (typeof onReport === "function") onReport();
+            else if (typeof onRequireAuth === "function") onRequireAuth();
+          }}
+        >
+          <span className={iconWrap}>
+            <Flag className={overlayIconClass} strokeWidth={1.75} />
+          </span>
+          <span className={labelClass}>Báo cáo</span>
+        </button>
+      ) : null}
       <div className="relative">
         <button
           type="button"

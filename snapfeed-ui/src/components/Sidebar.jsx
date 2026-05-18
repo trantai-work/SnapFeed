@@ -8,12 +8,16 @@ import {
   User,
   Search,
   Compass,
+  Headphones,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import logo from "../assets/logo.png";
 import logoLightMode from "../assets/logo_light_mode.png";
+import logoNoText from "../assets/logo_no_text.png";
 import AuthModal from "./AuthModal";
+import SupportModal from "./SupportModal";
+import SupportResponseModal from "./SupportResponseModal";
 import NotificationsPanel from "./NotificationsPanel";
 import { useMessageBox } from "./MessageBox";
 import { useAuth } from "../context/AuthContext";
@@ -35,7 +39,7 @@ function classNames(...xs) {
   return xs.filter(Boolean).join(" ");
 }
 
-export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }) {
+export default function Sidebar({ mobileOpen = false, onMobileClose = () => { } }) {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,6 +49,8 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
   const { activeConversationId } = useChatUI();
   const { show } = useMessageBox();
   const [authOpen, setAuthOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [supportResponseId, setSupportResponseId] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const unreadFetchLock = useRef(false);
@@ -105,6 +111,19 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
         const actorAvatarUrl = n?.actor?.avatarUrl ?? n?.actor?.avatar_url ?? null;
         const target = n?.target ?? null;
         const recipientId = payload.recipient?.id ?? null;
+
+        let displayAvatarUrl = actorAvatarUrl;
+        let displayImageType = "avatar";
+        if (n?.category === "system") {
+          if (target?.thumbnail) {
+            displayAvatarUrl = target.thumbnail;
+            displayImageType = "thumbnail";
+          } else {
+            displayAvatarUrl = logoNoText;
+            displayImageType = "logo";
+          }
+        }
+
         show({
           status: "notification",
           title: n.title || "Thông báo mới",
@@ -113,7 +132,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
           onClick: async (meta) => {
             const target = meta?.target ?? null;
             const actorId = meta?.actorId ?? null;
-            
+
             setNotificationsOpen(false);
             if (meta?.recipientId) {
               try {
@@ -123,13 +142,13 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                 // Ignore markRead failure; navigation intent is still valid.
               }
             }
-            
+
             // Handle video notifications
             if (target?.type === "videos.video" && target?.id) {
               navigate("/profile", { state: { openVideoId: target.id } });
               return;
             }
-            
+
             // Handle comment notifications
             if (target?.type === "comments.videocomment" && target?.id) {
               const c = await commentsApi.getById(target.id);
@@ -137,19 +156,25 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
               if (vid) navigate("/profile", { state: { openVideoId: vid } });
               return;
             }
-            
+
+            // Handle support notifications
+            if (target?.type === "support.supportticket" && target?.id) {
+              setSupportResponseId(target.id);
+              return;
+            }
+
             // Handle follow notifications (target is user) or any notification with actor
             if (target?.type === "users.user" && target?.id) {
               navigate(`/profile/${target.id}`);
               return;
             }
-            
+
             // Fallback: navigate to actor's profile if available
             if (actorId) {
               navigate(`/profile/${actorId}`);
             }
           },
-          meta: { actorId, target, recipientId, avatarUrl: actorAvatarUrl },
+          meta: { actorId, target, recipientId, avatarUrl: displayAvatarUrl, imageType: displayImageType },
         });
       }
     });
@@ -264,6 +289,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
     { icon: Bell, label: "Thông báo", path: "notifications" },
     { icon: Upload, label: "Tải lên", path: "upload" },
     { icon: User, label: "Hồ sơ", path: "profile" },
+    { icon: Headphones, label: "Hỗ trợ", action: "support" },
   ];
 
   if (loading) return null;
@@ -288,229 +314,249 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
       />
 
       <aside className={panelClass} aria-hidden={false}>
-            <button
-              type="button"
-              className="mb-4 flex items-center gap-2 cursor-pointer"
-              aria-label="Về trang Đề xuất"
-              onClick={() => {
-                setNotificationsOpen(false);
-                navigate("/");
-                onMobileClose?.();
-              }}
-            >
-              <img
-                src={theme === "light" ? logoLightMode : logo}
-                alt="SnapFeed"
-                className="h-20 max-h-[min(22vh,8.5rem)] w-auto max-w-full object-contain lg:h-28 lg:max-h-none"
-              />
-            </button>
+        <button
+          type="button"
+          className="mb-4 flex items-center gap-2 cursor-pointer"
+          aria-label="Về trang Đề xuất"
+          onClick={() => {
+            setNotificationsOpen(false);
+            navigate("/");
+            onMobileClose?.();
+          }}
+        >
+          <img
+            src={theme === "light" ? logoLightMode : logo}
+            alt="SnapFeed"
+            className="h-20 max-h-[min(22vh,8.5rem)] w-auto max-w-full object-contain lg:h-28 lg:max-h-none"
+          />
+        </button>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const q = String(searchQ || "").trim();
-                if (!q) return;
-                navigate(`/search?q=${encodeURIComponent(q)}`);
-                onMobileClose();
-              }}
-              className="mb-4 flex items-center rounded-full bg-gray-100 px-4 py-2 dark:bg-gray-800"
-            >
-              <Search size={16} className="text-gray-500 dark:text-gray-400" />
-              <input
-                placeholder="Tìm kiếm"
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                className="ml-2 w-full bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-500 dark:text-white dark:placeholder:text-gray-500"
-              />
-            </form>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const q = String(searchQ || "").trim();
+            if (!q) return;
+            navigate(`/search?q=${encodeURIComponent(q)}`);
+            onMobileClose();
+          }}
+          className="mb-4 flex items-center rounded-full bg-gray-100 px-4 py-2 dark:bg-gray-800"
+        >
+          <Search size={16} className="text-gray-500 dark:text-gray-400" />
+          <input
+            placeholder="Tìm kiếm"
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            className="ml-2 w-full bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-500 dark:text-white dark:placeholder:text-gray-500"
+          />
+        </form>
 
-            <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto">
-              {menu.map((item, index) => {
-                const Icon = item.icon;
-                const requiresAuth = !item.public;
-                if (item.path === "notifications") {
-                  const actorAvatarUrl = incomingRecipient?.notification?.actor?.avatarUrl;
-                  const showAvatar = actorAvatarUrl && unreadCount > 0;
-                  
-                  return (
-                    <button
-                      key={index}
-                      type="button"
-                      aria-expanded={notificationsOpen}
-                      onClick={() => {
-                        if (!isAuthenticated) {
-                          setAuthOpen(true);
-                          return;
-                        }
-                        setNotificationsOpen((open) => !open);
-                      }}
-                      className={classNames(
-                        "flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 text-left transition-colors",
-                        "hover:bg-gray-100 active:bg-gray-200/80 dark:hover:bg-gray-800 dark:active:bg-gray-700/80",
-                        notificationsOpen &&
-                          "bg-gray-100 font-semibold dark:bg-gray-800/90"
-                      )}
-                    >
-                      <span className="relative">
-                        {showAvatar ? (
-                          <img
-                            src={actorAvatarUrl}
-                            alt="Thông báo"
-                            className="h-5 w-5 rounded-full object-cover"
-                            referrerPolicy="no-referrer"
-                          />
-                        ) : (
-                          <Icon size={20} />
-                        )}
-                        {unreadCount > 0 ? (
-                          <span
-                            className="absolute -right-2.5 -top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[0.65rem] font-bold leading-none text-white shadow-sm ring-2 ring-white dark:ring-black"
-                            aria-label={`${unreadCount} thông báo chưa đọc`}
-                          >
-                            {unreadCount > 99 ? "99+" : unreadCount}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className="font-medium">{item.label}</span>
-                    </button>
-                  );
-                }
-                if (item.path === "chats") {
-                  return (
-                    <NavLink
-                      key={index}
-                      to={item.path}
-                      onClick={(e) => {
-                        const requiresAuth = !item.public;
-                        if (!isAuthenticated && requiresAuth) {
-                          e.preventDefault();
-                          setAuthOpen(true);
-                          return;
-                        }
-                        onMobileClose();
-                      }}
-                      className={({ isActive }) =>
-                        classNames(
-                          "flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800",
-                          isActive ? "font-semibold text-pink-500" : ""
-                        )
-                      }
-                    >
-                      <span className="relative">
-                        <Icon size={20} />
-                        {chatUnreadCount > 0 ? (
-                          <span
-                            className="absolute -right-2.5 -top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[0.65rem] font-bold leading-none text-white shadow-sm ring-2 ring-white dark:ring-black"
-                            aria-label={`${chatUnreadCount} cuộc trò chuyện chưa đọc`}
-                          >
-                            {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className="font-medium">{item.label}</span>
-                    </NavLink>
-                  );
-                }
-                return (
-                  <NavLink
-                    key={index}
-                    to={item.path}
-                    end={item.path === "/"}
-                    onClick={(e) => {
-                      if (!isAuthenticated && requiresAuth) {
-                        e.preventDefault();
-                        setAuthOpen(true);
-                        return;
-                      }
-                      onMobileClose();
-                    }}
-                    className={({ isActive }) =>
-                      classNames(
-                        "flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800",
-                        isActive ? "font-semibold text-pink-500" : ""
-                      )
-                    }
-                  >
-                    <Icon size={20} />
-                    <span className="font-medium">{item.label}</span>
-                  </NavLink>
-                );
-              })}
-            </nav>
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+          {menu.map((item, index) => {
+            const Icon = item.icon;
+            const requiresAuth = !item.public;
+            if (item.path === "notifications") {
+              const actorAvatarUrl = incomingRecipient?.notification?.actor?.avatarUrl;
+              const showAvatar = actorAvatarUrl && unreadCount > 0;
 
-            <div className="mt-auto space-y-3 border-t border-gray-200 pt-6 text-sm text-gray-500 dark:border-gray-800">
-              <div className="flex items-center justify-between gap-3 rounded-xl bg-gray-100 px-3 py-3 text-gray-900 dark:bg-white/10 dark:text-white">
-                <div className="text-sm font-semibold">Theme</div>
-                <ThemeToggle />
-              </div>
-
-              {!loading ? (
-                !isAuthenticated ? (
-                  <button
-                    type="button"
-                    className="w-full cursor-pointer rounded-xl bg-[#f6339a] px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 active:brightness-95"
-                    onClick={() => {
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  aria-expanded={notificationsOpen}
+                  onClick={() => {
+                    if (!isAuthenticated) {
                       setAuthOpen(true);
-                    }}
-                  >
-                    Đăng nhập
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      aria-label="Tới hồ sơ"
-                      className="flex w-full cursor-pointer items-center gap-3 rounded-xl bg-gray-100 px-3 py-3 text-left text-gray-900 transition-colors hover:bg-gray-200 active:bg-gray-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:active:bg-white/20"
-                      onClick={() => {
-                        navigate("/profile");
-                        onMobileClose();
-                      }}
-                    >
-                      {user?.avatarUrl ? (
-                        <img
-                          src={user.avatarUrl}
-                          alt={user.username || ""}
-                          className="h-9 w-9 shrink-0 rounded-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <div className="h-9 w-9 shrink-0 rounded-full bg-gray-300 dark:bg-white/10" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-semibold">
-                          {user?.firstName || ""} {user?.lastName || user?.username}
-                        </div>
-                        <div className="truncate text-xs text-gray-600 dark:text-white/60">
-                          {user?.username || ""}
-                        </div>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="w-full cursor-pointer rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-200 active:bg-gray-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:active:bg-white/20"
-                      onClick={async () => {
-                        await authApi.logout();
-                        setUser(null);
-                        navigate("/");
-                        onMobileClose();
-                      }}
-                    >
-                      Đăng xuất
-                    </button>
-                  </>
-                )
-              ) : null}
-
-              <Link
-                to="/privacy-policy"
-                className="block text-xs text-gray-500 transition-colors hover:text-gray-800 dark:hover:text-gray-300"
-                onClick={onMobileClose}
+                      return;
+                    }
+                    setNotificationsOpen((open) => !open);
+                  }}
+                  className={classNames(
+                    "flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 text-left transition-colors",
+                    "hover:bg-gray-100 active:bg-gray-200/80 dark:hover:bg-gray-800 dark:active:bg-gray-700/80",
+                    notificationsOpen &&
+                    "bg-gray-100 font-semibold dark:bg-gray-800/90"
+                  )}
+                >
+                  <span className="relative">
+                    {showAvatar ? (
+                      <img
+                        src={actorAvatarUrl}
+                        alt="Thông báo"
+                        className="h-5 w-5 rounded-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <Icon size={20} />
+                    )}
+                    {unreadCount > 0 ? (
+                      <span
+                        className="absolute -right-2.5 -top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[0.65rem] font-bold leading-none text-white shadow-sm ring-2 ring-white dark:ring-black"
+                        aria-label={`${unreadCount} thông báo chưa đọc`}
+                      >
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="font-medium">{item.label}</span>
+                </button>
+              );
+            }
+            if (item.path === "chats") {
+              return (
+                <NavLink
+                  key={index}
+                  to={item.path}
+                  onClick={(e) => {
+                    const requiresAuth = !item.public;
+                    if (!isAuthenticated && requiresAuth) {
+                      e.preventDefault();
+                      setAuthOpen(true);
+                      return;
+                    }
+                    onMobileClose();
+                  }}
+                  className={({ isActive }) =>
+                    classNames(
+                      "flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800",
+                      isActive ? "font-semibold text-pink-500" : ""
+                    )
+                  }
+                >
+                  <span className="relative">
+                    <Icon size={20} />
+                    {chatUnreadCount > 0 ? (
+                      <span
+                        className="absolute -right-2.5 -top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[0.65rem] font-bold leading-none text-white shadow-sm ring-2 ring-white dark:ring-black"
+                        aria-label={`${chatUnreadCount} cuộc trò chuyện chưa đọc`}
+                      >
+                        {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="font-medium">{item.label}</span>
+                </NavLink>
+              );
+            }
+            if (item.action === "support") {
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      setAuthOpen(true);
+                      return;
+                    }
+                    setSupportOpen(true);
+                    onMobileClose?.();
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  <Icon size={20} />
+                  <span className="font-medium">{item.label}</span>
+                </button>
+              );
+            }
+            return (
+              <NavLink
+                key={index}
+                to={item.path}
+                end={item.path === "/"}
+                onClick={(e) => {
+                  if (!isAuthenticated && requiresAuth) {
+                    e.preventDefault();
+                    setAuthOpen(true);
+                    return;
+                  }
+                  onMobileClose();
+                }}
+                className={({ isActive }) =>
+                  classNames(
+                    "flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800",
+                    isActive ? "font-semibold text-pink-500" : ""
+                  )
+                }
               >
-                Chính sách quyền riêng tư
-              </Link>
-              <div className="pt-2 text-xs">© 2026 SnapFeed</div>
-            </div>
+                <Icon size={20} />
+                <span className="font-medium">{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        <div className="mt-auto space-y-3 border-t border-gray-200 pt-6 text-sm text-gray-500 dark:border-gray-800">
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-gray-100 px-3 py-3 text-gray-900 dark:bg-white/10 dark:text-white">
+            <div className="text-sm font-semibold">Theme</div>
+            <ThemeToggle />
+          </div>
+
+          {!loading ? (
+            !isAuthenticated ? (
+              <button
+                type="button"
+                className="w-full cursor-pointer rounded-xl bg-[#f6339a] px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 active:brightness-95"
+                onClick={() => {
+                  setAuthOpen(true);
+                }}
+              >
+                Đăng nhập
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  aria-label="Tới hồ sơ"
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-xl bg-gray-100 px-3 py-3 text-left text-gray-900 transition-colors hover:bg-gray-200 active:bg-gray-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:active:bg-white/20"
+                  onClick={() => {
+                    navigate("/profile");
+                    onMobileClose();
+                  }}
+                >
+                  {user?.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.username || ""}
+                      className="h-9 w-9 shrink-0 rounded-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="h-9 w-9 shrink-0 rounded-full bg-gray-300 dark:bg-white/10" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">
+                      {user?.firstName || ""} {user?.lastName || user?.username}
+                    </div>
+                    <div className="truncate text-xs text-gray-600 dark:text-white/60">
+                      {user?.username || ""}
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className="w-full cursor-pointer rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-200 active:bg-gray-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:active:bg-white/20"
+                  onClick={async () => {
+                    await authApi.logout();
+                    setUser(null);
+                    navigate("/");
+                    onMobileClose();
+                  }}
+                >
+                  Đăng xuất
+                </button>
+              </>
+            )
+          ) : null}
+
+          <Link
+            to="/privacy-policy"
+            className="block text-xs text-gray-500 transition-colors hover:text-gray-800 dark:hover:text-gray-300"
+            onClick={onMobileClose}
+          >
+            Chính sách quyền riêng tư
+          </Link>
+          <div className="pt-2 text-xs">© 2026 SnapFeed</div>
+        </div>
       </aside>
 
       {notificationsOpen ? (
@@ -534,6 +580,13 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
               }}
               incomingRecipient={incomingRecipient}
               onItemMarkedRead={() => refreshUnread()}
+              onNotificationClick={(row) => {
+                const target = row?.notification?.target;
+                if (target?.type === "support.supportticket" && target?.id) {
+                  setSupportResponseId(target.id);
+                  setNotificationsOpen(false);
+                }
+              }}
             />
           </div>
         </>
@@ -552,6 +605,8 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
           authService.loginWithFacebook();
         }}
       />
+      <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
+      <SupportResponseModal ticketId={supportResponseId} onClose={() => setSupportResponseId(null)} />
     </>
   );
 }

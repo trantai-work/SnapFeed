@@ -40,6 +40,8 @@ export function ChatUnreadProvider({ children }) {
   const seedFromServer = useCallback(async () => {
     if (!isAuthenticated) return;
     if (seedInFlightRef.current) return;
+    if (window.location.pathname.startsWith("/moderator")) return;
+    
     seedInFlightRef.current = true;
     try {
       // Load all conversations (cursor pagination) to build an accurate total.

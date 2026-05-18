@@ -110,19 +110,19 @@ function ChatAttachment({ attachmentKey, attachmentType, attachmentName, isMine 
     <button
       type="button"
       className={classNames(
-        "flex w-full items-center gap-2 rounded-xl p-3 text-left text-sm transition-colors mb-1 break-all cursor-pointer relative",
+        "mb-1 flex w-full cursor-pointer items-center gap-2 break-all rounded-xl p-3 text-left text-sm transition-colors relative",
         isMine
-          ? "bg-white/20 text-white hover:bg-white/30"
-          : "bg-black/5 text-gray-900 hover:bg-black/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20",
+          ? "bg-white/90 text-gray-950 ring-1 ring-black/10 hover:bg-white dark:bg-white/20 dark:text-white dark:ring-white/10 dark:hover:bg-white/30"
+          : "bg-gray-100 text-gray-900 ring-1 ring-black/10 hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:ring-white/10 dark:hover:bg-white/20",
         isDownloading ? "opacity-70 pointer-events-none" : ""
       )}
       onClick={handleDownloadFile}
       disabled={isDownloading}
     >
-      <FileIcon className="h-5 w-5 shrink-0" />
-      <span className="truncate font-medium flex-1">{attachmentName || "Tải xuống file"}</span>
+      <FileIcon className="h-5 w-5 shrink-0 text-gray-600 dark:text-white/80" />
+      <span className="flex-1 truncate font-semibold text-gray-950 dark:text-white">{attachmentName || "Tải xuống file"}</span>
       {isDownloading && (
-        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-500 dark:text-white/70" />
       )}
     </button>
   );

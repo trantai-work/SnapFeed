@@ -15,6 +15,8 @@ from apps.videos.permissions import (
     GeneratePresignedUrlPermission,
     ReactVideoPermissions,
 )
+from apps.reports.serializers import VideoReportCreateSerializer, VideoReportSerializer
+from apps.reports.services import report_services
 from apps.videos.serializers import (
     PresignedUrlSerializer,
     VideoSerializer,
@@ -436,6 +438,31 @@ class VideoViewSet(
                 context={**self.get_serializer_context(), "reaction_count": count},
             ).data
         )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="report",
+        permission_classes=[IsUserAuthenticated],
+        serializer_class=VideoReportCreateSerializer,
+    )
+    def report(self, request, pk=None):
+        """
+        Report a video for moderation review.
+        """
+
+        video = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        report = report_services.report_video(
+            reporter=request.user,
+            video=video,
+            reason=serializer.validated_data["reason"],
+            description=serializer.validated_data.get("description", ""),
+        )
+
+        return self.response_created(VideoReportSerializer(report).data)
 
     @action(
         detail=False,

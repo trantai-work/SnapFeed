@@ -24,6 +24,7 @@ function FeedItemComponent({
   scrollRootRef,
   onReactionUpdate,
   onOpenComments,
+  onReport,
   onFollowUpdate,
 }) {
   const { isAuthenticated, user } = useAuth();
@@ -128,6 +129,13 @@ function FeedItemComponent({
         return;
       }
       onOpenComments?.(item.id);
+    },
+    onReport: () => {
+      if (!isAuthenticated) {
+        openAuthModal();
+        return;
+      }
+      onReport?.(item);
     },
   };
 

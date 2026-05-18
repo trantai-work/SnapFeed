@@ -2,11 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, MessageSquare, User, X } from "lucide-react";
 import { notificationsApi } from "../api/notifications.api";
 import { commentsApi } from "../api/comments.api";
-import {
-  formatNotificationTime,
-  normalizeNotificationRecipient,
-} from "../utils/notificationItem";
+import { formatNotificationTime, normalizeNotificationRecipient } from "../utils/notificationItem";
 import { useNavigate } from "react-router-dom";
+import logoUrl from "../assets/logo_no_text.png";
 
 const FILTERS = [
   { id: "all", label: "Tất cả" },
@@ -31,7 +29,19 @@ function actorInitials(actor) {
   return "?";
 }
 
-function ActorAvatar({ actor }) {
+function ActorAvatar({ actor, category }) {
+  if (category === "system") {
+    return (
+      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-tr from-pink-50 to-pink-100 ring-1 ring-pink-200/60 dark:from-pink-950/40 dark:to-pink-900/40 dark:ring-pink-500/20">
+        <img
+          src={logoUrl}
+          alt="System"
+          className="h-6 w-6 object-contain drop-shadow-sm"
+        />
+      </div>
+    );
+  }
+
   const url = actor?.avatarUrl;
   const ring = "ring-2 ring-zinc-200 dark:ring-zinc-600";
 
@@ -65,6 +75,7 @@ export default function NotificationsPanel({
   onClose,
   onItemMarkedRead,
   incomingRecipient,
+  onNotificationClick,
 }) {
   const navigate = useNavigate();
   const [filter, setFilter] = useState("all");
@@ -201,14 +212,16 @@ export default function NotificationsPanel({
       
       if (!target?.type || !target?.id) return false;
 
-      const openVideoId = async (videoId) => {
+      const openVideoId = async (videoId, meta = {}) => {
         if (!videoId) return;
         onClose?.();
-        navigate("/profile", { state: { openVideoId: videoId } });
+        navigate("/profile", { state: { openVideoId: videoId, ...meta } });
       };
 
       if (target.type === "videos.video") {
-        void openVideoId(target.id);
+        void openVideoId(target.id, {
+          targetThumbnail: target.thumbnail,
+        });
         return true;
       }
 
@@ -335,13 +348,19 @@ export default function NotificationsPanel({
                     aria-label={unread ? "Đánh dấu đã đọc" : "Thông báo"}
                     onClick={() => {
                       markReadOptimistic(row.id);
-                      handleOpenFromNotification(row);
+                      const handled = handleOpenFromNotification(row);
+                      if (!handled && onNotificationClick) {
+                        onNotificationClick(row);
+                      }
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         markReadOptimistic(row.id);
-                        handleOpenFromNotification(row);
+                        const handled = handleOpenFromNotification(row);
+                        if (!handled && onNotificationClick) {
+                          onNotificationClick(row);
+                        }
                       }
                     }}
                     className={classNames(
@@ -353,7 +372,7 @@ export default function NotificationsPanel({
                     )}
                   >
                     <div className="pt-0.5">
-                      <ActorAvatar actor={n.actor} />
+                      <ActorAvatar actor={n.actor} category={n.category} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
@@ -383,6 +402,20 @@ export default function NotificationsPanel({
                         {n.message}
                       </p>
                     </div>
+
+                    {/* Compact Target Thumbnail on the right */}
+                    {n.target?.thumbnail && (
+                      <div className="ml-2 flex shrink-0 items-center">
+                        <div className="relative h-12 w-10 shrink-0 overflow-hidden rounded-[5px] bg-black/10 ring-1 ring-black/5 dark:bg-white/10 dark:ring-white/10">
+                          <img
+                            src={n.target.thumbnail}
+                            alt="Target Video"
+                            className="h-full w-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </article>
                 </li>
               );

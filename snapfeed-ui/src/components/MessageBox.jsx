@@ -125,6 +125,16 @@ function MessageToast({ item, onClose }) {
   const styles = STATUS_STYLES[item.status] ?? STATUS_STYLES.success;
   const Icon = styles.icon;
   const avatarUrl = item?.meta?.avatarUrl ?? null;
+  const imageType = item?.meta?.imageType ?? "avatar";
+
+  let wrapperClass = "mt-0.5 grid shrink-0 overflow-hidden place-items-center ";
+  if (imageType === "thumbnail") {
+    wrapperClass += "h-[3.25rem] w-8 rounded-lg bg-black ring-1 ring-black/5 dark:ring-white/10";
+  } else if (imageType === "logo") {
+    wrapperClass += "h-10 w-10 rounded-2xl bg-gradient-to-tr from-pink-50 to-pink-100 ring-1 ring-pink-200/60 dark:from-pink-950/40 dark:to-pink-900/40 dark:ring-pink-500/20";
+  } else {
+    wrapperClass += "h-10 w-10 rounded-2xl " + styles.iconWrap;
+  }
 
   return (
     <div className="pointer-events-auto">
@@ -145,17 +155,12 @@ function MessageToast({ item, onClose }) {
         <div className={["absolute left-0 top-0 h-full w-1.5", styles.accent].join(" ")} />
 
         <div className="relative flex gap-4 p-4.5 pl-5.5 pr-12">
-          <div
-            className={[
-              "mt-0.5 grid h-10 w-10 place-items-center rounded-2xl",
-              styles.iconWrap,
-            ].join(" ")}
-          >
+          <div className={wrapperClass}>
             {avatarUrl ? (
               <img
                 src={avatarUrl}
                 alt=""
-                className="h-10 w-10 rounded-2xl object-cover"
+                className={imageType === "logo" ? "h-6 w-6 object-contain drop-shadow-sm" : "h-full w-full object-cover"}
                 referrerPolicy="no-referrer"
               />
             ) : (

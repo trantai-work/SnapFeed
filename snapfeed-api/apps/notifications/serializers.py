@@ -25,10 +25,27 @@ class NotificationSerializer(serializers.ModelSerializer):
         ct = obj.target_content_type
         if ct is None or obj.target_object_id is None:
             return None
-        return {
+        data = {
             "type": f"{ct.app_label}.{ct.model}",
             "id": obj.target_object_id,
         }
+
+        if ct.model == "video":
+            model_class = ct.model_class()
+            try:
+                # Use all_objects to include soft-deleted videos
+                video_obj = getattr(
+                    model_class, "all_objects", model_class.objects
+                ).get(pk=obj.target_object_id)
+                data["thumbnail"] = (
+                    video_obj.thumbnail.url if video_obj.thumbnail else None
+                )
+                data["title"] = video_obj.title
+                data["isDeleted"] = getattr(video_obj, "deleted", None) is not None
+            except Exception:
+                pass
+
+        return data
 
 
 class NotificationRecipientSerializer(serializers.ModelSerializer):

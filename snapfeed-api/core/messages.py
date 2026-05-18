@@ -86,14 +86,20 @@ _SUCCESS_MESSAGES = {
             "login_success": "Login successful.",
             "logout_success": "Logout successful.",
             "token_refreshed": "Token refreshed.",
-        }
+        },
+        "video_hidden": "Your video (video code #{video_id}) has been removed for violating community guidelines. If you believe this is a mistake, please contact support.",
+        "video_restored": "Your video (video code #{video_id}) has been reviewed by our moderators and restored. Thank you for your patience.",
+        "ticket_replied": "Your support request has been replied by an administrator. Click here to view details.",
     },
     "vi": {
         "common": {
             "login_success": "Đăng nhập thành công.",
             "logout_success": "Đăng xuất thành công.",
             "token_refreshed": "Refresh token thành công.",
-        }
+        },
+        "video_hidden": "Video của bạn (mã video #{video_id}) đã bị gỡ do vi phạm tiêu chuẩn cộng đồng. Nếu bạn cho rằng đây là sự nhầm lẫn, vui lòng liên hệ bộ phận hỗ trợ.",
+        "video_restored": "Video của bạn (mã video #{video_id}) đã được quản trị viên kiểm duyệt lại và khôi phục hoạt động bình thường. Cảm ơn bạn đã đồng hành.",
+        "ticket_replied": "Yêu cầu hỗ trợ của bạn đã được quản trị viên phản hồi. Bấm vào đây để xem chi tiết.",
     },
 }
 
