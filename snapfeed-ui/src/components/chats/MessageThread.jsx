@@ -8,6 +8,7 @@ import { useRealtimeSocket } from "../../context/RealtimeSocketContext";
 import { useMessageBox } from "../MessageBox";
 import { useVideoCall } from "../../context/VideoCallContext";
 import { Video } from "lucide-react";
+import GroupMembersModal from "./GroupMembersModal";
 
 export default function MessageThread({
   conversation,
@@ -29,6 +30,7 @@ export default function MessageThread({
   const [draft, setDraft] = useState("");
   const [attachment, setAttachment] = useState(null);
   const [sending, setSending] = useState(false);
+  const [membersModalOpen, setMembersModalOpen] = useState(false);
   const loadMoreLockRef = useRef(false);
   const scrollRef = useRef(null);
   const bottomRef = useRef(null);
@@ -354,17 +356,26 @@ export default function MessageThread({
     <div className="flex h-full w-full min-w-0 flex-1 flex-col bg-white dark:bg-black">
       {showHeader ? (
         <header className="flex shrink-0 items-center gap-3 border-b border-gray-200 bg-white/70 px-4 py-4 backdrop-blur-md dark:border-white/10 dark:bg-black/30">
-          <ConversationAvatar conv={conversation} meId={meId} />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-              {buildConversationName(conversation, meId)}
-            </div>
-            <div className="truncate text-xs text-gray-500 dark:text-white/50">
-              {conversation?.type === "group"
-                ? "Nhóm"
-                : conversation?.type === "self"
-                  ? "Ghi chú"
-                  : "Trò chuyện"}
+          <div
+            className={`flex items-center gap-3 min-w-0 flex-1 ${conversation?.type === "group" ? "cursor-pointer hover:opacity-85 active:scale-[0.99] transition-all" : ""}`}
+            onClick={() => {
+              if (conversation?.type === "group") {
+                setMembersModalOpen(true);
+              }
+            }}
+          >
+            <ConversationAvatar conv={conversation} meId={meId} />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                {buildConversationName(conversation, meId)}
+              </div>
+              <div className="truncate text-xs text-gray-500 dark:text-white/50">
+                {conversation?.type === "group"
+                  ? "Nhóm • Nhấp để xem thành viên"
+                  : conversation?.type === "self"
+                    ? "Ghi chú"
+                    : "Trò chuyện"}
+              </div>
             </div>
           </div>
 
@@ -376,6 +387,19 @@ export default function MessageThread({
               }}
               className="mr-2 flex h-12 w-12 items-center justify-center rounded-full text-gray-500 hover:bg-black/5 hover:text-gray-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white transition-all cursor-pointer active:scale-90"
               title="Cuộc gọi video"
+            >
+              <Video className="h-6 w-6" />
+            </button>
+          )}
+
+          {conversation?.type === "group" && (
+            <button
+              onClick={() => {
+                console.log("[MessageThread] Starting group call with convId:", convId);
+                startCall(null, convId, true, conversation);
+              }}
+              className="mr-2 flex h-12 w-12 items-center justify-center rounded-full text-gray-500 hover:bg-black/5 hover:text-gray-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white transition-all cursor-pointer active:scale-90"
+              title="Cuộc gọi nhóm"
             >
               <Video className="h-6 w-6" />
             </button>
@@ -520,6 +544,13 @@ export default function MessageThread({
           </button>
         </div>
       </div>
+      
+      <GroupMembersModal
+        open={membersModalOpen}
+        onClose={() => setMembersModalOpen(false)}
+        conversation={conversation}
+        meId={meId}
+      />
     </div>
   );
 }
