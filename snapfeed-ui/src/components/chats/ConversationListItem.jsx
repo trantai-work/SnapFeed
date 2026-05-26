@@ -19,6 +19,7 @@ export default function ConversationListItem({ active = false, conv, meId, onCli
     conv?.lastMessage?.content ?? conv?.last_message?.content ?? ""
   ).trim();
   const attachmentType = conv?.lastMessage?.attachmentType ?? conv?.last_message?.attachment_type ?? null;
+  const sharedVideoId = conv?.lastMessage?.sharedVideoId ?? conv?.last_message?.shared_video_id ?? conv?.lastMessage?.sharedVideo ?? conv?.last_message?.shared_video ?? null;
   
   let subtitleText = lastContent;
   if (lastContent.startsWith("[CALL_MISSED]")) {
@@ -27,6 +28,8 @@ export default function ConversationListItem({ active = false, conv, meId, onCli
     subtitleText = "Cuộc gọi video";
   } else if (!lastContent && attachmentType) {
     subtitleText = attachmentType === "image" ? "Đã gửi một ảnh" : "Đã gửi một file đính kèm";
+  } else if (!lastContent && sharedVideoId) {
+    subtitleText = "Đã chia sẻ một video";
   }
 
   const subtitle = subtitleText

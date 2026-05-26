@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Loader2, SendHorizontal, Paperclip, X } from "lucide-react";
+import { Loader2, SendHorizontal, Paperclip, X, UserPlus } from "lucide-react";
 import { messagesApi } from "../../api";
 import MessageBubble from "./MessageBubble";
 import ConversationAvatar from "./ConversationAvatar";
@@ -15,6 +15,7 @@ export default function MessageThread({
   onMessageSent,
   onLatestIncomingMessageId,
   showHeader = true,
+  onAddMembersClick,
 }) {
   const { startCall } = useVideoCall();
   const convId = conversation?.id ?? null;
@@ -34,6 +35,7 @@ export default function MessageThread({
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const lastConvIdRef = useRef(null);
+  const isPrependingRef = useRef(false);
 
   const toIdNum = (v) => {
     const n = Number(v);
@@ -91,6 +93,7 @@ export default function MessageThread({
       });
       const results = Array.isArray(data?.results) ? data.results : [];
       const olderAsc = [...results].reverse(); // older -> newer
+      isPrependingRef.current = true;
       setItems((prev) => [...olderAsc, ...(prev || [])]);
       setNextCursor(data?.nextCursor ?? null);
 
@@ -306,6 +309,10 @@ export default function MessageThread({
   }, [list]);
 
   useEffect(() => {
+    if (isPrependingRef.current) {
+      isPrependingRef.current = false;
+      return;
+    }
     bottomRef.current?.scrollIntoView?.({ behavior: "instant", block: "end" });
   }, [convId, list.length]);
 
@@ -371,6 +378,16 @@ export default function MessageThread({
               title="Cuộc gọi video"
             >
               <Video className="h-6 w-6" />
+            </button>
+          )}
+
+          {conversation?.type === "group" && typeof onAddMembersClick === "function" && (
+            <button
+              onClick={onAddMembersClick}
+              className="mr-2 flex h-12 w-12 items-center justify-center rounded-full text-zinc-500 hover:bg-black/5 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-zinc-100 transition-all cursor-pointer active:scale-90"
+              title="Thêm thành viên"
+            >
+              <UserPlus className="h-6 w-6" />
             </button>
           )}
         </header>

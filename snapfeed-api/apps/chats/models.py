@@ -2,6 +2,7 @@ from django.db import models
 
 from apps.chats.constants import ConversationType
 from apps.users.models import User
+from apps.videos.models import Video
 from core.models import BaseModel
 
 
@@ -86,6 +87,15 @@ class Message(BaseModel):
         blank=True,
         choices=[("image", "Image"), ("file", "File")],
     )
+
+    shared_video = models.ForeignKey(
+        Video,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="shared_messages",
+    )
+    is_system = models.BooleanField(default=False)
 
     class Meta:
         db_table = "messages"

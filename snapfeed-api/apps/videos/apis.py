@@ -17,6 +17,7 @@ from apps.videos.permissions import (
 )
 from apps.reports.serializers import VideoReportCreateSerializer, VideoReportSerializer
 from apps.reports.services import report_services
+from apps.reports.services.report_realtime_services import push_video_report_created
 from apps.videos.serializers import (
     PresignedUrlSerializer,
     VideoSerializer,
@@ -263,14 +264,10 @@ class VideoViewSet(
 
         user = request.user
 
-        if not hasattr(user, "embedding"):
-            feeds = video_services.get_default_feeds()
+        if user.is_authenticated:
+            feeds = video_services.get_personalized_feeds(user)
         else:
-            seen_video_ids = video_services.get_seen_video(user).values_list(
-                "id", flat=True
-            )
-            user_embedding = user.embedding.embedding
-            feeds = video_services.get_similar_videos(user_embedding, seen_video_ids)
+            feeds = video_services.get_default_feeds()
 
         feeds = feeds.select_related("user").prefetch_related("tags")
         if user.is_authenticated:
@@ -461,6 +458,8 @@ class VideoViewSet(
             reason=serializer.validated_data["reason"],
             description=serializer.validated_data.get("description", ""),
         )
+
+        push_video_report_created(report)
 
         return self.response_created(VideoReportSerializer(report).data)
 

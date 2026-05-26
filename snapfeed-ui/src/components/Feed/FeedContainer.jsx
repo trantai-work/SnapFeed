@@ -5,6 +5,7 @@ import { FeedList } from "./FeedList";
 import { useAuth } from "../../context/AuthContext";
 import CommentsPanel from "../CommentsPanel";
 import ReportVideoModal from "../ReportVideoModal";
+import ShareModal from "../chats/ShareModal";
 import { commentsApi } from "../../api/comments.api";
 import { openAuthModal } from "../../utils/authModalBus";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
@@ -31,6 +32,7 @@ export default function FeedContainer() {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentsVideoId, setCommentsVideoId] = useState(null);
   const [reportVideo, setReportVideo] = useState(null);
+  const [shareVideo, setShareVideo] = useState(null);
   const [panelMounted, setPanelMounted] = useState(false);
   const [panelShown, setPanelShown] = useState(false);
   const closeTimerRef = useRef(null);
@@ -204,6 +206,7 @@ export default function FeedContainer() {
           onReactionUpdate={updateFeedVideo}
           onOpenComments={openComments}
           onReport={setReportVideo}
+          onShare={setShareVideo}
           removingVideoIds={removingVideoIds}
           onFeedScroll={closeComments}
         />
@@ -214,6 +217,12 @@ export default function FeedContainer() {
         video={reportVideo}
         onClose={() => setReportVideo(null)}
         onReported={removeFeedVideo}
+      />
+
+      <ShareModal
+        open={!!shareVideo}
+        video={shareVideo}
+        onClose={() => setShareVideo(null)}
       />
 
       {panelMounted && (

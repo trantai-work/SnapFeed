@@ -26,6 +26,7 @@ function FeedItemComponent({
   onOpenComments,
   onReport,
   onFollowUpdate,
+  onShare,
 }) {
   const { isAuthenticated, user } = useAuth();
   const videoRef = useRef(null);
@@ -136,6 +137,13 @@ function FeedItemComponent({
         return;
       }
       onReport?.(item);
+    },
+    onShare: () => {
+      if (!isAuthenticated) {
+        openAuthModal();
+        return;
+      }
+      onShare?.(item);
     },
   };
 

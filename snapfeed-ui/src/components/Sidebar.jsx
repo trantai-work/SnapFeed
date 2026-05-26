@@ -200,7 +200,8 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => { } 
 
       const content = String(msg?.content ?? "").trim();
       const hasAttachment = Boolean(msg?.attachmentKey || msg?.attachment_key);
-      if (!content && !hasAttachment) return;
+      const hasSharedVideo = Boolean(msg?.sharedVideo || msg?.shared_video);
+      if (!content && !hasAttachment && !hasSharedVideo) return;
 
       const sender =
         msg?.sender?.firstName || msg?.sender?.lastName
@@ -218,6 +219,8 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => { } 
       } else if (!content && hasAttachment) {
         const type = msg?.attachmentType || msg?.attachment_type;
         displayMessage = type === "image" ? "Đã gửi một ảnh" : "Đã gửi một file đính kèm";
+      } else if (!content && hasSharedVideo) {
+        displayMessage = "Đã chia sẻ một video";
       } else if (content.length > 140) {
         displayMessage = `${content.slice(0, 140)}…`;
       }

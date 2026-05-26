@@ -3,11 +3,17 @@ from rest_framework import mixins
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.utils import timezone
 
 from apps.reports.permissions import IsModerator
-from apps.support.models import SupportTicket
+from apps.support.models import SupportTicket, SupportTicketReply
 from apps.support.serializers import SupportTicketSerializer
 from apps.support.services.support_services import process_support_ticket_update
+from apps.support.services.support_realtime_services import (
+    push_support_ticket_created,
+    push_support_reply_created,
+    push_support_ticket_updated,
+)
 from core.apis import BaseAPIViewSet
 
 
@@ -29,20 +35,25 @@ class UserSupportTicketViewSet(
         )
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        ticket = serializer.save(user=self.request.user)
+        push_support_ticket_created(ticket)
 
     @action(detail=True, methods=["post"], url_path="reply")
     def reply(self, request, pk=None):
-        from apps.support.models import SupportTicketReply
-
         ticket = self.get_object()
         content = request.data.get("reply_content")
         if not content:
             return self.response_error("Nội dung phản hồi không được để trống")
 
-        SupportTicketReply.objects.create(
+        reply_obj = SupportTicketReply.objects.create(
             ticket=ticket, sender=request.user, content=content
         )
+
+        ticket.updated_at = timezone.now()
+        ticket.save()
+
+        push_support_reply_created(reply_obj)
+        push_support_ticket_updated(ticket)
 
         serializer = self.get_serializer(ticket)
         return Response(serializer.data)

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { X, Trash2, Flag } from "lucide-react";
+import { X, Trash2, Flag, Share2 } from "lucide-react";
+import ShareModal from "./chats/ShareModal";
 import CommentsPanel from "./CommentsPanel";
 import ReportVideoModal from "./ReportVideoModal";
 import { commentsApi } from "../api/comments.api";
@@ -36,6 +37,7 @@ export default function VideoViewerPanel({
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [mobileCommentsOpen, setMobileCommentsOpen] = useState(false);
 
@@ -259,6 +261,22 @@ export default function VideoViewerPanel({
                 className="grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-zinc-100 text-red-500 hover:bg-red-50 active:bg-red-100 dark:bg-white/10 dark:text-red-400 dark:hover:bg-red-500/20"
               >
                 <Trash2 size={16} />
+              </button>
+            )}
+            {videoId && (
+              <button
+                type="button"
+                aria-label="Chia sẻ video"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    openAuthModal();
+                    return;
+                  }
+                  setShareOpen(true);
+                }}
+                className="grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-zinc-100 text-zinc-700 hover:bg-zinc-200 active:bg-zinc-300 dark:bg-white/10 dark:text-white/75 dark:hover:bg-white/20"
+              >
+                <Share2 size={16} />
               </button>
             )}
             {!isOwner && videoId ? (
@@ -561,6 +579,12 @@ export default function VideoViewerPanel({
         open={reportOpen}
         video={videoState || video}
         onClose={() => setReportOpen(false)}
+      />
+
+      <ShareModal
+        open={shareOpen}
+        video={videoState || video}
+        onClose={() => setShareOpen(false)}
       />
     </div>
   );

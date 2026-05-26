@@ -4,10 +4,23 @@ from rest_framework import serializers
 
 from apps.chats.models import Conversation, Message
 from apps.users.models import User
+from apps.videos.models import Video
+from apps.videos.serializers import VideoSerializer
 
 
 class DMSerializer(serializers.Serializer):
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+
+
+class GroupSerializer(serializers.Serializer):
+    title = serializers.CharField(
+        max_length=255, required=False, allow_blank=True, default=""
+    )
+    user_ids = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        many=True,
+        required=True,
+    )
 
 
 class MarkReadSerializer(serializers.Serializer):
@@ -22,6 +35,14 @@ class ChatUserSerializer(serializers.ModelSerializer):
 
 class MessageSerializer(serializers.ModelSerializer):
     sender = ChatUserSerializer(read_only=True)
+    shared_video = VideoSerializer(read_only=True)
+    shared_video_id = serializers.PrimaryKeyRelatedField(
+        queryset=Video.objects.all(),
+        source="shared_video",
+        write_only=True,
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = Message
@@ -34,9 +55,23 @@ class MessageSerializer(serializers.ModelSerializer):
             "attachment_name",
             "attachment_size",
             "attachment_type",
+            "shared_video",
+            "shared_video_id",
+            "is_system",
             "created_at",
         )
-        read_only_fields = ("id", "sender", "created_at")
+        read_only_fields = ("id", "sender", "is_system", "created_at")
+
+    def validate(self, attrs):
+        content = attrs.get("content")
+        attachment_key = attrs.get("attachment_key")
+        shared_video = attrs.get("shared_video")
+
+        if not content and not attachment_key and not shared_video:
+            raise serializers.ValidationError(
+                "Tin nhắn phải có nội dung, file đính kèm hoặc video chia sẻ."
+            )
+        return attrs
 
 
 class AttachmentUploadSerializer(serializers.Serializer):
@@ -83,6 +118,7 @@ class ConversationSerializer(serializers.ModelSerializer):
             "id": last_id,
             "content": getattr(obj, "last_message_content", None),
             "attachment_type": getattr(obj, "last_message_attachment_type", None),
+            "shared_video_id": getattr(obj, "last_message_shared_video_id", None),
             "created_at": getattr(obj, "last_message_created_at", None),
             "sender_id": getattr(obj, "last_message_sender_id", None),
             "sender": {

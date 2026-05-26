@@ -6,6 +6,7 @@ import {
   MessageCircle,
   User,
   UserCheck,
+  Share2,
 } from "lucide-react";
 import { FeedReactionButton } from "./FeedReactionButton";
 import { usersApi } from "../../api/user.api";
@@ -27,6 +28,7 @@ function FeedActionsComponent({
   onReact,
   onComment,
   onReport,
+  onShare,
   onRequireAuth,
   onFollowUpdate,
   overlay = false,
@@ -138,6 +140,20 @@ function FeedActionsComponent({
           <MessageCircle className={overlayIconClass} strokeWidth={1.75} />
         </span>
         <span className={labelClass}>{commentLabel}</span>
+      </button>
+      <button
+        type="button"
+        className={actionBtn}
+        aria-label="Chia sẻ"
+        onClick={() => {
+          if (typeof onShare === "function") onShare();
+          else if (typeof onRequireAuth === "function") onRequireAuth();
+        }}
+      >
+        <span className={iconWrap}>
+          <Share2 className={overlayIconClass} strokeWidth={1.75} />
+        </span>
+        <span className={labelClass}>Chia sẻ</span>
       </button>
       {profileUserId && currentUserId && profileUserId !== currentUserId ? (
         <button

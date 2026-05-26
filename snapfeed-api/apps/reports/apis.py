@@ -13,6 +13,7 @@ from apps.reports.models import VideoReport
 from apps.reports.permissions import IsModerator
 from apps.reports.serializers import VideoReportSerializer
 from apps.reports.services.stats_services import get_system_stats_data
+from apps.reports.services.report_realtime_services import push_video_report_updated
 from core.apis import BaseAPIViewSet
 from core.messages import SUCCESS_MESSAGES
 
@@ -68,6 +69,8 @@ class VideoReportViewSet(
                         recipient_users=[report.video.user],
                         target=report.video,
                     )
+
+        push_video_report_updated(report)
 
 
 @extend_schema(tags=["system-stats"])

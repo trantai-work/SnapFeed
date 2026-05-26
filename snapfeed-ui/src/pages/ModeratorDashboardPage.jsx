@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Loader2, RefreshCw, ShieldCheck } from "lucide-react";
 import { authApi, reportsApi, supportApi } from "../api";
 import { videosApi } from "../api/video.api";
 import { useAuth } from "../context/AuthContext";
 import { useMessageBox } from "../components/MessageBox";
+import { useRealtimeSocket } from "../context/RealtimeSocketContext";
 import logoLightMode from "../assets/logo_light_mode.png";
 
 // Import Moderator components
@@ -45,6 +46,119 @@ export default function ModeratorDashboardPage() {
   const [replyContent, setReplyContent] = useState("");
 
   const allowed = canModerate(user);
+  const { subscribe } = useRealtimeSocket();
+
+  const ticketsRef = useRef(tickets);
+  useEffect(() => {
+    ticketsRef.current = tickets;
+  }, [tickets]);
+
+  useEffect(() => {
+    if (!allowed || authLoading) return;
+
+    const unsubCreated = subscribe("support.ticket_created", (payload) => {
+      const { ticket } = payload || {};
+      if (!ticket) return;
+
+      show({
+        status: "info",
+        title: "Yêu cầu hỗ trợ mới",
+        message: `@${ticket.userUsername || 'Người dùng'} đã gửi yêu cầu: "${ticket.title}"`,
+      });
+
+      setTickets((prev) => {
+        const exists = prev.some((t) => t.id === ticket.id);
+        if (exists) return prev;
+        return [ticket, ...prev];
+      });
+    });
+
+    const unsubReply = subscribe("support.reply_created", (payload) => {
+      const { reply, ticketId } = payload || {};
+      if (!reply || !ticketId) return;
+
+      if (reply.senderUsername !== user?.username) {
+        const ticket = ticketsRef.current.find((t) => t.id === ticketId);
+        show({
+          status: "info",
+          title: "Phản hồi mới từ người dùng",
+          message: `@${reply.senderUsername} đã phản hồi yêu cầu "${ticket?.title || 'hỗ trợ'}"`,
+        });
+      }
+
+      setTickets((prev) => {
+        return prev.map((t) => {
+          if (t.id !== ticketId) return t;
+
+          const replies = t.replies || [];
+          const exists = replies.some((r) => r.id === reply.id);
+          const newReplies = exists ? replies : [...replies, reply];
+
+          return {
+            ...t,
+            replies: newReplies,
+            updatedAt: reply.createdAt || t.updatedAt,
+          };
+        });
+      });
+    });
+
+    const unsubUpdated = subscribe("support.ticket_updated", (payload) => {
+      const { ticket } = payload || {};
+      if (!ticket) return;
+
+      setTickets((prev) => {
+        const exists = prev.some((t) => t.id === ticket.id);
+        if (!exists) {
+          return [ticket, ...prev];
+        }
+        return prev.map((t) => {
+          if (t.id !== ticket.id) return t;
+          return {
+            ...t,
+            ...ticket,
+            replies: ticket.replies !== undefined ? ticket.replies : t.replies,
+          };
+        });
+      });
+    });
+
+    const unsubReportCreated = subscribe("video_report.created", (payload) => {
+      const { report } = payload || {};
+      if (!report) return;
+
+      show({
+        status: "warning",
+        title: "Báo cáo video mới",
+        message: `Video (ID: ${report.video}) vừa bị báo cáo: "${report.reason}"`,
+      });
+
+      setReports((prev) => {
+        const exists = prev.some((r) => r.id === report.id);
+        if (exists) return prev;
+        return [report, ...prev];
+      });
+    });
+
+    const unsubReportUpdated = subscribe("video_report.updated", (payload) => {
+      const { report } = payload || {};
+      if (!report) return;
+
+      setReports((prev) => {
+        const exists = prev.some((r) => r.id === report.id);
+        if (!exists) return [report, ...prev];
+        return prev.map((r) => (r.id === report.id ? { ...r, ...report } : r));
+      });
+    });
+
+    return () => {
+      unsubCreated?.();
+      unsubReply?.();
+      unsubUpdated?.();
+      unsubReportCreated?.();
+      unsubReportUpdated?.();
+    };
+  }, [allowed, authLoading, subscribe, user?.username, show]);
 
   const loadReports = useCallback(async () => {
     setLoading(true);

@@ -22,6 +22,7 @@ export function FeedList({
   onReactionUpdate,
   onOpenComments,
   onReport,
+  onShare,
   removingVideoIds,
   onFeedScroll,
 }) {
@@ -101,6 +102,7 @@ export function FeedList({
                     onReactionUpdate={onReactionUpdate}
                     onOpenComments={typeof onOpenComments === "function" ? onOpenComments : undefined}
                     onReport={typeof onReport === "function" ? onReport : undefined}
+                    onShare={typeof onShare === "function" ? onShare : undefined}
                   />
                 </div>
               );

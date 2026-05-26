@@ -136,6 +136,18 @@ export default function MessageBubble({ msg, meId, conversation }) {
   const attachmentType = msg?.attachmentType || msg?.attachment_type;
   const attachmentName = msg?.attachmentName || msg?.attachment_name;
 
+  const isSystem = msg?.isSystem || msg?.is_system;
+
+  if (isSystem) {
+    return (
+      <div className="flex justify-center w-full my-3 px-4">
+        <div className="rounded-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-150 dark:border-white/10 px-4 py-1.5 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 max-w-[85%] text-center shadow-sm">
+          {content}
+        </div>
+      </div>
+    );
+  }
+
   if (!content && !attachmentKey) return null;
 
   const avatar = sender?.avatarUrl || null;

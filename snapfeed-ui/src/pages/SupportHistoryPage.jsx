@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Loader2, FileText, Calendar, Plus, MessageSquare, ArrowLeft, Send } from "lucide-react";
 import { supportApi } from "../api";
 import { useMessageBox } from "../components/MessageBox";
 import SupportModal from "../components/SupportModal";
 import { formatRelativeTimeVi } from "../utils/format";
+import { useRealtimeSocket } from "../context/RealtimeSocketContext";
+import { useAuth } from "../context/AuthContext";
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -16,11 +18,94 @@ export default function SupportHistoryPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const { show } = useMessageBox();
 
+  const { user } = useAuth();
+  const { subscribe } = useRealtimeSocket();
+
   // Ticket Detail State
   const [ticketDetail, setTicketDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
+
+  const ticketsRef = useRef(tickets);
+  useEffect(() => {
+    ticketsRef.current = tickets;
+  }, [tickets]);
+
+  useEffect(() => {
+    const unsubCreated = subscribe("support.ticket_created", (payload) => {
+      const { ticket } = payload || {};
+      if (!ticket) return;
+      setTickets((prev) => {
+        const exists = prev.some((t) => t.id === ticket.id);
+        if (exists) return prev;
+        return [ticket, ...prev];
+      });
+    });
+
+    const unsubReply = subscribe("support.reply_created", (payload) => {
+      const { reply, ticketId } = payload || {};
+      if (!reply || !ticketId) return;
+
+      // Show toast if sender is not the current user
+      if (reply.senderUsername !== user?.username) {
+        const ticket = ticketsRef.current.find((t) => t.id === ticketId);
+        show({
+          status: "info",
+          title: "Phản hồi mới",
+          message: `Quản trị viên đã phản hồi yêu cầu "${ticket?.title || 'hỗ trợ'}"`,
+        });
+      }
+
+      // Update active ticket details
+      setTicketDetail((prev) => {
+        if (!prev || prev.id !== ticketId) return prev;
+        const exists = prev.replies?.some((r) => r.id === reply.id);
+        if (exists) return prev;
+        return {
+          ...prev,
+          replies: [...(prev.replies || []), reply],
+        };
+      });
+
+      // Update ticket in the list
+      setTickets((prev) => {
+        return prev.map((t) => {
+          if (t.id !== ticketId) return t;
+          return {
+            ...t,
+            updatedAt: reply.createdAt || t.updatedAt,
+          };
+        });
+      });
+    });
+
+    const unsubUpdated = subscribe("support.ticket_updated", (payload) => {
+      const { ticket } = payload || {};
+      if (!ticket) return;
+
+      setTickets((prev) => {
+        const exists = prev.some((t) => t.id === ticket.id);
+        if (!exists) return [ticket, ...prev];
+        return prev.map((t) => (t.id === ticket.id ? { ...t, ...ticket } : t));
+      });
+
+      setTicketDetail((prev) => {
+        if (!prev || prev.id !== ticket.id) return prev;
+        return {
+          ...prev,
+          ...ticket,
+          replies: ticket.replies !== undefined ? ticket.replies : prev.replies,
+        };
+      });
+    });
+
+    return () => {
+      unsubCreated?.();
+      unsubReply?.();
+      unsubUpdated?.();
+    };
+  }, [subscribe, user?.username, show]);
 
   const loadTickets = useCallback(async (preserveSelection = false) => {
     if (!preserveSelection) setLoading(true);
