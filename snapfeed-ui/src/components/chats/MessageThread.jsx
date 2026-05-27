@@ -18,7 +18,7 @@ export default function MessageThread({
   showHeader = true,
   onAddMembersClick,
 }) {
-  const { startCall } = useVideoCall();
+  const { startCall, joinGroupCall, queryGroupCallStatus, activeGroupCalls } = useVideoCall();
   const convId = conversation?.id ?? null;
   const { subscribe } = useRealtimeSocket();
   const { show } = useMessageBox();
@@ -43,6 +43,12 @@ export default function MessageThread({
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
   };
+
+  useEffect(() => {
+    if (conversation?.type === "group" && convId) {
+      queryGroupCallStatus(convId, conversation);
+    }
+  }, [convId, conversation, queryGroupCallStatus]);
 
   const recipient = useMemo(() => {
     if (conversation?.type !== "direct") return null;
@@ -393,16 +399,30 @@ export default function MessageThread({
           )}
 
           {conversation?.type === "group" && (
-            <button
-              onClick={() => {
-                console.log("[MessageThread] Starting group call with convId:", convId);
-                startCall(null, convId, true, conversation);
-              }}
-              className="mr-2 flex h-12 w-12 items-center justify-center rounded-full text-gray-500 hover:bg-black/5 hover:text-gray-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white transition-all cursor-pointer active:scale-90"
-              title="Cuộc gọi nhóm"
-            >
-              <Video className="h-6 w-6" />
-            </button>
+            activeGroupCalls[convId] && activeGroupCalls[convId].length > 0 ? (
+              <button
+                onClick={() => {
+                  console.log("[MessageThread] Joining active group call with convId:", convId);
+                  joinGroupCall(convId, conversation);
+                }}
+                className="mr-2 flex items-center justify-center gap-1.5 px-3.5 h-10 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-sm transition-all cursor-pointer shadow-md hover:shadow-lg active:scale-95 animate-pulse"
+                title="Tham gia cuộc gọi nhóm đang diễn ra"
+              >
+                <Video className="h-5 w-5" />
+                <span>Tham gia ({activeGroupCalls[convId].length})</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  console.log("[MessageThread] Starting group call with convId:", convId);
+                  startCall(null, convId, true, conversation);
+                }}
+                className="mr-2 flex h-12 w-12 items-center justify-center rounded-full text-gray-500 hover:bg-black/5 hover:text-gray-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white transition-all cursor-pointer active:scale-90"
+                title="Cuộc gọi nhóm"
+              >
+                <Video className="h-6 w-6" />
+              </button>
+            )
           )}
 
           {conversation?.type === "group" && typeof onAddMembersClick === "function" && (

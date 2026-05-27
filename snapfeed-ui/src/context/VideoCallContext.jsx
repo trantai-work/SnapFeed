@@ -50,6 +50,8 @@ export function VideoCallProvider({ children }) {
   const [groupConversation, setGroupConversation] = useState(null);
   const [groupActiveMembers, setGroupActiveMembers] = useState([]); // [ { id, username, ... } ]
   const [groupParticipantStates, setGroupParticipantStates] = useState({}); // { [userId]: { isMuted, isVideoOff } }
+  const [activeGroupCalls, setActiveGroupCalls] = useState({}); // { [conversationId]: [userId1, userId2, ...] }
+
 
   const activeConversationIdRef = useRef(null);
   const groupConversationRef = useRef(null);
@@ -380,6 +382,74 @@ export function VideoCallProvider({ children }) {
     }
   }, [isGroupCall, groupConversation, remoteUser, send, me]);
 
+  const queryGroupCallStatus = useCallback((conversationId, conversationData) => {
+    if (!conversationData) return;
+    const participants = conversationData.participants || [];
+    const otherParticipants = participants.filter(p => Number(p.id || p.user?.id) !== me?.id);
+    
+    otherParticipants.forEach(p => {
+      const pId = Number(p.id || p.user?.id);
+      if (pId) {
+        send('call.signaling', {
+          recipientId: pId,
+          data: {
+            type: 'group-call-query',
+            conversationId
+          }
+        });
+      }
+    });
+  }, [send, me]);
+
+  const joinGroupCall = useCallback(async (conversationId, conversationData) => {
+    if (!conversationData) return;
+    try {
+      setActiveGroupCalls(prev => {
+        const currentList = prev[conversationId] || [];
+        const myId = Number(me?.id);
+        if (myId && !currentList.includes(myId)) {
+          return { ...prev, [conversationId]: [...currentList, myId] };
+        }
+        return prev;
+      });
+      setIsGroupCall(true);
+      setGroupCallState('active');
+      setGroupConversation(conversationData);
+      activeConversationIdRef.current = conversationId;
+      groupStartTimeRef.current = Date.now();
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+      localStreamRef.current = stream;
+      setLocalStream(stream);
+
+      const participants = conversationData.participants || [];
+      const otherParticipants = participants.filter(p => Number(p.id || p.user?.id) !== me?.id);
+      otherParticipants.forEach(p => {
+        const pId = Number(p.id || p.user?.id);
+        if (pId) {
+          send('call.signaling', {
+            recipientId: pId,
+            data: {
+              type: 'group-call-join',
+              conversationId,
+              sender: me
+            }
+          });
+        }
+      });
+    } catch (err) {
+      console.error("[VideoCall] Failed to join group call:", err);
+      cleanup();
+    }
+  }, [me, send, cleanup]);
+
   const startCall = useCallback(async (targetUser, conversationId, isGroup = false, conversationData = null) => {
     console.log("[VideoCall] Starting call. targetUser:", targetUser, "Conversation ID:", conversationId, "isGroup:", isGroup);
     if (isGroup) {
@@ -388,6 +458,14 @@ export function VideoCallProvider({ children }) {
         return;
       }
       try {
+        setActiveGroupCalls(prev => {
+          const currentList = prev[conversationId] || [];
+          const myId = Number(me?.id);
+          if (myId && !currentList.includes(myId)) {
+            return { ...prev, [conversationId]: [...currentList, myId] };
+          }
+          return prev;
+        });
         setIsGroupCall(true);
         setGroupCallState('active');
         setGroupConversation(conversationData);
@@ -650,7 +728,7 @@ export function VideoCallProvider({ children }) {
     const unsub = subscribe('call.signaling', async (payload) => {
       const { senderId, data } = payload;
 
-      if (data?.type && data.type.startsWith('group-') && data.type !== 'group-call-leave' && data.type !== 'group-call-invite') {
+      if (groupCallState === 'active' && data?.type && data.type.startsWith('group-') && data.type !== 'group-call-leave' && data.type !== 'group-call-invite' && data.type !== 'group-call-query' && data.type !== 'group-call-active-reply') {
         setGroupActiveMembers(prev => {
           const sId = Number(senderId);
           if (prev.some(m => Number(m.id) === sId)) return prev;
@@ -662,7 +740,37 @@ export function VideoCallProvider({ children }) {
 
       switch (data.type) {
         // --- Group Call Cases ---
+        case 'group-call-query':
+          if (groupCallState === 'active' && Number(activeConversationIdRef.current) === Number(data.conversationId)) {
+            const activeIds = [me?.id, ...groupActiveMembers.map(m => m.id)];
+            send('call.signaling', {
+              recipientId: senderId,
+              data: {
+                type: 'group-call-active-reply',
+                conversationId: data.conversationId,
+                activeMembers: activeIds
+              }
+            });
+          }
+          break;
+
+        case 'group-call-active-reply':
+          setActiveGroupCalls(prev => ({
+            ...prev,
+            [data.conversationId]: data.activeMembers
+          }));
+          break;
+
         case 'group-call-invite':
+          setActiveGroupCalls(prev => {
+            const currentList = prev[data.conversationId] || [];
+            const sId = Number(senderId);
+            if (sId && !currentList.includes(sId)) {
+              return { ...prev, [data.conversationId]: [...currentList, sId] };
+            }
+            return prev;
+          });
+
           if (callState !== 'idle' || groupCallState !== 'idle') {
             // Already in a call, ignore
             return;
@@ -677,6 +785,16 @@ export function VideoCallProvider({ children }) {
           break;
 
         case 'group-call-join':
+          setActiveGroupCalls(prev => {
+            const currentList = prev[data.conversationId] || [];
+            const sId = Number(senderId);
+            if (currentList.includes(sId)) return prev;
+            return {
+              ...prev,
+              [data.conversationId]: [...currentList, sId]
+            };
+          });
+
           if (groupCallState === 'active' && localStreamRef.current) {
             setGroupActiveMembers(prev => {
               const sId = Number(senderId);
@@ -768,6 +886,18 @@ export function VideoCallProvider({ children }) {
           break;
 
         case 'group-call-leave':
+          setActiveGroupCalls(prev => {
+            const currentList = prev[data.conversationId] || [];
+            const nextList = currentList.filter(id => Number(id) !== Number(senderId));
+            const nextState = { ...prev };
+            if (nextList.length === 0) {
+              delete nextState[data.conversationId];
+            } else {
+              nextState[data.conversationId] = nextList;
+            }
+            return nextState;
+          });
+
           if (groupPCsRef.current[senderId]) {
             try {
               groupPCsRef.current[senderId].close();
@@ -900,7 +1030,10 @@ export function VideoCallProvider({ children }) {
       groupStreams,
       groupConversation,
       groupActiveMembers,
-      groupParticipantStates
+      groupParticipantStates,
+      activeGroupCalls,
+      queryGroupCallStatus,
+      joinGroupCall
     }}>
       {children}
     </VideoCallContext.Provider>
