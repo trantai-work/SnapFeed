@@ -5,3 +5,5 @@ export * from "./notifications.api";
 export * from "./user.api";
 export * from "./conversations.api";
 export * from "./messages.api";
+export * from "./reports.api";
+export * from "./support.api";

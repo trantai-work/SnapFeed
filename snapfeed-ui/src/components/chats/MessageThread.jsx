@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Loader2, SendHorizontal, Paperclip, X } from "lucide-react";
+import { Loader2, SendHorizontal, Paperclip, X, UserPlus } from "lucide-react";
 import { messagesApi } from "../../api";
 import MessageBubble from "./MessageBubble";
 import ConversationAvatar from "./ConversationAvatar";
@@ -8,6 +8,7 @@ import { useRealtimeSocket } from "../../context/RealtimeSocketContext";
 import { useMessageBox } from "../MessageBox";
 import { useVideoCall } from "../../context/VideoCallContext";
 import { Video } from "lucide-react";
+import GroupMembersModal from "./GroupMembersModal";
 
 export default function MessageThread({
   conversation,
@@ -15,8 +16,9 @@ export default function MessageThread({
   onMessageSent,
   onLatestIncomingMessageId,
   showHeader = true,
+  onAddMembersClick,
 }) {
-  const { startCall } = useVideoCall();
+  const { startCall, joinGroupCall, queryGroupCallStatus, activeGroupCalls } = useVideoCall();
   const convId = conversation?.id ?? null;
   const { subscribe } = useRealtimeSocket();
   const { show } = useMessageBox();
@@ -28,17 +30,25 @@ export default function MessageThread({
   const [draft, setDraft] = useState("");
   const [attachment, setAttachment] = useState(null);
   const [sending, setSending] = useState(false);
+  const [membersModalOpen, setMembersModalOpen] = useState(false);
   const loadMoreLockRef = useRef(false);
   const scrollRef = useRef(null);
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const lastConvIdRef = useRef(null);
+  const isPrependingRef = useRef(false);
 
   const toIdNum = (v) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
   };
+
+  useEffect(() => {
+    if (conversation?.type === "group" && convId) {
+      queryGroupCallStatus(convId, conversation);
+    }
+  }, [convId, conversation, queryGroupCallStatus]);
 
   const recipient = useMemo(() => {
     if (conversation?.type !== "direct") return null;
@@ -91,6 +101,7 @@ export default function MessageThread({
       });
       const results = Array.isArray(data?.results) ? data.results : [];
       const olderAsc = [...results].reverse(); // older -> newer
+      isPrependingRef.current = true;
       setItems((prev) => [...olderAsc, ...(prev || [])]);
       setNextCursor(data?.nextCursor ?? null);
 
@@ -306,6 +317,10 @@ export default function MessageThread({
   }, [list]);
 
   useEffect(() => {
+    if (isPrependingRef.current) {
+      isPrependingRef.current = false;
+      return;
+    }
     bottomRef.current?.scrollIntoView?.({ behavior: "instant", block: "end" });
   }, [convId, list.length]);
 
@@ -347,17 +362,26 @@ export default function MessageThread({
     <div className="flex h-full w-full min-w-0 flex-1 flex-col bg-white dark:bg-black">
       {showHeader ? (
         <header className="flex shrink-0 items-center gap-3 border-b border-gray-200 bg-white/70 px-4 py-4 backdrop-blur-md dark:border-white/10 dark:bg-black/30">
-          <ConversationAvatar conv={conversation} meId={meId} />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-              {buildConversationName(conversation, meId)}
-            </div>
-            <div className="truncate text-xs text-gray-500 dark:text-white/50">
-              {conversation?.type === "group"
-                ? "Nhóm"
-                : conversation?.type === "self"
-                  ? "Ghi chú"
-                  : "Trò chuyện"}
+          <div
+            className={`flex items-center gap-3 min-w-0 flex-1 ${conversation?.type === "group" ? "cursor-pointer hover:opacity-85 active:scale-[0.99] transition-all" : ""}`}
+            onClick={() => {
+              if (conversation?.type === "group") {
+                setMembersModalOpen(true);
+              }
+            }}
+          >
+            <ConversationAvatar conv={conversation} meId={meId} />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                {buildConversationName(conversation, meId)}
+              </div>
+              <div className="truncate text-xs text-gray-500 dark:text-white/50">
+                {conversation?.type === "group"
+                  ? "Nhóm • Nhấp để xem thành viên"
+                  : conversation?.type === "self"
+                    ? "Ghi chú"
+                    : "Trò chuyện"}
+              </div>
             </div>
           </div>
 
@@ -371,6 +395,43 @@ export default function MessageThread({
               title="Cuộc gọi video"
             >
               <Video className="h-6 w-6" />
+            </button>
+          )}
+
+          {conversation?.type === "group" && (
+            activeGroupCalls[convId] && activeGroupCalls[convId].length > 0 ? (
+              <button
+                onClick={() => {
+                  console.log("[MessageThread] Joining active group call with convId:", convId);
+                  joinGroupCall(convId, conversation);
+                }}
+                className="mr-2 flex items-center justify-center gap-1.5 px-3.5 h-10 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-sm transition-all cursor-pointer shadow-md hover:shadow-lg active:scale-95 animate-pulse"
+                title="Tham gia cuộc gọi nhóm đang diễn ra"
+              >
+                <Video className="h-5 w-5" />
+                <span>Tham gia ({activeGroupCalls[convId].length})</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  console.log("[MessageThread] Starting group call with convId:", convId);
+                  startCall(null, convId, true, conversation);
+                }}
+                className="mr-2 flex h-12 w-12 items-center justify-center rounded-full text-gray-500 hover:bg-black/5 hover:text-gray-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white transition-all cursor-pointer active:scale-90"
+                title="Cuộc gọi nhóm"
+              >
+                <Video className="h-6 w-6" />
+              </button>
+            )
+          )}
+
+          {conversation?.type === "group" && typeof onAddMembersClick === "function" && (
+            <button
+              onClick={onAddMembersClick}
+              className="mr-2 flex h-12 w-12 items-center justify-center rounded-full text-zinc-500 hover:bg-black/5 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-zinc-100 transition-all cursor-pointer active:scale-90"
+              title="Thêm thành viên"
+            >
+              <UserPlus className="h-6 w-6" />
             </button>
           )}
         </header>
@@ -503,6 +564,13 @@ export default function MessageThread({
           </button>
         </div>
       </div>
+      
+      <GroupMembersModal
+        open={membersModalOpen}
+        onClose={() => setMembersModalOpen(false)}
+        conversation={conversation}
+        meId={meId}
+      />
     </div>
   );
 }

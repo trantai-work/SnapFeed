@@ -5,6 +5,8 @@ from rest_framework import mixins
 from rest_framework.decorators import action
 
 from apps.chats.models import Message
+from apps.chats.constants import ConversationType
+from apps.users.models import User
 from apps.chats.filters import MessageFilter
 from apps.chats.pagination import ConversationPagination, MessagePagination
 from apps.chats.serializers import (
@@ -12,6 +14,7 @@ from apps.chats.serializers import (
     AttachmentUploadSerializer,
     ConversationSerializer,
     DMSerializer,
+    GroupSerializer,
     MarkReadSerializer,
     MessageSerializer,
 )
@@ -22,6 +25,7 @@ from apps.chats.services.attachment_services import (
 )
 from apps.chats.services.chat_realtime_services import push_message_created
 from core.apis import BaseAPIViewSet
+from core.messages import ERROR_MESSAGES
 from core.permissions import FullDjangoModelPermissions
 
 
@@ -55,6 +59,104 @@ class ConversationViewSet(
         other_user = serializer.validated_data["user"]
 
         conv = chat_services.get_or_create_direct_conversation(request.user, other_user)
+        conv = chat_services.annotate_conversations_for_user(request.user).get(
+            id=conv.id
+        )
+        return self.response_ok(ConversationSerializer(conv).data)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="group",
+        serializer_class=GroupSerializer,
+    )
+    def group(self, request):
+        serializer = self.get_serializer(
+            data=request.data, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+
+        title = serializer.validated_data.get("title")
+        participant_users = serializer.validated_data.get("user_ids", [])
+
+        # Create group conversation
+        conv = chat_services.create_group_conversation(
+            creator=request.user,
+            title=title,
+            participant_users=participant_users,
+        )
+
+        # Send initial system message to make the group visible to everyone
+        creator_name = (
+            f"{request.user.first_name} {request.user.last_name}".strip()
+            or request.user.username
+        )
+        sys_msg_text = f"{creator_name} đã tạo nhóm"
+        if title:
+            sys_msg_text += f' "{title}"'
+
+        sys_msg = chat_services.create_message(
+            conversation=conv,
+            sender=request.user,
+            content=sys_msg_text,
+            is_system=True,
+        )
+
+        # Reload conversation with annotated fields (such as last_message_*)
+        conv = chat_services.annotate_conversations_for_user(request.user).get(
+            id=conv.id
+        )
+
+        # Notify other participants via WS message
+        push_message_created(sys_msg)
+
+        return self.response_created(ConversationSerializer(conv).data)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="add-members",
+    )
+    def add_members(self, request, pk=None):
+        conv = self.get_object()
+        if conv.type != ConversationType.GROUP.value:
+            return self.response_bad_request(
+                ERROR_MESSAGES["only_group_can_add_members"]
+            )
+
+        user_ids = request.data.get("user_ids", [])
+        if not user_ids:
+            return self.response_bad_request(ERROR_MESSAGES["user_ids_required"])
+
+        users = list(User.objects.filter(id__in=user_ids))
+        if not users:
+            return self.response_bad_request(ERROR_MESSAGES["no_valid_users_found"])
+
+        new_participants = chat_services.add_participants_to_group(
+            conversation=conv,
+            users=users,
+        )
+
+        if new_participants:
+            user_names = [
+                f"{u.first_name} {u.last_name}".strip() or u.username for u in users
+            ]
+            added_names_str = ", ".join(user_names)
+            creator_name = (
+                f"{request.user.first_name} {request.user.last_name}".strip()
+                or request.user.username
+            )
+            sys_msg_text = f"{creator_name} đã thêm {added_names_str} vào nhóm"
+
+            sys_msg = chat_services.create_message(
+                conversation=conv,
+                sender=request.user,
+                content=sys_msg_text,
+                is_system=True,
+            )
+
+            push_message_created(sys_msg)
+
         conv = chat_services.annotate_conversations_for_user(request.user).get(
             id=conv.id
         )
@@ -98,7 +200,7 @@ class MessageViewSet(
     def get_queryset(self):
         return (
             Message.objects.filter(conversation__participants__user=self.request.user)
-            .select_related("sender")
+            .select_related("sender", "shared_video", "shared_video__user")
             .order_by("-id")
             .distinct()
         )
@@ -118,10 +220,18 @@ class MessageViewSet(
             attachment_name=serializer.validated_data.get("attachment_name"),
             attachment_size=serializer.validated_data.get("attachment_size"),
             attachment_type=serializer.validated_data.get("attachment_type"),
+            shared_video=serializer.validated_data.get("shared_video"),
         )
+        # Refresh or fetch with prefetched/selected fields to make serialization of shared_video efficient
+        # and prevent N+1 queries.
+        msg = Message.objects.select_related(
+            "sender", "shared_video", "shared_video__user"
+        ).get(id=msg.id)
         push_message_created(msg)
 
-        return self.response_created(MessageSerializer(msg).data)
+        return self.response_created(
+            MessageSerializer(msg, context={"request": request}).data
+        )
 
     @action(
         detail=False,

@@ -98,6 +98,12 @@ export const videosApi = {
     return normalizeFeedItem(data);
   },
 
+  getModeratorVideoById: async (videoId) => {
+    if (!videoId) return null;
+    const data = await api.get(`/moderator/videos/${videoId}/`);
+    return normalizeFeedItem(data);
+  },
+
   generatePresignedUrl: async ({ fileName, contentType }) => {
     const data = await api.post("/videos/generate_presigned_url", {
       fileName,
@@ -145,6 +151,17 @@ export const videosApi = {
     return data;
   },
 
+  /**
+   * POST /videos/:id/report
+   */
+  reportVideo: async ({ videoId, reason, description = "" }) => {
+    const data = await api.post(`/videos/${videoId}/report`, {
+      reason,
+      description,
+    });
+    return data;
+  },
+
   /** GET /videos/search?keyword=...&cursor=...&size=... */
   search: async ({ keyword, cursor = null, size = 20 } = {}) => {
     const q = String(keyword ?? "").trim();
@@ -161,3 +178,4 @@ export const videosApi = {
     };
   },
 };
+

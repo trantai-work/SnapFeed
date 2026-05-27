@@ -65,6 +65,8 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.chats",
     "apps.oauth",
+    "apps.reports",
+    "apps.support",
 ]
 
 MIDDLEWARE = [

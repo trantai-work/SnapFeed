@@ -23,17 +23,18 @@ export const messagesApi = {
   },
 
   /** POST /chats/messages */
-  async create({ conversationId, content, attachmentKey, attachmentName, attachmentSize, attachmentType } = {}) {
+  async create({ conversationId, content, attachmentKey, attachmentName, attachmentSize, attachmentType, sharedVideoId } = {}) {
     if (!conversationId) {
       throw new Error("conversationId is required");
     }
     const payload = {
       conversation: conversationId,
-      content: String(content ?? ""),
+      content: content != null ? String(content) : undefined,
       attachmentKey,
       attachmentName,
       attachmentSize,
       attachmentType,
+      sharedVideoId,
     };
     return await api.post("/chats/messages", payload);
   },

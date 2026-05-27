@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 import uuid
 
+from utils.text import format_content_disposition
+
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
@@ -97,9 +99,9 @@ def generate_download_presigned_url(
             "Key": s3_key,
         }
         if download_filename:
-            params[
-                "ResponseContentDisposition"
-            ] = f'attachment; filename="{download_filename}"'
+            params["ResponseContentDisposition"] = format_content_disposition(
+                download_filename
+            )
 
         url = s3.generate_presigned_url(
             ClientMethod="get_object",

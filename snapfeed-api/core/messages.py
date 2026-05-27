@@ -30,6 +30,9 @@ _ERROR_MESSAGES = {
         "user_not_in_conversation": "User not in conversation.",
         "attachment_access_denied": "You do not have access to this attachment.",
         "invalid_conversation": "Invalid conversation.",
+        "only_group_can_add_members": "Only group conversations can add members.",
+        "user_ids_required": "Please provide a list of user_ids.",
+        "no_valid_users_found": "No valid users found.",
         "can_not_follow_yourself": "Cannot follow yourself.",
         "you_havent_followed_this_user": "You haven't followed this user.",
         "video_s3_key_is_required": "Video S3 key is requried.",
@@ -68,6 +71,9 @@ _ERROR_MESSAGES = {
         "user_not_in_conversation": "Người dùng không nằm trong đoạn chat.",
         "attachment_access_denied": "Bạn không có quyền truy cập file này.",
         "invalid_conversation": "Đoạn chat không hợp lệ.",
+        "only_group_can_add_members": "Chỉ có thể thêm thành viên vào nhóm.",
+        "user_ids_required": "Vui lòng cung cấp danh sách user_ids.",
+        "no_valid_users_found": "Không tìm thấy người dùng nào phù hợp.",
         "can_not_follow_yourself": "Không thể theo dõi chính mình.",
         "you_havent_followed_this_user": "Bạn chưa theo dõi người này.",
         "video_s3_key_is_required": "Thiếu video s3 key.",
@@ -86,14 +92,20 @@ _SUCCESS_MESSAGES = {
             "login_success": "Login successful.",
             "logout_success": "Logout successful.",
             "token_refreshed": "Token refreshed.",
-        }
+        },
+        "video_hidden": "Your video (video code #{video_id}) has been removed for violating community guidelines. If you believe this is a mistake, please contact support.",
+        "video_restored": "Your video (video code #{video_id}) has been reviewed by our moderators and restored. Thank you for your patience.",
+        "ticket_replied": "Your support request has been replied by an administrator. Click here to view details.",
     },
     "vi": {
         "common": {
             "login_success": "Đăng nhập thành công.",
             "logout_success": "Đăng xuất thành công.",
             "token_refreshed": "Refresh token thành công.",
-        }
+        },
+        "video_hidden": "Video của bạn (mã video #{video_id}) đã bị gỡ do vi phạm tiêu chuẩn cộng đồng. Nếu bạn cho rằng đây là sự nhầm lẫn, vui lòng liên hệ bộ phận hỗ trợ.",
+        "video_restored": "Video của bạn (mã video #{video_id}) đã được quản trị viên kiểm duyệt lại và khôi phục hoạt động bình thường. Cảm ơn bạn đã đồng hành.",
+        "ticket_replied": "Yêu cầu hỗ trợ của bạn đã được quản trị viên phản hồi. Bấm vào đây để xem chi tiết.",
     },
 }
 

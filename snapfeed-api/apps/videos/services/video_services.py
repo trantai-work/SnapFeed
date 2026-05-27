@@ -132,6 +132,46 @@ def get_default_feeds() -> QuerySet[Video]:
     return feeds
 
 
+def get_personalized_feeds(user: User) -> QuerySet[Video]:
+    """
+    Get personalized feeds for a logged-in user.
+    Mixes similar videos (based on embedding) and trending videos.
+    """
+
+    if not hasattr(user, "embedding"):
+        return get_default_feeds()
+
+    seen_video_ids = get_seen_video(user).values_list("id", flat=True)
+    user_embedding = user.embedding.embedding
+
+    # 1. Similar videos (limit 40)
+    similar_ids = list(
+        get_similar_videos(user_embedding, seen_video_ids, limit=40).values_list(
+            "id", flat=True
+        )
+    )
+
+    # 2. Trending videos (limit 10, excluding seen and similar ones)
+    exclude_ids = set(seen_video_ids) | set(similar_ids)
+    trending_qs = get_trending_videos(limit=100)
+    trending_ids = [
+        tid
+        for tid in trending_qs.values_list("id", flat=True)
+        if tid not in exclude_ids
+    ][:10]
+
+    # 3. Combine IDs and query queryset preserving order
+    combined_ids = similar_ids + trending_ids
+    if not combined_ids:
+        return Video.objects.none()
+
+    order = Case(
+        *[When(pk=pk, then=Value(idx)) for idx, pk in enumerate(combined_ids)],
+        output_field=IntegerField(),
+    )
+    return Video.objects.filter(id__in=combined_ids).order_by(order)
+
+
 def search_videos(
     *,
     keyword: str,

@@ -21,6 +21,9 @@ export function FeedList({
   onEndReached,
   onReactionUpdate,
   onOpenComments,
+  onReport,
+  onShare,
+  removingVideoIds,
   onFeedScroll,
 }) {
   const scrollRef = useRef(null);
@@ -78,18 +81,30 @@ export function FeedList({
             {visible.map((item, i) => {
               const index = start + i;
               const video = item?.video ?? item;
+              const isRemoving = removingVideoIds?.has?.(video?.id);
 
               return (
-                <FeedItem
+                <div
                   key={item?.instanceId || item?.videoKey || item?.id || index}
-                  item={video}
-                  instanceId={item?.instanceId}
-                  isActive={index === currentIndex}
-                  slideHeightClass={SLIDE_HEIGHT_CLASS}
-                  scrollRootRef={scrollRef}
-                  onReactionUpdate={onReactionUpdate}
-                  onOpenComments={typeof onOpenComments === "function" ? onOpenComments : undefined}
-                />
+                  className={[
+                    "transition-all duration-500 ease-out",
+                    isRemoving
+                      ? "scale-[0.985] opacity-0 blur-sm"
+                      : "scale-100 opacity-100 blur-0",
+                  ].join(" ")}
+                >
+                  <FeedItem
+                    item={video}
+                    instanceId={item?.instanceId}
+                    isActive={index === currentIndex}
+                    slideHeightClass={SLIDE_HEIGHT_CLASS}
+                    scrollRootRef={scrollRef}
+                    onReactionUpdate={onReactionUpdate}
+                    onOpenComments={typeof onOpenComments === "function" ? onOpenComments : undefined}
+                    onReport={typeof onReport === "function" ? onReport : undefined}
+                    onShare={typeof onShare === "function" ? onShare : undefined}
+                  />
+                </div>
               );
             })}
           </div>

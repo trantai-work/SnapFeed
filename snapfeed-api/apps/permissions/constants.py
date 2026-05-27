@@ -3,6 +3,7 @@ from core.enum_choices import EnumChoices
 
 class Groups(EnumChoices):
     ADMIN = "admin"
+    MODERATOR = "moderator"
     MEMBER = "member"
 
 
@@ -21,6 +22,14 @@ GROUP_PERMISSIONS_MAP = {
         "chats.add_conversation",
         "chats.view_message",
         "chats.add_message",
+    ],
+    Groups.MODERATOR.value: [
+        "reports.view_videoreport",
+        "reports.change_videoreport",
+        "reports.moderate_videoreport",
+        "videos.delete_video",
+        "videos.view_video",
+        "comments.view_videocomment",
     ],
     Groups.ADMIN.value: [],
 }
