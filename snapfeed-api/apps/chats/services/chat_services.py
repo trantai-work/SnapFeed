@@ -20,6 +20,7 @@ from apps.chats.constants import ConversationType
 from apps.chats.exceptions import UserNotInConversationError
 from apps.chats.models import Conversation, ConversationParticipant, Message
 from apps.users.models import User
+from apps.videos.models import Video
 
 
 def build_direct_key(a: int, b: int) -> str:
@@ -64,6 +65,7 @@ def annotate_conversations_for_user(user: User):
         last_message_id=Subquery(last_msg.values("id")[:1]),
         last_message_content=Subquery(last_msg.values("content")[:1]),
         last_message_attachment_type=Subquery(last_msg.values("attachment_type")[:1]),
+        last_message_shared_video_id=Subquery(last_msg.values("shared_video_id")[:1]),
         last_message_created_at=Subquery(last_msg.values("created_at")[:1]),
         last_message_sender_id=Subquery(last_msg.values("sender_id")[:1]),
         last_message_sender_username=Subquery(last_msg.values("sender__username")[:1]),
@@ -156,6 +158,8 @@ def create_message(
     attachment_name: str | None = None,
     attachment_size: int | None = None,
     attachment_type: str | None = None,
+    shared_video: Video | None = None,
+    is_system: bool = False,
 ) -> Message:
     msg = Message.objects.create(
         conversation_id=conversation.id,
@@ -165,6 +169,8 @@ def create_message(
         attachment_name=attachment_name,
         attachment_size=attachment_size,
         attachment_type=attachment_type,
+        shared_video=shared_video,
+        is_system=is_system,
     )
     Conversation.objects.filter(id=conversation.id).update(
         last_message_at=msg.created_at
@@ -204,3 +210,37 @@ def mark_read(
     )
 
     return read_at
+
+
+def create_group_conversation(
+    creator: User,
+    title: str,
+    participant_users: list[User],
+) -> Conversation:
+    with transaction.atomic():
+        conv = Conversation.objects.create(
+            type=ConversationType.GROUP.value,
+            title=title or "Cuộc trò chuyện nhóm",
+            created_by=creator,
+        )
+        participants = set(participant_users)
+        participants.add(creator)
+        ConversationParticipant.objects.bulk_create(
+            [ConversationParticipant(conversation=conv, user=u) for u in participants]
+        )
+    return conv
+
+
+def add_participants_to_group(
+    conversation: Conversation,
+    users: list[User],
+) -> list[ConversationParticipant]:
+    new_participants = []
+    with transaction.atomic():
+        for u in users:
+            p, created = ConversationParticipant.objects.get_or_create(
+                conversation=conversation, user=u
+            )
+            if created:
+                new_participants.append(p)
+    return new_participants

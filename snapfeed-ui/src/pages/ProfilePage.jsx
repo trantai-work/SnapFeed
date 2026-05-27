@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { conversationsApi, usersApi } from "../api";
 import { formatCount } from "../utils/format";
 import { buildVideoSrc } from "../utils/feedVideo";
+import { useMessageBox } from "../components/MessageBox";
 import VideoViewerPanel from "../components/VideoViewerPanel";
 import UserListModal from "../components/UserListModal";
 import { videosApi } from "../api/video.api";
@@ -26,6 +27,7 @@ export default function ProfilePage() {
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { show } = useMessageBox();
   const [tab, setTab] = useState("videos"); // videos | liked | followers | following
   const [videos, setVideos] = useState([]);
   const [videosLoading, setVideosLoading] = useState(false);
@@ -199,6 +201,15 @@ export default function ProfilePage() {
         const v = await videosApi.getById(openVideoId);
         if (cancelled) return;
         if (v) setSelectedVideo(v);
+      } catch (err) {
+        if (!cancelled) {
+          show({
+            status: "error",
+            title: "Video không tồn tại",
+            message: "Video này có thể đã bị gỡ hoặc xóa khỏi hệ thống.",
+            meta: location?.state?.targetThumbnail ? { avatarUrl: location.state.targetThumbnail } : null,
+          });
+        }
       } finally {
         // Clear state so it won't reopen on re-render/back.
         if (!cancelled) {

@@ -15,6 +15,7 @@ function toInstances(batchId, videos) {
 
 export function useFeedItems(resetKey = "") {
   const [items, setItems] = useState([]);
+  const [removingVideoIds, setRemovingVideoIds] = useState(() => new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const inFlightRef = useRef(false);
@@ -74,6 +75,23 @@ export function useFeedItems(resetKey = "") {
     );
   }, []);
 
+  const removeFeedVideo = useCallback((videoId) => {
+    if (!videoId) return;
+    setRemovingVideoIds((prev) => {
+      const next = new Set(prev);
+      next.add(videoId);
+      return next;
+    });
+    window.setTimeout(() => {
+      setItems((prev) => prev.filter((inst) => (inst.video ?? inst)?.id !== videoId));
+      setRemovingVideoIds((prev) => {
+        const next = new Set(prev);
+        next.delete(videoId);
+        return next;
+      });
+    }, 700);
+  }, []);
+
   useEffect(() => {
     // Reset feed state when auth/user changes (e.g. logout) to avoid showing previous user's reactions.
     inFlightRef.current = false;
@@ -83,6 +101,14 @@ export function useFeedItems(resetKey = "") {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]);
 
-  return { items, loading, error, loadMore, updateFeedVideo };
+  return {
+    items,
+    loading,
+    error,
+    loadMore,
+    updateFeedVideo,
+    removeFeedVideo,
+    removingVideoIds,
+  };
 }
 

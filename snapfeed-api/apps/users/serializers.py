@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.permissions.constants import Groups
 from apps.users.models import User
 
 
@@ -8,6 +9,8 @@ class UserSerializer(serializers.ModelSerializer):
     follower_count = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()
     is_following = serializers.SerializerMethodField()
+    is_moderator = serializers.SerializerMethodField()
+    is_admin = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -22,6 +25,8 @@ class UserSerializer(serializers.ModelSerializer):
             "follower_count",
             "following_count",
             "is_following",
+            "is_moderator",
+            "is_admin",
         ]
         read_only_fields = [
             "id",
@@ -34,6 +39,8 @@ class UserSerializer(serializers.ModelSerializer):
             "follower_count",
             "following_count",
             "is_following",
+            "is_moderator",
+            "is_admin",
         ]
 
     def get_like_count(self, obj: User) -> int:
@@ -69,3 +76,13 @@ class UserSerializer(serializers.ModelSerializer):
         if request.user.id == obj.id:
             return False
         return getattr(obj, "is_following", False)
+
+    def get_is_moderator(self, obj: User) -> bool:
+        if obj.is_superuser:
+            return True
+        return obj.groups.filter(name=Groups.MODERATOR.value).exists()
+
+    def get_is_admin(self, obj: User) -> bool:
+        if obj.is_superuser:
+            return True
+        return obj.groups.filter(name=Groups.ADMIN.value).exists()

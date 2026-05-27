@@ -3,10 +3,12 @@ from rest_framework import routers as drf_routers
 from apps.notifications.apis import NotificationRecipientViewSet
 from apps.oauth.apis import OAuthViewSet
 from apps.recommendation.apis import VideoEmbeddingViewSet
+from apps.reports.apis import VideoReportViewSet
 from apps.users.apis import UserViewSet
 from apps.videos.apis import VideoViewSet
 from apps.comments.apis import VideoCommentViewSet
 from apps.chats.apis import ConversationViewSet, MessageViewSet
+from apps.support.apis import UserSupportTicketViewSet, ModeratorSupportTicketViewSet
 
 api_router = drf_routers.SimpleRouter(trailing_slash=False)
 api_router.register(r"auth", OAuthViewSet, basename="auth")
@@ -21,6 +23,15 @@ api_router.register(
 api_router.register(r"comments", VideoCommentViewSet, basename="comment")
 api_router.register(r"conversations", ConversationViewSet, basename="conversation")
 api_router.register(r"chats/messages", MessageViewSet, basename="message")
+api_router.register(r"video-reports", VideoReportViewSet, basename="video-report")
+api_router.register(
+    r"support-tickets", UserSupportTicketViewSet, basename="support-ticket"
+)
+api_router.register(
+    r"moderator/support-tickets",
+    ModeratorSupportTicketViewSet,
+    basename="moderator-support-ticket",
+)
 
 # Add api router urls
 urlpatterns = []

@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Bell, Home as HomeIcon, Send, Upload, User } from "lucide-react";
+import { Bell, Home as HomeIcon, Send, Upload, User, Headphones } from "lucide-react";
 
 import AuthModal from "./AuthModal";
+import SupportModal from "./SupportModal";
+import SupportResponseModal from "./SupportResponseModal";
 import NotificationsPanel from "./NotificationsPanel";
+import logoNoText from "../assets/logo_no_text.png";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { authService } from "../services/auth.service";
@@ -60,6 +63,8 @@ export default function SimpleSideBar() {
   const { show } = useMessageBox();
 
   const [authOpen, setAuthOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [supportResponseId, setSupportResponseId] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const unreadFetchLock = useRef(false);
@@ -116,6 +121,19 @@ export default function SimpleSideBar() {
         const actorAvatarUrl = n?.actor?.avatarUrl ?? n?.actor?.avatar_url ?? null;
         const target = n?.target ?? null;
         const recipientId = payload.recipient?.id ?? null;
+        
+        let displayAvatarUrl = actorAvatarUrl;
+        let displayImageType = "avatar";
+        if (n?.category === "system") {
+           if (target?.thumbnail) {
+               displayAvatarUrl = target.thumbnail;
+               displayImageType = "thumbnail";
+           } else {
+               displayAvatarUrl = logoNoText;
+               displayImageType = "logo";
+           }
+        }
+
         show({
           status: "notification",
           title: n.title || "Thông báo mới",
@@ -149,6 +167,12 @@ export default function SimpleSideBar() {
               return;
             }
             
+            // Handle support notifications
+            if (target?.type === "support.supportticket" && target?.id) {
+              setSupportResponseId(target.id);
+              return;
+            }
+            
             // Handle follow notifications (target is user) or any notification with actor
             if (target?.type === "users.user" && target?.id) {
               navigate(`/profile/${target.id}`);
@@ -160,7 +184,7 @@ export default function SimpleSideBar() {
               navigate(`/profile/${actorId}`);
             }
           },
-          meta: { actorId, target, recipientId, avatarUrl: actorAvatarUrl },
+          meta: { actorId, target, recipientId, avatarUrl: displayAvatarUrl, imageType: displayImageType },
         });
       }
     });
@@ -189,7 +213,8 @@ export default function SimpleSideBar() {
 
       const content = String(msg?.content ?? "").trim();
       const hasAttachment = Boolean(msg?.attachmentKey || msg?.attachment_key);
-      if (!content && !hasAttachment) return;
+      const hasSharedVideo = Boolean(msg?.sharedVideo || msg?.shared_video);
+      if (!content && !hasAttachment && !hasSharedVideo) return;
 
       const sender =
         msg?.sender?.firstName || msg?.sender?.lastName
@@ -203,6 +228,8 @@ export default function SimpleSideBar() {
       if (!content && hasAttachment) {
         const type = msg?.attachmentType || msg?.attachment_type;
         displayMessage = type === "image" ? "Đã gửi một ảnh" : "Đã gửi một file đính kèm";
+      } else if (!content && hasSharedVideo) {
+        displayMessage = "Đã chia sẻ một video";
       } else if (content.length > 140) {
         displayMessage = `${content.slice(0, 140)}…`;
       }
@@ -325,6 +352,16 @@ export default function SimpleSideBar() {
             }}
             disabled
           />
+          <IconNavLink
+            to="#"
+            label="Hỗ trợ"
+            Icon={Headphones}
+            onClick={(e) => {
+              e?.preventDefault?.();
+              requireAuth(() => setSupportOpen(true));
+            }}
+            disabled
+          />
         </div>
 
         <div className="mt-auto flex flex-col items-center gap-2 pt-2">
@@ -386,6 +423,13 @@ export default function SimpleSideBar() {
               }}
               incomingRecipient={incomingRecipient}
               onItemMarkedRead={() => refreshUnread()}
+              onNotificationClick={(row) => {
+                const target = row?.notification?.target;
+                if (target?.type === "support.supportticket" && target?.id) {
+                  setSupportResponseId(target.id);
+                  setNotificationsOpen(false);
+                }
+              }}
             />
           </div>
         </>
@@ -404,6 +448,8 @@ export default function SimpleSideBar() {
           authService.loginWithFacebook();
         }}
       />
+      <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
+      <SupportResponseModal ticketId={supportResponseId} onClose={() => setSupportResponseId(null)} />
     </>
   );
 }

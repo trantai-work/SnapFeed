@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, Loader2, MessageSquareText, Video } from "lucide-react";
+import { ChevronLeft, Loader2, MessageSquareText, Video, Plus, UserPlus } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { conversationsApi } from "../api";
 import { useAuth } from "../context/AuthContext";
@@ -11,6 +11,8 @@ import ConversationListItem from "../components/chats/ConversationListItem";
 import MessageThread from "../components/chats/MessageThread";
 import { buildConversationName } from "../utils/chat";
 import ConversationAvatar from "../components/chats/ConversationAvatar";
+import CreateGroupModal from "../components/chats/CreateGroupModal";
+import AddMembersModal from "../components/chats/AddMembersModal";
 
 export default function ChatsPage() {
   const { user, isAuthenticated } = useAuth();
@@ -29,6 +31,8 @@ export default function ChatsPage() {
   const [items, setItems] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
+  const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [addMembersOpen, setAddMembersOpen] = useState(false);
   const itemsRef = useRef(items);
   useEffect(() => {
     itemsRef.current = items;
@@ -257,11 +261,48 @@ export default function ChatsPage() {
     };
   }, [bumpConversation, isAuthenticated, moveToTop, refreshConversations]);
 
+  const handleGroupCreated = (newGroup) => {
+    setItems((prev) => [newGroup, ...prev]);
+    setSelectedConversation(newGroup);
+    setMobileThreadOpen(true);
+  };
+
+  const existingParticipantIds = useMemo(() => {
+    return (resolvedSelectedConversation?.participants || [])
+      .map((p) => Number(p.id || p.user?.id))
+      .filter(Boolean);
+  }, [resolvedSelectedConversation]);
+
+  const handleMembersAdded = (updatedConv) => {
+    setItems((prev) => {
+      const arr = Array.isArray(prev) ? prev : [];
+      const idx = arr.findIndex((c) => toIdNum(c?.id) === toIdNum(updatedConv.id));
+      if (idx >= 0) {
+        const next = [...arr];
+        next[idx] = {
+          ...next[idx],
+          ...updatedConv,
+        };
+        return next;
+      }
+      return prev;
+    });
+    setSelectedConversation(updatedConv);
+  };
+
   return (
     <div className="flex h-[100dvh] min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-black md:flex-row">
       <aside className="flex w-full shrink-0 flex-col border-b border-gray-200 bg-white dark:border-white/10 dark:bg-black md:h-full md:w-[min(22rem,92vw)] md:border-b-0 md:border-r sm:md:w-[min(24rem,92vw)]">
-        <div className="hidden px-4 py-4 md:block">
-          <div className="text-lg font-bold">Tin nhắn</div>
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-zinc-100 dark:border-white/5 md:border-b-0 md:px-4 md:py-4">
+          <div className="text-base md:text-lg font-bold text-zinc-950 dark:text-white">Tin nhắn</div>
+          <button 
+            type="button"
+            onClick={() => setCreateGroupOpen(true)}
+            className="flex items-center gap-1 rounded-xl bg-pink-500 hover:bg-pink-600 dark:bg-pink-600 dark:hover:bg-pink-700 px-3 py-1.5 text-xs font-semibold text-white transition-all active:scale-95 shadow-sm cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            Tạo nhóm
+          </button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
@@ -320,6 +361,7 @@ export default function ChatsPage() {
             <MessageThread
               conversation={resolvedSelectedConversation}
               meId={meId}
+              onAddMembersClick={() => setAddMembersOpen(true)}
               onLatestIncomingMessageId={() => {}}
               onMessageSent={(msg) => {
                 const createdAt = msg?.createdAt ?? msg?.created_at ?? null;
@@ -419,6 +461,17 @@ export default function ChatsPage() {
               </button>
             );
           })()}
+
+          {/* Add member button (mobile) */}
+          {resolvedSelectedConversation?.type === "group" && (
+            <button
+              onClick={() => setAddMembersOpen(true)}
+              className="mr-1 flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-black/5 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-zinc-100 transition-all cursor-pointer active:scale-90"
+              title="Thêm thành viên"
+            >
+              <UserPlus className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
         <div
@@ -432,6 +485,7 @@ export default function ChatsPage() {
               conversation={resolvedSelectedConversation}
               meId={meId}
               showHeader={false}
+              onAddMembersClick={() => setAddMembersOpen(true)}
               onLatestIncomingMessageId={() => {}}
               onMessageSent={(msg) => {
                 const createdAt = msg?.createdAt ?? msg?.created_at ?? null;
@@ -475,6 +529,22 @@ export default function ChatsPage() {
           ) : null}
         </div>
       </div>
+
+      <CreateGroupModal
+        open={createGroupOpen}
+        onClose={() => setCreateGroupOpen(false)}
+        meId={meId}
+        onGroupCreated={handleGroupCreated}
+      />
+
+      <AddMembersModal
+        open={addMembersOpen}
+        onClose={() => setAddMembersOpen(false)}
+        meId={meId}
+        conversationId={resolvedSelectedConversation?.id}
+        existingParticipantIds={existingParticipantIds}
+        onMembersAdded={handleMembersAdded}
+      />
     </div>
   );
 }

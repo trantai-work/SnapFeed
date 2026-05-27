@@ -1,9 +1,65 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useVideoCall } from '../../context/VideoCallContext';
+import { useAuth } from '../../context/AuthContext';
 import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff } from 'lucide-react';
 import ConversationAvatar from './ConversationAvatar';
 
+function GroupVideoCard({ videoItem }) {
+  const videoRef = useRef(null);
+  const { id, stream, user, isLocal, isMuted, isVideoOff } = videoItem;
+
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream, isVideoOff]);
+
+  const displayName = isLocal ? 'Bạn' : `${user?.firstName || user?.first_name || ''} ${user?.lastName || user?.last_name || ''}`.trim() || user?.username || 'Thành viên';
+  const rawAvatarUrl = user?.avatar_url || user?.avatarUrl;
+  const avatarUrl = rawAvatarUrl?.replace('=s96-c', '=s200-c');
+
+  return (
+    <div className="relative bg-[#1a1a1a] rounded-2xl overflow-hidden border border-white/10 shadow-lg flex items-center justify-center aspect-[4/3] sm:aspect-video w-full">
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted={isLocal}
+        className={`w-full h-full object-cover ${isLocal ? 'scale-x-[-1]' : ''} ${(!stream || isVideoOff) ? 'hidden' : ''}`}
+      />
+
+      {(!stream || isVideoOff) && (
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative">
+            {avatarUrl ? (
+              <img src={avatarUrl} className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border border-white/10" referrerPolicy="no-referrer" alt="" />
+            ) : (
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-700 flex items-center justify-center text-white text-xl font-bold">
+                {(user?.firstName || user?.first_name || displayName)?.[0]}
+              </div>
+            )}
+            {isMuted && (
+              <div className="absolute -bottom-1 -right-1 bg-red-500 text-white rounded-full p-1.5 border-2 border-[#1a1a1a]">
+                <MicOff className="w-3.5 h-3.5" />
+              </div>
+            )}
+          </div>
+          <span className="text-white/60 text-xs sm:text-sm font-medium">{displayName}</span>
+        </div>
+      )}
+
+      {stream && !isVideoOff && (
+        <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-semibold flex items-center gap-1.5 border border-white/5">
+          {displayName}
+          {isMuted && <MicOff className="w-3.5 h-3.5 text-red-500" />}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function VideoCallModal() {
+  const { user: me } = useAuth();
   const {
     callState,
     remoteUser,
@@ -17,7 +73,13 @@ export default function VideoCallModal() {
     remoteIsMuted,
     remoteIsVideoOff,
     toggleAudio,
-    toggleVideo
+    toggleVideo,
+    isGroupCall,
+    groupCallState,
+    groupStreams,
+    groupConversation,
+    groupActiveMembers,
+    groupParticipantStates
   } = useVideoCall();
 
   const localVideoRef = useRef(null);
@@ -99,7 +161,127 @@ export default function VideoCallModal() {
     }
   }, [remoteStream, callState, remoteIsVideoOff]);
 
-  if (callState === 'idle') return null;
+  const activeState = isGroupCall ? groupCallState : callState;
+  if (activeState === 'idle') return null;
+
+  if (isGroupCall) {
+    if (groupCallState === 'incoming') {
+      const groupTitle = groupConversation?.title || "Nhóm trò chuyện";
+      const rawGroupAvatarUrl = remoteUser?.avatar_url || remoteUser?.avatarUrl;
+      const groupAvatarUrl = rawGroupAvatarUrl?.replace('=s96-c', '=s400-c');
+
+      return (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-[#050505] overflow-hidden font-sans select-none">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-700">
+              <div className="relative">
+                <div className="absolute inset-0 bg-blue-600/10 blur-[100px] rounded-full scale-[2.5]"></div>
+                {groupAvatarUrl ? (
+                  <img
+                    src={groupAvatarUrl}
+                    alt=""
+                    className="w-32 h-32 rounded-full border-4 border-white/5 shadow-2xl relative z-10 object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border-4 border-white/5 shadow-2xl relative z-10 flex items-center justify-center text-white text-3xl font-bold">
+                    {groupTitle?.[0]}
+                  </div>
+                )}
+              </div>
+              <div className="text-center z-10">
+                <h2 className="text-white text-2xl font-bold tracking-tight">{groupTitle}</h2>
+                <p className="mt-2 text-sm font-semibold tracking-widest uppercase opacity-70 text-blue-400">
+                  Cuộc gọi nhóm đang đến từ {remoteUser?.firstName || remoteUser?.first_name || remoteUser?.username}...
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 bg-[#121212]/90 backdrop-blur-3xl rounded-[30px] border border-white/10 z-50 shadow-2xl">
+            <button
+              onClick={acceptCall}
+              className="w-12 h-12 flex items-center justify-center bg-green-500 hover:bg-green-600 text-white rounded-full transition-all hover:scale-110 active:scale-90 shadow-lg shadow-green-500/30 cursor-pointer"
+            >
+              <Phone className="w-6 h-6 fill-current" />
+            </button>
+            <button
+              onClick={rejectCall}
+              className="w-12 h-12 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-full transition-all hover:scale-110 active:scale-90 shadow-lg shadow-red-500/30 cursor-pointer"
+            >
+              <PhoneOff className="w-6 h-6 fill-current" />
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    const activeRemoteUsers = Object.keys(groupStreams).map(uId => {
+      const numId = Number(uId);
+      const userObj = groupActiveMembers.find(m => m.id === numId) || 
+                      groupConversation?.participants?.find(p => Number(p.id || p.user?.id) === numId) || 
+                      { id: numId, first_name: 'Thành viên' };
+      const pState = groupParticipantStates[numId] || {};
+      return {
+        id: numId,
+        stream: groupStreams[uId],
+        user: userObj,
+        isLocal: false,
+        isMuted: pState.isMuted || false,
+        isVideoOff: pState.isVideoOff || false
+      };
+    });
+
+    const localVideoItem = {
+      id: 'local',
+      stream: localStream,
+      user: me,
+      isLocal: true,
+      isMuted,
+      isVideoOff
+    };
+
+    const allVideos = [localVideoItem, ...activeRemoteUsers];
+
+    return (
+      <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-[#050505] overflow-hidden font-sans select-none p-6">
+        <div className="absolute top-8 left-8 z-30 bg-black/40 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10">
+          <span className="text-white font-semibold text-sm">
+            Cuộc gọi nhóm: {groupConversation?.title || 'Đang kết nối...'}
+          </span>
+        </div>
+
+        <div className="w-full max-w-6xl max-h-[75vh] overflow-y-auto grid gap-4 p-2 items-center justify-center grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 animate-in fade-in zoom-in duration-350">
+          {allVideos.map((video) => (
+            <GroupVideoCard key={video.id} videoItem={video} />
+          ))}
+        </div>
+
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 bg-[#121212]/90 backdrop-blur-3xl rounded-[30px] border border-white/10 z-50 shadow-2xl">
+          <button
+            onClick={toggleVideo}
+            className={`w-10 h-10 flex items-center justify-center rounded-full transition-all cursor-pointer group border border-white/5 ${isVideoOff ? 'bg-red-500/20 text-red-500' : 'bg-white/5 hover:bg-white/15 text-white'}`}
+            title={isVideoOff ? "Bật Camera" : "Tắt Camera"}
+          >
+            {isVideoOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4 group-hover:scale-110 transition-transform" />}
+          </button>
+          <button
+            onClick={toggleAudio}
+            className={`w-10 h-10 flex items-center justify-center rounded-full transition-all cursor-pointer group border border-white/5 ${isMuted ? 'bg-red-500/20 text-red-500' : 'bg-white/5 hover:bg-white/15 text-white'}`}
+            title={isMuted ? "Bật Mic" : "Tắt Mic"}
+          >
+            {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4 group-hover:scale-110 transition-transform" />}
+          </button>
+          <button
+            onClick={endCall}
+            className="w-12 h-12 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-full transition-all hover:scale-110 active:scale-90 shadow-lg shadow-red-500/30 cursor-pointer"
+          >
+            <PhoneOff className="w-6 h-6 fill-current" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Request higher resolution (e.g. 400px) instead of default s96-c
   const rawAvatarUrl = remoteUser?.avatar_url || remoteUser?.avatarUrl;

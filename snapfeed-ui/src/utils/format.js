@@ -13,7 +13,7 @@ export function formatRelativeTimeVi(input) {
 
   const diffMs = ts - Date.now();
   const absSec = Math.round(Math.abs(diffMs) / 1000);
-  const rtf = new Intl.RelativeTimeFormat("vi", { numeric: "auto" });
+  const rtf = new Intl.RelativeTimeFormat("vi", { numeric: "always" });
 
   if (absSec < 15) return "bây giờ";
   if (absSec < 60) return rtf.format(Math.round(diffMs / 1000), "second");
@@ -24,9 +24,11 @@ export function formatRelativeTimeVi(input) {
   const absHr = Math.round(absMin / 60);
   if (absHr < 24) return rtf.format(Math.round(diffMs / 3600000), "hour");
 
-  const absDay = Math.round(absHr / 24);
-  if (absDay < 7) return rtf.format(Math.round(diffMs / 86400000), "day");
-
-  const absWeek = Math.round(absDay / 7);
-  return rtf.format(Math.round(diffMs / 604800000), "week");
+  return new Intl.DateTimeFormat("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(d);
 }
