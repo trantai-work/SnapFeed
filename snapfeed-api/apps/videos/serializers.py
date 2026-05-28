@@ -1,7 +1,8 @@
 from rest_framework import serializers
-
 from apps.videos.constants import AllowedVideoContentTypes, Reactions
 from apps.videos.models import Video, VideoReaction
+from apps.music.models import Music
+from apps.music.serializers import MusicSerializer
 
 
 class VideoSerializer(serializers.ModelSerializer):
@@ -15,6 +16,14 @@ class VideoSerializer(serializers.ModelSerializer):
     tags_input = serializers.ListField(
         child=serializers.CharField(max_length=50),
         required=False,
+        write_only=True,
+    )
+    music = MusicSerializer(read_only=True)
+    music_id = serializers.PrimaryKeyRelatedField(
+        queryset=Music.objects.all(),
+        source="music",
+        required=False,
+        allow_null=True,
         write_only=True,
     )
 
@@ -33,6 +42,8 @@ class VideoSerializer(serializers.ModelSerializer):
             "video_key",
             "thumbnail",
             "duration",
+            "music",
+            "music_id",
             "view_count",
             "comment_count",
             "reaction_count",

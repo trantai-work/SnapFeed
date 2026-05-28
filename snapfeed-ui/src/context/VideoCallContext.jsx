@@ -112,6 +112,24 @@ export function VideoCallProvider({ children }) {
     setIsVideoOff(false);
     setRemoteIsMuted(false);
     setRemoteIsVideoOff(false);
+
+    // Remove ourselves from activeGroupCalls locally when leaving
+    const convId = activeConversationIdRef.current;
+    const myId = Number(me?.id);
+    if (convId && myId) {
+      setActiveGroupCalls(prev => {
+        const currentList = prev[convId] || [];
+        const nextList = currentList.filter(id => Number(id) !== myId);
+        const nextState = { ...prev };
+        if (nextList.length === 0) {
+          delete nextState[convId];
+        } else {
+          nextState[convId] = nextList;
+        }
+        return nextState;
+      });
+    }
+
     activeConversationIdRef.current = null;
     startTimeRef.current = null;
     groupStartTimeRef.current = null;
@@ -126,7 +144,7 @@ export function VideoCallProvider({ children }) {
     setGroupActiveMembers([]);
     setGroupParticipantStates({});
     pendingGroupCandidates.current = {};
-  }, []);
+  }, [me]);
 
   const createPeerConnection = useCallback((recipientId) => {
     const pc = new RTCPeerConnection(ICE_SERVERS);
@@ -742,7 +760,10 @@ export function VideoCallProvider({ children }) {
         // --- Group Call Cases ---
         case 'group-call-query':
           if (groupCallState === 'active' && Number(activeConversationIdRef.current) === Number(data.conversationId)) {
-            const activeIds = [me?.id, ...groupActiveMembers.map(m => m.id)];
+            const activeIds = Array.from(new Set([
+              Number(me?.id),
+              ...groupActiveMembers.map(m => Number(m.id || m.user?.id))
+            ].filter(Boolean)));
             send('call.signaling', {
               recipientId: senderId,
               data: {
@@ -1007,6 +1028,17 @@ export function VideoCallProvider({ children }) {
 
     return unsub;
   }, [subscribe, callState, groupCallState, createPeerConnection, createGroupPeerConnection, send, cleanup, saveCallLog, me]);
+
+  useEffect(() => {
+    if (callState !== 'idle' || groupCallState !== 'idle') {
+      const backgroundVideos = document.querySelectorAll("video");
+      backgroundVideos.forEach((vid) => {
+        if (vid.getAttribute("data-keep-playing") !== "true") {
+          vid.pause();
+        }
+      });
+    }
+  }, [callState, groupCallState]);
 
   return (
     <VideoCallContext.Provider value={{

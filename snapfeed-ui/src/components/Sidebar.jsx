@@ -9,6 +9,7 @@ import {
   Search,
   Compass,
   Headphones,
+  Camera,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -18,6 +19,7 @@ import logoNoText from "../assets/logo_no_text.png";
 import AuthModal from "./AuthModal";
 import SupportModal from "./SupportModal";
 import SupportResponseModal from "./SupportResponseModal";
+import RecordVideoModal from "./RecordVideoModal";
 import NotificationsPanel from "./NotificationsPanel";
 import { useMessageBox } from "./MessageBox";
 import { useAuth } from "../context/AuthContext";
@@ -50,6 +52,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => { } 
   const { show } = useMessageBox();
   const [authOpen, setAuthOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [recordOpen, setRecordOpen] = useState(false);
   const [supportResponseId, setSupportResponseId] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -291,6 +294,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => { } 
     { icon: Send, label: "Tin nhắn", path: "chats" },
     { icon: Bell, label: "Thông báo", path: "notifications" },
     { icon: Upload, label: "Tải lên", path: "upload" },
+    { icon: Camera, label: "Quay video", action: "record" },
     { icon: User, label: "Hồ sơ", path: "profile" },
     { icon: Headphones, label: "Hỗ trợ", action: "support" },
   ];
@@ -460,6 +464,26 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => { } 
                 </button>
               );
             }
+            if (item.action === "record") {
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      setAuthOpen(true);
+                      return;
+                    }
+                    setRecordOpen(true);
+                    onMobileClose?.();
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  <Icon size={20} />
+                  <span className="font-medium">{item.label}</span>
+                </button>
+              );
+            }
             return (
               <NavLink
                 key={index}
@@ -610,6 +634,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => { } 
       />
       <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
       <SupportResponseModal ticketId={supportResponseId} onClose={() => setSupportResponseId(null)} />
+      <RecordVideoModal open={recordOpen} onClose={() => setRecordOpen(false)} />
     </>
   );
 }

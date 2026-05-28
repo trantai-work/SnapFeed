@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { X, Trash2, Flag, Share2 } from "lucide-react";
+import { X, Trash2, Flag, Share2, Music } from "lucide-react";
 import ShareModal from "./chats/ShareModal";
 import CommentsPanel from "./CommentsPanel";
 import ReportVideoModal from "./ReportVideoModal";
@@ -77,6 +77,7 @@ export default function VideoViewerPanel({
     const id = videoId;
     videosApi.recordView({ videoId: id, watchTime }).catch(() => {});
   }, [open, videoId, isAuthenticated]);
+
   const src = useMemo(
     () => buildVideoSrc(videoState?.videoKey ?? video?.videoKey),
     [video?.videoKey, videoState?.videoKey]

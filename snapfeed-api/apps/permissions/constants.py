@@ -22,6 +22,7 @@ GROUP_PERMISSIONS_MAP = {
         "chats.add_conversation",
         "chats.view_message",
         "chats.add_message",
+        "music.view_music",
     ],
     Groups.MODERATOR.value: [
         "reports.view_videoreport",
@@ -30,6 +31,10 @@ GROUP_PERMISSIONS_MAP = {
         "videos.delete_video",
         "videos.view_video",
         "comments.view_videocomment",
+        "music.view_music",
+        "music.add_music",
+        "music.change_music",
+        "music.delete_music",
     ],
     Groups.ADMIN.value: [],
 }

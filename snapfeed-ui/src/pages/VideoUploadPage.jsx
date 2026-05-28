@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2, ImagePlus, RefreshCcw, Upload, X, Loader2 } from "lucide-react";
+import { CheckCircle2, ImagePlus, RefreshCcw, Upload, X, Loader2, Music } from "lucide-react";
 import { videosApi, presignedPostUpload } from "../api/video.api";
 import { useMessageBox } from "../components/MessageBox";
 import { useUploadDraft } from "../context/UploadDraftContext";
 import Sidebar from "../components/Sidebar";
 import { getVideoDurationSeconds, getVideoFirstFrameJpegFile } from "../utils/video";
+import { mergeVideoAndMusic } from "../utils/ffmpeg";
 
 export default function VideoUploadPage() {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ export default function VideoUploadPage() {
     tagsText,
     videoPreviewUrl,
     coverPreviewUrl,
+    selectedMusic,
     setVideo,
     setCover,
     setTitle,
@@ -68,6 +70,53 @@ export default function VideoUploadPage() {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [videoFile]);
+
+  const previewVideoRef = useRef(null);
+  const musicAudioRef = useRef(null);
+
+  // Load and manage preview music audio
+  useEffect(() => {
+    if (selectedMusic) {
+      let resolvedUrl = selectedMusic.audioFile;
+      if (resolvedUrl && !resolvedUrl.startsWith("http")) {
+        const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
+        resolvedUrl = `${apiBase.replace(/\/$/, "")}/${resolvedUrl.replace(/^\//, "")}`;
+      }
+      const audio = new Audio(resolvedUrl);
+      audio.loop = true;
+      audio.preload = "auto";
+      audio.volume = 1.0;
+      audio.muted = false;
+      audio.load();
+      musicAudioRef.current = audio;
+    } else {
+      if (musicAudioRef.current) {
+        musicAudioRef.current.pause();
+      }
+      musicAudioRef.current = null;
+    }
+    return () => {
+      if (musicAudioRef.current) {
+        musicAudioRef.current.pause();
+        musicAudioRef.current = null;
+      }
+    };
+  }, [selectedMusic]);
+
+  const forceWebMDuration = (videoEl, dur) => {
+    if (!videoEl || !dur || dur <= 0) return;
+    try {
+      if (videoEl.duration !== dur) {
+        Object.defineProperty(videoEl, 'duration', {
+          get: () => dur,
+          configurable: true
+        });
+        videoEl.dispatchEvent(new Event('durationchange'));
+      }
+    } catch (e) {
+      console.warn("Failed to override duration:", e);
+    }
+  };
 
   const effectiveCoverPreviewUrl = coverPreviewUrl || defaultCoverPreviewUrl;
 
@@ -144,18 +193,27 @@ export default function VideoUploadPage() {
         duration: 2000,
       });
 
+      let fileToUpload = videoFile;
+      if (selectedMusic?.audioFile) {
+        try {
+          fileToUpload = await mergeVideoAndMusic(videoFile, selectedMusic.audioFile);
+        } catch (mergeErr) {
+          console.error("Failed to merge background music on client, using raw video:", mergeErr);
+        }
+      }
+
       const [videoKey, duration, thumbnailFile] = await Promise.all([
         presignedPostUpload({
-          file: videoFile,
+          file: fileToUpload,
           onProgress: setUploadProgress,
           abortSignal: abortControllerRef.current.signal,
         }),
-        getVideoDurationSeconds(videoFile),
+        getVideoDurationSeconds(fileToUpload),
         (async () => {
           if (coverFile || defaultCoverFile) return coverFile || defaultCoverFile;
           try {
-            return await getVideoFirstFrameJpegFile(videoFile, {
-              fileNameBase: videoFile.name.replace(/\.[^/.]+$/, ""),
+            return await getVideoFirstFrameJpegFile(fileToUpload, {
+              fileNameBase: fileToUpload.name.replace(/\.[^/.]+$/, ""),
             });
           } catch {
             show({
@@ -178,6 +236,7 @@ export default function VideoUploadPage() {
         videoKey,
         thumbnail: thumbnailFile,
         duration,
+        musicId: selectedMusic?.id,
       });
 
       const videoId = createdVideo?.id;
@@ -296,6 +355,13 @@ export default function VideoUploadPage() {
                       Đã tải lên ({(videoFile.size / (1024 * 1024)).toFixed(2)}MB)
                     </span>
                   </div>
+
+                  {selectedMusic && (
+                    <div className="mt-2.5 flex items-center gap-2 text-xs font-semibold text-pink-500 bg-pink-500/10 px-3 py-1.5 rounded-lg w-fit border border-pink-500/20">
+                      <Music size={14} className="animate-pulse" />
+                      <span>Nhạc nền: {selectedMusic.title} - {selectedMusic.artist || "Unknown"}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
@@ -426,10 +492,47 @@ export default function VideoUploadPage() {
 
                 <div className="mt-3 flex items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-black dark:border-zinc-600">
                   <video
+                    ref={previewVideoRef}
                     src={videoPreviewUrl}
                     className="w-full max-h-[70vh] object-contain"
                     controls
                     playsInline
+                    onLoadedMetadata={() => {
+                      forceWebMDuration(previewVideoRef.current, videoFile?.recordedDuration);
+                    }}
+                    onLoadedData={() => {
+                      forceWebMDuration(previewVideoRef.current, videoFile?.recordedDuration);
+                    }}
+                    onCanPlay={() => {
+                      forceWebMDuration(previewVideoRef.current, videoFile?.recordedDuration);
+                    }}
+                    onPlay={() => {
+                      forceWebMDuration(previewVideoRef.current, videoFile?.recordedDuration);
+                      if (musicAudioRef.current && previewVideoRef.current) {
+                        musicAudioRef.current.currentTime = previewVideoRef.current.currentTime;
+                        musicAudioRef.current.play().catch(e => console.log("Music play failed:", e));
+                      }
+                    }}
+                    onPause={() => {
+                      if (musicAudioRef.current) {
+                        musicAudioRef.current.pause();
+                      }
+                    }}
+                    onTimeUpdate={() => {
+                      forceWebMDuration(previewVideoRef.current, videoFile?.recordedDuration);
+                      if (musicAudioRef.current && previewVideoRef.current) {
+                        const diff = Math.abs(musicAudioRef.current.currentTime - previewVideoRef.current.currentTime);
+                        if (diff > 0.3) {
+                          musicAudioRef.current.currentTime = previewVideoRef.current.currentTime;
+                        }
+                      }
+                    }}
+                    onSeeking={() => {
+                      forceWebMDuration(previewVideoRef.current, videoFile?.recordedDuration);
+                      if (musicAudioRef.current && previewVideoRef.current) {
+                        musicAudioRef.current.currentTime = previewVideoRef.current.currentTime;
+                      }
+                    }}
                   />
                 </div>
               </div>

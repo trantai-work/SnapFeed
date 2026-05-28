@@ -2,6 +2,9 @@ import i18n from "../i18n";
 
 export async function getVideoDurationSeconds(file) {
   if (!file) throw new Error(i18n.t("errors.missingVideoFile"));
+  if (typeof file.recordedDuration === "number" && file.recordedDuration > 0) {
+    return Math.round(file.recordedDuration);
+  }
   const url = URL.createObjectURL(file);
   try {
     const duration = await new Promise((resolve, reject) => {

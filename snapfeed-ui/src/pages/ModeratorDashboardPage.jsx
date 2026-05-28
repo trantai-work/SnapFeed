@@ -16,6 +16,7 @@ import ModeratorVideoReviewModal from "../components/moderator/ModeratorVideoRev
 import ModeratorDashboardCharts from "../components/moderator/ModeratorDashboardCharts";
 import SupportQueue from "../components/moderator/SupportQueue";
 import SupportDetailPanel from "../components/moderator/SupportDetailPanel";
+import MusicManagement from "../components/moderator/MusicManagement";
 import { classNames } from "../components/moderator/moderatorHelpers";
 
 function canModerate(user) {
@@ -483,6 +484,10 @@ export default function ModeratorDashboardPage() {
                 saving={saving}
                 onUpdateStatus={updateTicketStatus}
               />
+            </main>
+          ) : activeTab === "music" ? (
+            <main className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+              <MusicManagement />
             </main>
           ) : (
             <main className="grid min-h-0 flex-1 gap-5 overflow-hidden px-4 py-5 sm:px-6 xl:grid-cols-[minmax(30rem,40%)_minmax(0,1fr)]">
