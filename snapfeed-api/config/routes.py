@@ -9,8 +9,10 @@ from apps.videos.apis import VideoViewSet
 from apps.comments.apis import VideoCommentViewSet
 from apps.chats.apis import ConversationViewSet, MessageViewSet
 from apps.support.apis import UserSupportTicketViewSet, ModeratorSupportTicketViewSet
+from apps.music.apis import MusicViewSet
 
 api_router = drf_routers.SimpleRouter(trailing_slash=False)
+api_router.register(r"music", MusicViewSet, basename="music")
 api_router.register(r"auth", OAuthViewSet, basename="auth")
 api_router.register(r"users", UserViewSet, basename="user")
 api_router.register(r"videos", VideoViewSet, basename="video")

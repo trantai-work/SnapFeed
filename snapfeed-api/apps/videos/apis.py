@@ -1,5 +1,6 @@
 from django.conf import settings
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Exists, OuterRef
+from apps.users.models import UserFollow
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import action
 from rest_framework import mixins
@@ -54,10 +55,9 @@ class VideoViewSet(
     permission_classes = [FullDjangoModelPermissions]
 
     def get_queryset(self):
-        from django.db.models import Exists, OuterRef
-        from apps.users.models import UserFollow
-
-        qs = Video.objects.select_related("user").prefetch_related("tags").all()
+        qs = (
+            Video.objects.select_related("user", "music").prefetch_related("tags").all()
+        )
         user = getattr(self.request, "user", None)
         if user and user.is_authenticated:
             qs = qs.prefetch_related(
@@ -269,7 +269,7 @@ class VideoViewSet(
         else:
             feeds = video_services.get_default_feeds()
 
-        feeds = feeds.select_related("user").prefetch_related("tags")
+        feeds = feeds.select_related("user", "music").prefetch_related("tags")
         if user.is_authenticated:
             feeds = feeds.prefetch_related(
                 Prefetch(
@@ -294,7 +294,7 @@ class VideoViewSet(
         """
 
         feeds = video_services.get_trending_videos(limit=50)
-        feeds = feeds.select_related("user").prefetch_related("tags")
+        feeds = feeds.select_related("user", "music").prefetch_related("tags")
         user = request.user
         if user.is_authenticated:
             feeds = feeds.prefetch_related(
@@ -325,7 +325,7 @@ class VideoViewSet(
         feeds = video_services.get_following_videos(request.user).exclude(
             id__in=seen_video_ids
         )[:50]
-        feeds = feeds.select_related("user").prefetch_related("tags")
+        feeds = feeds.select_related("user", "music").prefetch_related("tags")
         user = request.user
         feeds = feeds.prefetch_related(
             Prefetch(

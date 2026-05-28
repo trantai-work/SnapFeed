@@ -112,7 +112,7 @@ export const videosApi = {
     return data; // { url, fields, s3Key }
   },
 
-  createVideo: async ({ title, description, tags, videoKey, thumbnail, duration }) => {
+  createVideo: async ({ title, description, tags, videoKey, thumbnail, duration, musicId }) => {
     const formData = new FormData();
     if (title !== undefined) formData.append("title", title ?? "");
     if (description !== undefined) formData.append("description", description ?? "");
@@ -123,6 +123,9 @@ export const videosApi = {
     if (thumbnail) formData.append("thumbnail", thumbnail);
     if (duration !== undefined && duration !== null) {
       formData.append("duration", String(duration));
+    }
+    if (musicId !== undefined && musicId !== null) {
+      formData.append("music_id", String(musicId));
     }
 
     const data = await api.post("/videos", formData);

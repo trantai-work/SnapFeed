@@ -1,6 +1,7 @@
 from django.core.validators import FileExtensionValidator
 from django.db import models
 
+from apps.music.models import Music
 from apps.videos.constants import Reactions, VideoStatus
 from core.models import BaseModel
 from apps.users.models import User
@@ -27,6 +28,13 @@ class Video(BaseModel):
         validators=[FileExtensionValidator(["jpg", "jpeg", "png"])],
     )
     duration = models.PositiveIntegerField(help_text="Video duration in seconds")
+    music = models.ForeignKey(
+        Music,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="videos",
+    )
     view_count = models.PositiveIntegerField(default=0)
     comment_count = models.PositiveIntegerField(default=0)
     reaction_count = models.PositiveIntegerField(default=0)

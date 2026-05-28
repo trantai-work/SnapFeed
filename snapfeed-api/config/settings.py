@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     "apps.oauth",
     "apps.reports",
     "apps.support",
+    "apps.music",
 ]
 
 MIDDLEWARE = [
@@ -260,6 +261,7 @@ CLIENT_HOMEPAGE_URL = env("CLIENT_HOMEPAGE_URL")
 # AWS S3
 AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
 AWS_DEFAULT_REGION = env("AWS_DEFAULT_REGION")
+AWS_S3_REGION_NAME = AWS_DEFAULT_REGION
 AWS_S3_FILE_OVERWRITE = False
 AWS_QUERYSTRING_AUTH = False  # Public video -> False, if video is private, use True
 
@@ -270,12 +272,18 @@ STORAGES = {
     "default": {
         # All media files will be stored under "media/" folder on S3
         "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-        "OPTIONS": {"location": "media"},
+        "OPTIONS": {
+            "location": "media",
+            "region_name": AWS_DEFAULT_REGION,
+        },
     },
     "staticfiles": {
         # All static files will be stored under "static/" folder on S3
         "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-        "OPTIONS": {"location": "static"},
+        "OPTIONS": {
+            "location": "static",
+            "region_name": AWS_DEFAULT_REGION,
+        },
     },
 }
 

@@ -25,6 +25,7 @@ function GroupVideoCard({ videoItem }) {
         autoPlay
         playsInline
         muted={isLocal}
+        data-keep-playing="true"
         className={`w-full h-full object-cover ${isLocal ? 'scale-x-[-1]' : ''} ${(!stream || isVideoOff) ? 'hidden' : ''}`}
       />
 
@@ -297,6 +298,7 @@ export default function VideoCallModal() {
           ref={remoteVideoRef}
           autoPlay
           playsInline
+          data-keep-playing="true"
           className={`w-full h-full object-contain ${(callState === 'active' && !remoteIsVideoOff) ? 'opacity-100' : 'opacity-0 absolute pointer-events-none'}`}
           onLoadedMetadata={(e) => { e.target.volume = 1; }}
         />
@@ -374,6 +376,7 @@ export default function VideoCallModal() {
               autoPlay
               playsInline
               muted
+              data-keep-playing="true"
               className="w-full h-full object-cover scale-x-[-1] pointer-events-none"
               onLoadedMetadata={(e) => {
                 const v = e.target;
