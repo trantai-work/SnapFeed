@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Bell, Home as HomeIcon, Send, Upload, User, Headphones } from "lucide-react";
+import { Bell, Home as HomeIcon, Send, Upload, User, Headphones, Camera } from "lucide-react";
 
 import AuthModal from "./AuthModal";
 import SupportModal from "./SupportModal";
 import SupportResponseModal from "./SupportResponseModal";
+import RecordVideoModal from "./RecordVideoModal";
 import NotificationsPanel from "./NotificationsPanel";
 import logoNoText from "../assets/logo_no_text.png";
 import { useAuth } from "../context/AuthContext";
@@ -64,6 +65,7 @@ export default function SimpleSideBar() {
 
   const [authOpen, setAuthOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [recordOpen, setRecordOpen] = useState(false);
   const [supportResponseId, setSupportResponseId] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -343,6 +345,17 @@ export default function SimpleSideBar() {
           />
 
           <IconNavLink
+            to="#"
+            label="Quay video"
+            Icon={Camera}
+            onClick={(e) => {
+              e?.preventDefault?.();
+              requireAuth(() => setRecordOpen(true));
+            }}
+            disabled
+          />
+
+          <IconNavLink
             to="/profile"
             label="Hồ sơ"
             Icon={User}
@@ -450,6 +463,7 @@ export default function SimpleSideBar() {
       />
       <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
       <SupportResponseModal ticketId={supportResponseId} onClose={() => setSupportResponseId(null)} />
+      <RecordVideoModal open={recordOpen} onClose={() => setRecordOpen(false)} />
     </>
   );
 }

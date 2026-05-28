@@ -6,6 +6,7 @@ import {
   UserRound,
   LogOut,
   Headphones,
+  Music,
 } from "lucide-react";
 import logoLightMode from "../../assets/logo_light_mode.png";
 
@@ -92,6 +93,19 @@ export default function ModeratorSidebar({ user, reportsCount, supportCount, onL
           >
             {supportCount}
           </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("music")}
+          className={classNames(
+            "flex h-11 w-full cursor-pointer items-center gap-3 rounded-full px-4 text-sm font-medium transition",
+            activeTab === "music"
+              ? "bg-[#292524] text-white"
+              : "text-[#4e4e4e] hover:bg-[#f0efed] hover:text-[#0c0a09]"
+          )}
+        >
+          <Music className="h-4 w-4" />
+          Nhạc nền
         </button>
       </nav>
 

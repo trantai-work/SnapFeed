@@ -9,6 +9,7 @@ export function UploadDraftProvider({ children }) {
   const [description, setDescription] = useState("");
   const [tagsText, setTagsText] = useState("");
   const [location, setLocation] = useState("");
+  const [selectedMusic, setSelectedMusic] = useState(null);
 
   const videoUrlRef = useRef("");
   const coverUrlRef = useRef("");
@@ -36,6 +37,7 @@ export function UploadDraftProvider({ children }) {
     setDescription("");
     setTagsText("");
     setLocation("");
+    setSelectedMusic(null);
   }, []);
 
   const value = useMemo(
@@ -46,6 +48,7 @@ export function UploadDraftProvider({ children }) {
       description,
       tagsText,
       location,
+      selectedMusic,
       videoPreviewUrl: videoUrlRef.current,
       coverPreviewUrl: coverUrlRef.current,
       setVideo,
@@ -54,9 +57,10 @@ export function UploadDraftProvider({ children }) {
       setDescription,
       setTagsText,
       setLocation,
+      setSelectedMusic,
       reset,
     }),
-    [videoFile, coverFile, title, description, tagsText, location, setVideo, setCover, reset]
+    [videoFile, coverFile, title, description, tagsText, location, selectedMusic, setVideo, setCover, reset]
   );
 
   return <UploadDraftContext.Provider value={value}>{children}</UploadDraftContext.Provider>;
