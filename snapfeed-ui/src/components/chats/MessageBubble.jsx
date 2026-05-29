@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { fullName } from "../../utils/chat";
 import { messagesApi } from "../../api";
-import { FileIcon, X, Loader2, PhoneOff, Video } from "lucide-react";
+import { FileIcon, X, Loader2, PhoneOff, Video, Play } from "lucide-react";
 
 function classNames(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -128,13 +128,69 @@ function ChatAttachment({ attachmentKey, attachmentType, attachmentName, isMine 
   );
 }
 
-export default function MessageBubble({ msg, meId, conversation }) {
+function SharedVideoCard({ video, onClick }) {
+  if (!video) return null;
+
+  const creatorName = `${video.userFirstName || video.user_first_name || ""} ${video.userLastName || video.user_last_name || ""}`.trim() || "Người dùng";
+  const avatar = video.userAvatar || video.user_avatar || null;
+
+  return (
+    <div
+      onClick={onClick}
+      className="cursor-pointer overflow-hidden rounded-xl bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 ring-1 ring-black/10 dark:ring-white/10 transition duration-200 w-52 max-w-full"
+    >
+      <div className="relative aspect-[9/16] bg-zinc-950 flex items-center justify-center">
+        {video.thumbnail ? (
+          <img
+            src={video.thumbnail}
+            alt=""
+            className="h-full w-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <Play className="h-10 w-10 text-white/60" />
+        )}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/35 transition-colors">
+          <div className="rounded-full bg-white/20 p-2.5 backdrop-blur-sm border border-white/30 text-white shadow-md">
+            <Play className="h-6 w-6 fill-white text-white translate-x-[1px]" />
+          </div>
+        </div>
+      </div>
+      
+      <div className="p-2.5 flex items-center gap-2 border-t border-black/5 dark:border-white/5">
+        {avatar ? (
+          <img
+            src={avatar}
+            alt=""
+            className="h-6 w-6 rounded-full object-cover ring-1 ring-black/10 dark:ring-white/10"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="h-6 w-6 rounded-full bg-zinc-300 dark:bg-zinc-700 shrink-0" />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-semibold text-gray-900 dark:text-white leading-none">
+            {creatorName}
+          </p>
+          {video.title && (
+            <p className="truncate text-[10px] text-gray-500 dark:text-white/60 mt-1 leading-none">
+              {video.title}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function MessageBubble({ msg, meId, conversation, onViewVideo }) {
   const sender = msg?.sender ?? null;
   const isMine = !!meId && sender?.id === meId;
   const content = String(msg?.content ?? "").trim();
   const attachmentKey = msg?.attachmentKey || msg?.attachment_key;
   const attachmentType = msg?.attachmentType || msg?.attachment_type;
   const attachmentName = msg?.attachmentName || msg?.attachment_name;
+  const sharedVideo = msg?.sharedVideo || msg?.shared_video;
 
   const isSystem = msg?.isSystem || msg?.is_system;
 
@@ -148,7 +204,7 @@ export default function MessageBubble({ msg, meId, conversation }) {
     );
   }
 
-  if (!content && !attachmentKey) return null;
+  if (!content && !attachmentKey && !sharedVideo) return null;
 
   const avatar = sender?.avatarUrl || null;
   const initials = (() => {
@@ -161,6 +217,8 @@ export default function MessageBubble({ msg, meId, conversation }) {
   })();
 
   const isOnlyImage = !content && attachmentType === "image";
+  const isSharedVideoOnly = !content && !!sharedVideo;
+  const isMediaOnly = isOnlyImage || isSharedVideoOnly;
   const isCallMissed = content.startsWith("[CALL_MISSED]");
   const isCallEnded = content.startsWith("[CALL_ENDED]");
   const isCallLog = isCallMissed || isCallEnded;
@@ -191,17 +249,17 @@ export default function MessageBubble({ msg, meId, conversation }) {
       <div
         className={classNames(
           "max-w-[min(78%,44rem)] text-sm leading-snug shadow-sm transition-all",
-          isOnlyImage ? "rounded-2xl overflow-hidden bg-transparent shadow-none" : "rounded-2xl px-3.5 py-2.5",
+          isMediaOnly ? "rounded-2xl overflow-hidden bg-transparent shadow-none" : "rounded-2xl px-3.5 py-2.5",
           // Call Missed: Red and bigger
-          isCallMissed 
-            ? "bg-red-500 text-white shadow-red-500/20 scale-[1.05] mx-2" 
+          isCallMissed
+            ? "bg-red-500 text-white shadow-red-500/20 scale-[1.05] mx-2"
             : isCallEnded
               ? "bg-emerald-600 text-white shadow-emerald-600/20"
               : isFile
                 ? "bg-gray-100 text-gray-800 ring-1 ring-black/5 dark:bg-white/10 dark:text-gray-200 dark:ring-white/10"
                 : isMine
-                  ? "bg-sky-500 text-white shadow-sky-500/10"
-                  : "bg-white/70 text-gray-900 ring-1 ring-black/5 backdrop-blur-sm dark:bg-white/10 dark:text-white dark:ring-white/10"
+                  ? isMediaOnly ? "" : "bg-sky-500 text-white shadow-sky-500/10"
+                  : isMediaOnly ? "" : "bg-white/70 text-gray-900 ring-1 ring-black/5 backdrop-blur-sm dark:bg-white/10 dark:text-white dark:ring-white/10"
         )}
         aria-label={sender ? fullName(sender) : "Tin nhắn"}
       >
@@ -213,13 +271,19 @@ export default function MessageBubble({ msg, meId, conversation }) {
             isMine={isMine}
           />
         )}
+        {sharedVideo && (
+          <SharedVideoCard
+            video={sharedVideo}
+            onClick={() => onViewVideo?.(sharedVideo)}
+          />
+        )}
         {content && (() => {
           if (isCallLog) {
             const duration = parseInt(content.split(" ")[1]) || 0;
             const mins = Math.floor(duration / 60);
             const secs = duration % 60;
             const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
-            
+
             if (isCallMissed) {
               return (
                 <div className="flex items-center gap-3 py-1.5 font-medium">

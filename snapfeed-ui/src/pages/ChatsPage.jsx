@@ -13,6 +13,7 @@ import { buildConversationName } from "../utils/chat";
 import ConversationAvatar from "../components/chats/ConversationAvatar";
 import CreateGroupModal from "../components/chats/CreateGroupModal";
 import AddMembersModal from "../components/chats/AddMembersModal";
+import VideoViewerPanel from "../components/VideoViewerPanel";
 
 export default function ChatsPage() {
   const { user, isAuthenticated } = useAuth();
@@ -33,6 +34,7 @@ export default function ChatsPage() {
   const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [addMembersOpen, setAddMembersOpen] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState(null);
   const itemsRef = useRef(items);
   useEffect(() => {
     itemsRef.current = items;
@@ -363,6 +365,7 @@ export default function ChatsPage() {
               meId={meId}
               onAddMembersClick={() => setAddMembersOpen(true)}
               onLatestIncomingMessageId={() => {}}
+              onViewVideo={(video) => setSelectedVideo(video)}
               onMessageSent={(msg) => {
                 const createdAt = msg?.createdAt ?? msg?.created_at ?? null;
                 const convId = resolvedSelectedConversation?.id ?? null;
@@ -487,6 +490,7 @@ export default function ChatsPage() {
               showHeader={false}
               onAddMembersClick={() => setAddMembersOpen(true)}
               onLatestIncomingMessageId={() => {}}
+              onViewVideo={(video) => setSelectedVideo(video)}
               onMessageSent={(msg) => {
                 const createdAt = msg?.createdAt ?? msg?.created_at ?? null;
                 const convId = resolvedSelectedConversation?.id ?? null;
@@ -544,6 +548,12 @@ export default function ChatsPage() {
         conversationId={resolvedSelectedConversation?.id}
         existingParticipantIds={existingParticipantIds}
         onMembersAdded={handleMembersAdded}
+      />
+
+      <VideoViewerPanel
+        open={!!selectedVideo}
+        video={selectedVideo}
+        onClose={() => setSelectedVideo(null)}
       />
     </div>
   );

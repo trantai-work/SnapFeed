@@ -17,6 +17,7 @@ export default function MessageThread({
   onLatestIncomingMessageId,
   showHeader = true,
   onAddMembersClick,
+  onViewVideo,
 }) {
   const { startCall, joinGroupCall, queryGroupCallStatus, activeGroupCalls } = useVideoCall();
   const convId = conversation?.id ?? null;
@@ -480,6 +481,7 @@ export default function MessageThread({
                   msg={msg}
                   meId={meId}
                   conversation={conversation}
+                  onViewVideo={onViewVideo}
                 />
               );
             })

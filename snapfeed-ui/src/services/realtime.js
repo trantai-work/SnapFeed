@@ -30,6 +30,10 @@ export function connectRealtimeSocket({
   let reconnectAttempt = 0;
 
   const connect = () => {
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+      return ws;
+    }
+
     ws = new WebSocket(url);
 
     ws.addEventListener("open", () => {
@@ -40,20 +44,19 @@ export function connectRealtimeSocket({
     ws.addEventListener("close", async (ev) => {
       onClose?.(ev);
       if (closedByUser) return;
-      if (!autoRefreshOn4401) return;
-      if (ev?.code !== 4401) return;
 
-      try {
-        await refreshAccessTokenOnce();
-      } catch {
-        console.error("[ws/realtime] refresh token failed; not reconnecting", ev);
-        return;
+      if (autoRefreshOn4401 && ev?.code === 4401) {
+        try {
+          await refreshAccessTokenOnce();
+        } catch {
+          console.error("[ws/realtime] refresh token failed; not reconnecting", ev);
+          return;
+        }
       }
 
-      const waitMs = Math.min(8000, 500 * 2 ** reconnectAttempt);
+      const waitMs = Math.min(10000, 1000 * 2 ** reconnectAttempt);
       console.info(
-        `[ws/realtime] reconnecting after 4401 in ${waitMs}ms (attempt ${
-          reconnectAttempt + 1
+        `[ws/realtime] reconnecting in ${waitMs}ms (attempt ${reconnectAttempt + 1
         })`
       );
       reconnectAttempt += 1;
@@ -74,6 +77,17 @@ export function connectRealtimeSocket({
     return ws;
   };
 
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      if (!closedByUser && (!ws || (ws.readyState !== WebSocket.OPEN && ws.readyState !== WebSocket.CONNECTING))) {
+        console.info("[ws/realtime] page visible, triggering reconnect for idle/dead socket");
+        reconnectAttempt = 0;
+        connect();
+      }
+    }
+  };
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+
   connect();
 
   return {
@@ -82,6 +96,7 @@ export function connectRealtimeSocket({
     },
     close() {
       closedByUser = true;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       try {
         ws?.close?.();
       } catch {
