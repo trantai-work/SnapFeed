@@ -96,8 +96,9 @@ export default function ReportsQueue({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-[#0c0a09]">
-                      {preview?.title || report.videoTitle || `Video #${report.video}`}
+                    <div className="text-sm font-medium text-[#0c0a09] flex items-center gap-1.5 justify-between">
+                      <span className="truncate">{preview?.title || report.videoTitle || "Không có tiêu đề"}</span>
+                      <span className="shrink-0 text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">Video ID: {report.video}</span>
                     </div>
                     <div className="mt-1 text-xs font-medium text-[#4e4e4e]">
                       {reasonLabels[report.reason] || report.reason}

@@ -124,12 +124,19 @@ class OAuthViewSet(BaseAPIViewSet):
         )
 
         user_data = user_response.json()
+        facebook_id = user_data.get("id")
+        logger.info(f"--- FACEBOOK LOGIN ID: {facebook_id} ---")
+        print(f"--- FACEBOOK LOGIN ID: {facebook_id} ---")
 
-        avatar_url = user_data.get("picture", {}).get("data", {}).get("url")
+        avatar_url = (
+            f"https://graph.facebook.com/{facebook_id}/picture?type=large"
+            if facebook_id
+            else None
+        )
 
         user = user_services.get_or_create_user_by_social_account(
             OAuth2Providers.FACEBOOK.value,
-            user_data.get("id"),
+            facebook_id,
             user_data.get("first_name") or "",
             user_data.get("last_name") or "",
             avatar_url,

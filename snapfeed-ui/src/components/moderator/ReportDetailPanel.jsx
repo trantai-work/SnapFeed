@@ -75,7 +75,7 @@ export default function ReportDetailPanel({
                 <div className="mb-4 flex items-start justify-between gap-4">
                   <div>
                     <div className="text-xs font-semibold uppercase tracking-[0.96px] text-[#777169]">
-                      Báo cáo #{selectedReport.id}
+                      Báo cáo #{selectedReport.id} · Video ID: {selectedReport.video}
                     </div>
                     {selectedVideo?.title || selectedReport.videoTitle ? (
                       <h2 className="mt-1 text-2xl font-medium text-[#0c0a09]">
@@ -149,6 +149,14 @@ export default function ReportDetailPanel({
                       </div>
                       <div className="font-bold text-[#0c0a09]">
                         {formatRelativeTimeVi(selectedReport.createdAt)}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-[#f0efed] bg-[#fafafa] p-4 flex flex-col justify-center">
+                      <div className="text-xs font-semibold uppercase tracking-[0.96px] text-[#777169] mb-1">
+                        ID Video
+                      </div>
+                      <div className="font-bold text-[#0c0a09]">
+                        #{selectedReport.video}
                       </div>
                     </div>
                     {selectedVideo && (

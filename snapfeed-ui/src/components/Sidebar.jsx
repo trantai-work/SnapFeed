@@ -36,6 +36,7 @@ import { useChatUnread } from "../context/ChatUnreadContext";
 import { useChatUI } from "../context/ChatUIContext";
 import ThemeToggle from "./ThemeToggle";
 import { getUserAvatarUrl, getUserDisplayName } from "../utils/feedItem";
+import { fullName } from "../utils/chat";
 
 function classNames(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -551,7 +552,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => { } 
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-semibold">
-                      {user?.firstName || ""} {user?.lastName || user?.username}
+                      {fullName(user)}
                     </div>
                     <div className="truncate text-xs text-gray-600 dark:text-white/60">
                       {user?.username || ""}
