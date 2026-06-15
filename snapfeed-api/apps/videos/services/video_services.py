@@ -28,7 +28,8 @@ from apps.users.models import User
 from apps.videos.constants import VIDEO_SEARCH_DEFAULT_SIZE
 from apps.videos.documents import VideoDocument
 from apps.videos.exceptions import VideoWithS3KeyNotFound
-from apps.videos.models import Video
+from apps.videos.models import Video, VideoView
+from django.utils.timezone import now
 from apps.videos.services.s3_services import delete_s3_object, delete_s3_directory
 from utils.search_cursor import decode_search_after_cursor, encode_search_after_cursor
 
@@ -132,10 +133,62 @@ def get_default_feeds() -> QuerySet[Video]:
     return feeds
 
 
+def rerank_videos_by_scores(
+    candidates_qs: QuerySet[Video], limit: int = 30
+) -> list[int]:
+    """
+    Reranks candidate videos in memory based on a combined score:
+      Score = 0.5 * Similarity + 0.3 * Engagement + 0.2 * Recency
+
+    Returns a list of video IDs sorted by score descending.
+    """
+    watch_time_subquery = (
+        VideoView.objects.filter(video_id=OuterRef("pk"))
+        .values("video_id")
+        .annotate(total=Sum("watch_time"))
+        .values("total")[:1]
+    )
+
+    candidates = list(
+        candidates_qs.annotate(
+            total_watch_time=Coalesce(Subquery(watch_time_subquery), 0)
+        )
+    )
+
+    current_time = now()
+    scored_candidates = []
+
+    for video in candidates:
+        # 1. Similarity score: 1.0 - CosineDistance
+        distance = (
+            video.distance if getattr(video, "distance", None) is not None else 1.0
+        )
+        s_sim = max(0.0, min(1.0, 1.0 - distance))
+
+        # 2. Engagement score: eng_raw / (eng_raw + 100.0)
+        total_watch_time = getattr(video, "total_watch_time", 0) or 0
+        view_count = video.view_count or 0
+        reaction_count = video.reaction_count or 0
+
+        eng_raw = reaction_count * 3 + total_watch_time * 0.5 + view_count * 0.2
+        s_eng = eng_raw / (eng_raw + 100.0) if eng_raw > 0 else 0.0
+
+        # 3. Recency score: 24.0 / (age_in_hours + 24.0)
+        age_in_hours = (current_time - video.created_at).total_seconds() / 3600.0
+        s_rec = 24.0 / (age_in_hours + 24.0) if age_in_hours >= 0 else 1.0
+
+        # Weighted score
+        score = 0.5 * s_sim + 0.3 * s_eng + 0.2 * s_rec
+        scored_candidates.append((video.id, score))
+
+    scored_candidates.sort(key=lambda x: x[1], reverse=True)
+    return [vid for vid, _ in scored_candidates[:limit]]
+
+
 def get_personalized_feeds(user: User) -> QuerySet[Video]:
     """
     Get personalized feeds for a logged-in user.
-    Mixes similar videos (based on embedding) and trending videos.
+    Mixes similar videos (based on embedding, reranked by engagement & recency) and trending videos.
     """
 
     if not hasattr(user, "embedding"):
@@ -144,15 +197,14 @@ def get_personalized_feeds(user: User) -> QuerySet[Video]:
     seen_video_ids = get_seen_video(user).values_list("id", flat=True)
     user_embedding = user.embedding.embedding
 
-    # 1. Similar videos (limit 40)
-    similar_ids = list(
-        get_similar_videos(user_embedding, seen_video_ids, limit=40).values_list(
-            "id", flat=True
-        )
-    )
+    # 1. Retrieve 100 similar candidate videos based on embedding similarity
+    candidates_qs = get_similar_videos(user_embedding, seen_video_ids, limit=100)
 
-    # 2. Trending videos (limit 10, excluding seen and similar ones)
-    exclude_ids = set(seen_video_ids) | set(similar_ids)
+    # 2. Rerank candidates and select top 30
+    top_30_similar_ids = rerank_videos_by_scores(candidates_qs, limit=30)
+
+    # 3. Trending videos (limit 10, excluding seen and similar ones)
+    exclude_ids = set(seen_video_ids) | set(top_30_similar_ids)
     trending_qs = get_trending_videos(limit=100)
     trending_ids = [
         tid
@@ -160,8 +212,8 @@ def get_personalized_feeds(user: User) -> QuerySet[Video]:
         if tid not in exclude_ids
     ][:10]
 
-    # 3. Combine IDs and query queryset preserving order
-    combined_ids = similar_ids + trending_ids
+    # 4. Combine IDs and query queryset preserving order
+    combined_ids = top_30_similar_ids + trending_ids
     if not combined_ids:
         return Video.objects.none()
 
