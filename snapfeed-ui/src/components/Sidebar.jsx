@@ -291,12 +291,12 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => { } 
 
   const menu = [
     { icon: HomeIcon, label: "Đề xuất", path: "/", public: true },
-    { icon: Compass, label: "Khám phá", path: "explore", public: true },
-    { icon: Send, label: "Tin nhắn", path: "chats" },
-    { icon: Bell, label: "Thông báo", path: "notifications" },
-    { icon: Upload, label: "Tải lên", path: "upload" },
+    { icon: Compass, label: "Khám phá", path: "/explore", public: true },
+    { icon: Send, label: "Tin nhắn", path: "/chats" },
+    { icon: Bell, label: "Thông báo", path: "/notifications" },
+    { icon: Upload, label: "Tải lên", path: "/upload" },
     { icon: Camera, label: "Quay video", action: "record" },
-    { icon: User, label: "Hồ sơ", path: "profile" },
+    { icon: User, label: "Hồ sơ", path: "/profile" },
     { icon: Headphones, label: "Hỗ trợ", action: "support" },
   ];
 
@@ -362,7 +362,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => { } 
           {menu.map((item, index) => {
             const Icon = item.icon;
             const requiresAuth = !item.public;
-            if (item.path === "notifications") {
+            if (item.path === "/notifications") {
               const actorAvatarUrl = incomingRecipient?.notification?.actor?.avatarUrl;
               const showAvatar = actorAvatarUrl && unreadCount > 0;
 
@@ -409,7 +409,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => { } 
                 </button>
               );
             }
-            if (item.path === "chats") {
+            if (item.path === "/chats") {
               return (
                 <NavLink
                   key={index}
