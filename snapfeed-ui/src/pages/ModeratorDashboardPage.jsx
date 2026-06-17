@@ -17,6 +17,7 @@ import ModeratorDashboardCharts from "../components/moderator/ModeratorDashboard
 import SupportQueue from "../components/moderator/SupportQueue";
 import SupportDetailPanel from "../components/moderator/SupportDetailPanel";
 import MusicManagement from "../components/moderator/MusicManagement";
+import UserPreferences from "../components/moderator/UserPreferences";
 import { classNames } from "../components/moderator/moderatorHelpers";
 
 function canModerate(user) {
@@ -430,7 +431,18 @@ export default function ModeratorDashboardPage() {
           <header className="hidden">
             <div className="flex min-h-20 flex-col justify-between gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center">
               <div className="flex items-center gap-3">
-                <img src={logoLightMode} alt="SnapFeed" className="h-12 w-auto object-contain lg:hidden" />
+                <img
+                  src={logoLightMode}
+                  alt="SnapFeed"
+                  className="h-12 w-auto cursor-pointer object-contain lg:hidden"
+                  onClick={() => {
+                    if (window.location.pathname === "/") {
+                      window.location.reload();
+                    } else {
+                      navigate("/");
+                    }
+                  }}
+                />
                 <div className="grid h-11 w-11 place-items-center rounded-full bg-[#292524] text-white">
                   <ShieldCheck className="h-5 w-5" strokeWidth={2.2} />
                 </div>
@@ -488,6 +500,10 @@ export default function ModeratorDashboardPage() {
           ) : activeTab === "music" ? (
             <main className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
               <MusicManagement />
+            </main>
+          ) : activeTab === "preferences" ? (
+            <main className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+              <UserPreferences />
             </main>
           ) : (
             <main className="grid min-h-0 flex-1 gap-5 overflow-hidden px-4 py-5 sm:px-6 xl:grid-cols-[minmax(30rem,40%)_minmax(0,1fr)]">

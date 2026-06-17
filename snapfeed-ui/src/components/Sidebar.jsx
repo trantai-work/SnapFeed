@@ -328,7 +328,11 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => { } 
           aria-label="Về trang Đề xuất"
           onClick={() => {
             setNotificationsOpen(false);
-            navigate("/");
+            if (window.location.pathname === "/") {
+              window.location.reload();
+            } else {
+              navigate("/");
+            }
             onMobileClose?.();
           }}
         >

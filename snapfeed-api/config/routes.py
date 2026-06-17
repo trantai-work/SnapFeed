@@ -2,7 +2,10 @@ from rest_framework import routers as drf_routers
 
 from apps.notifications.apis import NotificationRecipientViewSet
 from apps.oauth.apis import OAuthViewSet
-from apps.recommendation.apis import VideoEmbeddingViewSet
+from apps.recommendation.apis import (
+    VideoEmbeddingViewSet,
+    ModeratorUserPreferenceViewSet,
+)
 from apps.reports.apis import VideoReportViewSet
 from apps.users.apis import UserViewSet
 from apps.videos.apis import VideoViewSet
@@ -33,6 +36,11 @@ api_router.register(
     r"moderator/support-tickets",
     ModeratorSupportTicketViewSet,
     basename="moderator-support-ticket",
+)
+api_router.register(
+    r"moderator/user-preferences",
+    ModeratorUserPreferenceViewSet,
+    basename="moderator-user-preference",
 )
 
 # Add api router urls

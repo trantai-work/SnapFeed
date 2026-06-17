@@ -7,6 +7,7 @@ import {
   LogOut,
   Headphones,
   Music,
+  Sparkles,
 } from "lucide-react";
 import logoLightMode from "../../assets/logo_light_mode.png";
 
@@ -28,7 +29,13 @@ export default function ModeratorSidebar({ user, reportsCount, supportCount, onL
       <button
         type="button"
         className="mb-8 flex cursor-pointer items-center"
-        onClick={() => navigate("/")}
+        onClick={() => {
+          if (window.location.pathname === "/") {
+            window.location.reload();
+          } else {
+            navigate("/");
+          }
+        }}
         aria-label="Về SnapFeed"
       >
         <img src={logoLightMode} alt="SnapFeed" className="h-16 w-auto object-contain" />
@@ -106,6 +113,19 @@ export default function ModeratorSidebar({ user, reportsCount, supportCount, onL
         >
           <Music className="h-4 w-4" />
           Nhạc nền
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("preferences")}
+          className={classNames(
+            "flex h-11 w-full cursor-pointer items-center gap-3 rounded-full px-4 text-sm font-medium transition",
+            activeTab === "preferences"
+              ? "bg-[#292524] text-white"
+              : "text-[#4e4e4e] hover:bg-[#f0efed] hover:text-[#0c0a09]"
+          )}
+        >
+          <Sparkles className="h-4 w-4" />
+          Sở thích gợi ý
         </button>
       </nav>
 
