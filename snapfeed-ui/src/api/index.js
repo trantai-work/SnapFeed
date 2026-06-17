@@ -8,3 +8,5 @@ export * from "./messages.api";
 export * from "./reports.api";
 export * from "./support.api";
 export * from "./music.api";
+export * from "./recommendation.api";
+
