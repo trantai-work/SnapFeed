@@ -2,10 +2,13 @@ from django.conf import settings
 from django.db import transaction
 from drf_spectacular.utils import extend_schema
 from rest_framework.mixins import CreateModelMixin
+from rest_framework.decorators import action
 
 from apps.recommendation.models import VideoEmbedding
 from apps.recommendation.serializers import VideoEmbeddingSerializer
 from apps.videos.services import video_services
+from apps.recommendation.services import preference_services
+from apps.reports.permissions import IsModerator
 from core.apis import BaseAPIViewSet
 from core.messages import ERROR_MESSAGES
 
@@ -44,3 +47,33 @@ class VideoEmbeddingViewSet(CreateModelMixin, BaseAPIViewSet):
         serializer.save(video=video)
 
         return self.response_ok(serializer.data)
+
+
+@extend_schema(tags=["moderator-user-preferences"])
+class ModeratorUserPreferenceViewSet(BaseAPIViewSet):
+    """
+    API Viewset for moderator dashboard to inspect user preferences.
+    """
+
+    permission_classes = [IsModerator]
+
+    @action(detail=False, methods=["get"], url_path="search-users")
+    def search_users(self, request):
+        """
+        Search users by username, email, first name, or last name.
+        """
+        q = request.query_params.get("q", "").strip()
+        result = preference_services.search_users_for_moderator(q)
+        return self.response_ok(result)
+
+    @action(detail=True, methods=["get"], url_path="preferences")
+    def get_preferences(self, request, pk=None):
+        """
+        Calculate user preference statistics based on vector similarity and video tags.
+        """
+        result = preference_services.get_user_preferences_statistics(pk)
+        if "error" in result:
+            return self.response_error(
+                result["error"], status=result.get("status_code", 400)
+            )
+        return self.response_ok(result)
