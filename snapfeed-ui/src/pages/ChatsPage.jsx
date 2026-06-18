@@ -23,7 +23,7 @@ export default function ChatsPage() {
   const { subscribe } = useRealtimeSocket();
   const { setConversationUnread } = useChatUnread();
   const { setActiveConversationId } = useChatUI();
-  const { startCall } = useVideoCall();
+  const { startCall, joinGroupCall, activeGroupCalls } = useVideoCall();
   const refreshInFlightRef = useRef(false);
   const lastReadPingRef = useRef(new Map()); // convId -> last time we pinged /read (ms)
 
@@ -449,20 +449,59 @@ export default function ChatsPage() {
             </div>
           </div>
 
-          {/* Video call button (mobile) */}
+          {/* Video call button (mobile direct call) */}
           {resolvedSelectedConversation?.type === "direct" && (() => {
             const parts = resolvedSelectedConversation?.participants || [];
-            const recipient = parts.find(p => (p?.id ?? p?.user?.id) !== meId) || null;
+            const other = parts.find((p) => toIdNum(p.id) !== toIdNum(meId)) || 
+                          parts.find((p) => toIdNum(p.user?.id) !== toIdNum(meId));
+            const recipient = other?.user || other;
             if (!recipient) return null;
             return (
               <button
-                onClick={() => startCall(recipient, resolvedSelectedConversation.id)}
+                onClick={() => {
+                  console.log("[ChatsPage] Calling startCall (mobile) with convId:", resolvedSelectedConversation.id);
+                  startCall(recipient, resolvedSelectedConversation.id);
+                }}
                 className="mr-1 flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-black/5 hover:text-gray-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white transition-all cursor-pointer active:scale-90"
                 title="Cuộc gọi video"
               >
                 <Video className="h-5 w-5" />
               </button>
             );
+          })()}
+
+          {/* Video call button for group (mobile group call) */}
+          {resolvedSelectedConversation?.type === "group" && (() => {
+            const convId = resolvedSelectedConversation.id;
+            const activeCall = activeGroupCalls[convId];
+            if (activeCall && activeCall.length > 0) {
+              return (
+                <button
+                  onClick={() => {
+                    console.log("[ChatsPage] Joining active group call (mobile) with convId:", convId);
+                    joinGroupCall(convId, resolvedSelectedConversation);
+                  }}
+                  className="mr-1 flex items-center justify-center gap-1.5 px-3 h-9 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-xs transition-all cursor-pointer shadow-md active:scale-95 animate-pulse"
+                  title="Tham gia cuộc gọi nhóm đang diễn ra"
+                >
+                  <Video className="h-4 w-4" />
+                  <span>Tham gia ({activeCall.length})</span>
+                </button>
+              );
+            } else {
+              return (
+                <button
+                  onClick={() => {
+                    console.log("[ChatsPage] Starting group call (mobile) with convId:", convId);
+                    startCall(null, convId, true, resolvedSelectedConversation);
+                  }}
+                  className="mr-1 flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-black/5 hover:text-gray-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white transition-all cursor-pointer active:scale-90"
+                  title="Cuộc gọi nhóm"
+                >
+                  <Video className="h-5 w-5" />
+                </button>
+              );
+            }
           })()}
 
           {/* Add member button (mobile) */}
