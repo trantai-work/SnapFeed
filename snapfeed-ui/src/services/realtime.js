@@ -106,8 +106,10 @@ export function connectRealtimeSocket({
     send(data) {
       if (ws?.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(data));
+        return true;
       } else {
         console.warn("[ws/realtime] cannot send message, socket not open", data);
+        return false;
       }
     },
   };

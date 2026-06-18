@@ -84,13 +84,17 @@ export function RealtimeSocketProvider({ children }) {
   const send = useCallback((type, payload) => {
     if (!wsRef.current) {
       console.warn("[RealtimeSocket] cannot send, no active connection");
-      return;
+      return false;
     }
     console.log("[RealtimeSocket] Sending message:", type, payload);
-    wsRef.current.send({ type, payload });
+    return wsRef.current.send({ type, payload });
   }, []);
 
-  const value = useMemo(() => ({ subscribe, send }), [subscribe, send]);
+  const isConnected = useCallback(() => {
+    return wsRef.current?.socket?.readyState === WebSocket.OPEN;
+  }, []);
+
+  const value = useMemo(() => ({ subscribe, send, isConnected }), [subscribe, send, isConnected]);
 
   return (
     <RealtimeSocketContext.Provider value={value}>

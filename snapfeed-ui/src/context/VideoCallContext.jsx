@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState, useCallb
 import { useRealtimeSocket } from './RealtimeSocketContext';
 import { useAuth } from './AuthContext';
 import { messagesApi } from '../api';
+import { useMessageBox } from '../components/MessageBox';
 
 const VideoCallContext = createContext(null);
 
@@ -30,9 +31,58 @@ const _dependencies = (() => {
 
 const ICE_SERVERS = { iceServers: _dependencies };
 
+const safeGetUserMedia = async (constraints, retries = 1) => {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    throw new TypeError("Trình duyệt không hỗ trợ thiết bị đa phương tiện hoặc đã chặn quyền truy cập Camera/Mic do trang web không được chạy dưới giao thức bảo mật HTTPS.");
+  }
+  try {
+    return await navigator.mediaDevices.getUserMedia(constraints);
+  } catch (err) {
+    if (err.name === 'AbortError' && retries > 0) {
+      console.warn(`[VideoCall] getUserMedia aborted, retrying in 1s... (${retries} left)`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return safeGetUserMedia(constraints, retries - 1);
+    }
+    throw err;
+  }
+};
+
 export function VideoCallProvider({ children }) {
-  const { subscribe, send } = useRealtimeSocket();
+  const { subscribe, send, isConnected } = useRealtimeSocket();
   const { user: me } = useAuth();
+  const { show: showMessage } = useMessageBox();
+
+  const handleCallError = useCallback((err, defaultPrefix = "Lỗi kết nối cuộc gọi") => {
+    console.log("[VideoCall] handleCallError:", err);
+    if (err.message && (err.message.includes("máy chủ") || err.message.includes("kết nối") || err.message.includes("socket") || err.message.includes("mạng"))) {
+      showMessage({
+        status: "error",
+        title: "Lỗi kết nối mạng",
+        message: err.message,
+        duration: 8000
+      });
+      return;
+    }
+
+    let msg = "Không thể truy cập Máy ảnh (Camera) hoặc Mic của bạn.";
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      msg = "Bạn đã từ chối quyền truy cập Camera/Microphone. Vui lòng bật quyền truy cập camera/micro trong cài đặt trình duyệt để thực hiện cuộc gọi.";
+    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      msg = "Không tìm thấy thiết bị Camera hoặc Microphone trên máy tính/điện thoại của bạn.";
+    } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+      msg = "Camera hoặc Microphone đang bị sử dụng bởi một ứng dụng khác (ví dụ: Zoom, Teams, Skype, hoặc tab trình duyệt khác). Vui lòng tắt ứng dụng đó và thử lại.";
+    } else if (err.name === 'AbortError') {
+      msg = "Không thể khởi động camera/mic do hết thời gian chờ (Timeout starting video source). Vui lòng thử lại hoặc khởi động lại thiết bị.";
+    } else {
+      msg += ` (Chi tiết: ${err.message || err.name || err})`;
+    }
+    showMessage({
+      status: "error",
+      title: defaultPrefix,
+      message: msg,
+      duration: 10000
+    });
+  }, [showMessage]);
 
   const [callState, setCallState] = useState('idle'); // idle, outgoing, incoming, active, no_answer
   const [remoteUser, setRemoteUser] = useState(null);
@@ -421,6 +471,15 @@ export function VideoCallProvider({ children }) {
 
   const joinGroupCall = useCallback(async (conversationId, conversationData) => {
     if (!conversationData) return;
+    if (!isConnected()) {
+      showMessage({
+        status: "error",
+        title: "Lỗi kết nối",
+        message: "Không thể tham gia cuộc gọi nhóm do không có kết nối với máy chủ thời gian thực. Vui lòng kiểm tra lại kết nối mạng.",
+        duration: 5000
+      });
+      return;
+    }
     try {
       setActiveGroupCalls(prev => {
         const currentList = prev[conversationId] || [];
@@ -436,7 +495,7 @@ export function VideoCallProvider({ children }) {
       activeConversationIdRef.current = conversationId;
       groupStartTimeRef.current = Date.now();
 
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const stream = await safeGetUserMedia({
         video: true,
         audio: {
           echoCancellation: true,
@@ -449,10 +508,11 @@ export function VideoCallProvider({ children }) {
 
       const participants = conversationData.participants || [];
       const otherParticipants = participants.filter(p => Number(p.id || p.user?.id) !== me?.id);
+      let sentAny = false;
       otherParticipants.forEach(p => {
         const pId = Number(p.id || p.user?.id);
         if (pId) {
-          send('call.signaling', {
+          const sent = send('call.signaling', {
             recipientId: pId,
             data: {
               type: 'group-call-join',
@@ -460,16 +520,30 @@ export function VideoCallProvider({ children }) {
               sender: me
             }
           });
+          if (sent) sentAny = true;
         }
       });
+      if (otherParticipants.length > 0 && !sentAny) {
+        throw new Error("Không thể gửi yêu cầu tham gia tới các thành viên nhóm. Vui lòng kiểm tra kết nối mạng.");
+      }
     } catch (err) {
       console.error("[VideoCall] Failed to join group call:", err);
+      handleCallError(err);
       cleanup();
     }
-  }, [me, send, cleanup]);
+  }, [me, send, cleanup, isConnected, showMessage, handleCallError]);
 
   const startCall = useCallback(async (targetUser, conversationId, isGroup = false, conversationData = null) => {
     console.log("[VideoCall] Starting call. targetUser:", targetUser, "Conversation ID:", conversationId, "isGroup:", isGroup);
+    if (!isConnected()) {
+      showMessage({
+        status: "error",
+        title: "Lỗi kết nối",
+        message: "Không thể bắt đầu cuộc gọi do không có kết nối với máy chủ thời gian thực. Vui lòng kiểm tra lại kết nối mạng.",
+        duration: 5000
+      });
+      return;
+    }
     if (isGroup) {
       if (!conversationData) {
         console.error("[VideoCall] conversationData is required for group calls");
@@ -491,7 +565,7 @@ export function VideoCallProvider({ children }) {
         isCallerRef.current = true;
         groupStartTimeRef.current = Date.now();
 
-        const stream = await navigator.mediaDevices.getUserMedia({
+        const stream = await safeGetUserMedia({
           video: true,
           audio: {
             echoCancellation: true,
@@ -505,10 +579,11 @@ export function VideoCallProvider({ children }) {
         const participants = conversationData.participants || [];
         const otherParticipants = participants.filter(p => Number(p.id || p.user?.id) !== me.id);
         
+        let sentAny = false;
         otherParticipants.forEach(p => {
           const pId = Number(p.id || p.user?.id);
           if (pId) {
-            send('call.signaling', {
+            const sent = send('call.signaling', {
               recipientId: pId,
               data: {
                 type: 'group-call-invite',
@@ -517,10 +592,15 @@ export function VideoCallProvider({ children }) {
                 sender: me
               }
             });
+            if (sent) sentAny = true;
           }
         });
+        if (otherParticipants.length > 0 && !sentAny) {
+          throw new Error("Không thể gửi lời mời cuộc gọi tới các thành viên nhóm. Vui lòng kiểm tra kết nối mạng.");
+        }
       } catch (err) {
         console.error("[VideoCall] Failed to start group call:", err);
+        handleCallError(err);
         cleanup();
       }
       return;
@@ -535,7 +615,12 @@ export function VideoCallProvider({ children }) {
       isCallerRef.current = true;
       ringingStartTimeRef.current = Date.now();
       console.log("[VideoCall] Set activeConversationIdRef to:", activeConversationIdRef.current);
-      const stream = await navigator.mediaDevices.getUserMedia({
+      
+      // Update UI state immediately to show the calling modal
+      setRemoteUser(targetUser);
+      setCallState('outgoing');
+
+      const stream = await safeGetUserMedia({
         video: true,
         audio: {
           echoCancellation: true,
@@ -546,8 +631,6 @@ export function VideoCallProvider({ children }) {
       console.log("[VideoCall] Media stream obtained");
       localStreamRef.current = stream;
       setLocalStream(stream);
-      setRemoteUser(targetUser);
-      setCallState('outgoing');
 
       callingAudio.current.play().catch(e => console.warn("Audio play blocked", e));
 
@@ -580,23 +663,36 @@ export function VideoCallProvider({ children }) {
       await pc.setLocalDescription(offer);
 
       console.log("[VideoCall] Sending offer to recipient:", targetUser.id);
-      send('call.signaling', {
+      const sent = send('call.signaling', {
         recipientId: targetUser.id,
         data: { type: 'offer', offer, sender: me }
       });
+      if (!sent) {
+        throw new Error("Không thể gửi yêu cầu cuộc gọi. Vui lòng kiểm tra kết nối mạng của bạn.");
+      }
     } catch (err) {
       console.error("[VideoCall] Failed to start call:", err);
+      handleCallError(err);
       cleanup();
     }
-  }, [createPeerConnection, me, send, cleanup]);
+  }, [createPeerConnection, me, send, cleanup, isConnected, showMessage, handleCallError]);
 
   const acceptCall = useCallback(async () => {
+    if (!isConnected()) {
+      showMessage({
+        status: "error",
+        title: "Lỗi kết nối",
+        message: "Không thể nhận cuộc gọi do không có kết nối với máy chủ thời gian thực. Vui lòng kiểm tra lại kết nối mạng.",
+        duration: 5000
+      });
+      return;
+    }
     if (isGroupCall) {
       try {
         ringingAudio.current.pause();
         ringingAudio.current.currentTime = 0;
 
-        const stream = await navigator.mediaDevices.getUserMedia({
+        const stream = await safeGetUserMedia({
           video: true,
           audio: {
             echoCancellation: true,
@@ -613,10 +709,11 @@ export function VideoCallProvider({ children }) {
         const participants = groupConversation?.participants || [];
         const otherParticipants = participants.filter(p => Number(p.id || p.user?.id) !== me.id);
         
+        let sentAny = false;
         otherParticipants.forEach(p => {
           const pId = Number(p.id || p.user?.id);
           if (pId) {
-            send('call.signaling', {
+            const sent = send('call.signaling', {
               recipientId: pId,
               data: {
                 type: 'group-call-join',
@@ -624,10 +721,15 @@ export function VideoCallProvider({ children }) {
                 sender: me
               }
             });
+            if (sent) sentAny = true;
           }
         });
+        if (otherParticipants.length > 0 && !sentAny) {
+          throw new Error("Không thể gửi yêu cầu tham gia tới các thành viên nhóm. Vui lòng kiểm tra kết nối mạng.");
+        }
       } catch (err) {
         console.error("[GroupCall] Failed to accept group call:", err);
+        handleCallError(err);
         cleanup();
       }
       return;
@@ -637,7 +739,7 @@ export function VideoCallProvider({ children }) {
     try {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const stream = await safeGetUserMedia({
         video: true,
         audio: {
           echoCancellation: true,
@@ -658,10 +760,13 @@ export function VideoCallProvider({ children }) {
       answer.sdp = setAudioBitrate(answer.sdp);
       await pc.setLocalDescription(answer);
 
-      send('call.signaling', {
+      const sent = send('call.signaling', {
         recipientId: remoteUser.id,
         data: { type: 'answer', answer }
       });
+      if (!sent) {
+        throw new Error("Không thể gửi phản hồi cuộc gọi. Vui lòng kiểm tra kết nối mạng của bạn.");
+      }
 
       while (pendingCandidates.current.length > 0) {
         const candidate = pendingCandidates.current.shift();
@@ -669,9 +774,10 @@ export function VideoCallProvider({ children }) {
       }
     } catch (err) {
       console.error("Failed to accept call:", err);
+      handleCallError(err);
       cleanup();
     }
-  }, [remoteUser, cleanup, send, isGroupCall, groupConversation, me]);
+  }, [remoteUser, cleanup, send, isGroupCall, groupConversation, me, isConnected, showMessage, handleCallError]);
 
   const rejectCall = useCallback(() => {
     console.log("[VideoCall] rejectCall triggered");
