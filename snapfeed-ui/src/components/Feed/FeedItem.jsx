@@ -6,7 +6,7 @@ import {
   getUserDisplayName,
   normalizeReactApiResponse,
 } from "../../utils/feedItem";
-import { videosApi, isValidView } from "../../api/video.api";
+import { videosApi } from "../../api/video.api";
 import { useAuth } from "../../context/AuthContext";
 import { useAutoPlayVideo } from "../../hooks/useAutoPlayVideo";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
@@ -54,6 +54,7 @@ function FeedItemComponent({
 
   // Track watch time
   const maxWatchTimeRef = useRef(0);
+  const wasActiveRef = useRef(false);
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -67,11 +68,12 @@ function FeedItemComponent({
 
   useEffect(() => {
     if (isActive) {
+      wasActiveRef.current = true;
       maxWatchTimeRef.current = 0;
       return;
     }
-    if (!isAuthenticated || !item.id || maxWatchTimeRef.current <= 0) return;
-    if (!isValidView(maxWatchTimeRef.current, item.duration)) return;
+    if (!wasActiveRef.current) return;
+    if (!isAuthenticated || !item.id) return;
     const watchTime = maxWatchTimeRef.current;
     videosApi.recordView({ videoId: item.id, watchTime }).catch(() => {});
   }, [isActive, item.id, isAuthenticated]);

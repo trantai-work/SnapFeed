@@ -31,15 +31,9 @@ def is_valid_view(watch_time: int, duration: int) -> bool:
 def record_video_view(*, user, video: Video, watch_time: int) -> VideoView | None:
     """
     Upsert a VideoView for the given user and video.
-
-    - Returns None if watch_time does not meet the view threshold and user has no reaction.
-    - Creates a new VideoView and increments video.view_count on first valid view.
-    - On subsequent views, updates watch_time to max(existing, new).
+    Always creates a VideoView record to exclude it from future feeds,
+    but only increments view_count if it qualifies as a valid view.
     """
-
-    has_reaction = VideoReaction.objects.filter(user=user, video=video).exists()
-    if not is_valid_view(watch_time, video.duration) and not has_reaction:
-        return None
 
     with transaction.atomic():
         locked = Video.objects.select_for_update().get(pk=video.pk)
@@ -50,13 +44,31 @@ def record_video_view(*, user, video: Video, watch_time: int) -> VideoView | Non
             defaults={"watch_time": watch_time},
         )
 
-        if created:
-            Video.objects.filter(pk=locked.pk).update(view_count=F("view_count") + 1)
-        elif watch_time > view.watch_time:
-            view.watch_time = watch_time
-            view.save(update_fields=["watch_time", "updated_at"])
+        has_reaction = VideoReaction.objects.filter(user=user, video=locked).exists()
+        is_valid = is_valid_view(watch_time, locked.duration) or has_reaction
 
-    if view is not None:
-        update_user_embedding(user=user, video=video)
+        if created:
+            if is_valid:
+                Video.objects.filter(pk=locked.pk).update(
+                    view_count=F("view_count") + 1
+                )
+        else:
+            was_previously_valid = (
+                is_valid_view(view.watch_time, locked.duration) or has_reaction
+            )
+
+            if watch_time > view.watch_time:
+                view.watch_time = watch_time
+                view.save(update_fields=["watch_time", "updated_at"])
+
+            is_now_valid = (
+                is_valid_view(view.watch_time, locked.duration) or has_reaction
+            )
+            if is_now_valid and not was_previously_valid:
+                Video.objects.filter(pk=locked.pk).update(
+                    view_count=F("view_count") + 1
+                )
+
+    update_user_embedding(user=user, video=video)
 
     return view

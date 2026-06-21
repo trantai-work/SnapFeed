@@ -10,7 +10,8 @@ import { commentsApi } from "../../api/comments.api";
 import { openAuthModal } from "../../utils/authModalBus";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useMessageBox } from "../MessageBox";
-import { getUserDisplayName } from "../../utils/feedItem";
+import { getUserDisplayName, normalizeFeedItem } from "../../utils/feedItem";
+import { feedApi } from "../../api/feed.api";
 import VideoViewerPanel from "../VideoViewerPanel";
 
 const MAX_COMMENT_CHARS = 1000;
@@ -59,13 +60,37 @@ export default function FeedContainer() {
   const recomTimerRef = useRef(null);
   const [selectedVideo, setSelectedVideo] = useState(null);
 
+  const [recomItems, setRecomItems] = useState([]);
+  const [recomLoading, setRecomLoading] = useState(false);
+
+  const fetchRecommendations = useCallback(async () => {
+    if (!isAuthenticated) {
+      setRecomItems([]);
+      return;
+    }
+    setRecomLoading(true);
+    try {
+      const data = await feedApi.getFeeds();
+      const raw = Array.isArray(data) ? data : data?.results ?? [];
+      setRecomItems(raw.map(normalizeFeedItem));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setRecomLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    setRecomItems([]);
+  }, [user?.id]);
+
   const hasPersonalizedRecoms = useMemo(() => {
     if (!isAuthenticated) return false;
-    return items.some((item) => {
+    return recomItems.some((item) => {
       const video = item?.video ?? item;
       return !video.isDefaultFeed;
     });
-  }, [items, isAuthenticated]);
+  }, [recomItems, isAuthenticated]);
 
   const openComments = useCallback((videoId) => {
     if (!videoId) return;
@@ -288,7 +313,7 @@ export default function FeedContainer() {
           type="button"
           onClick={() => {
             setRecommendationsOpen(true);
-            refresh();
+            fetchRecommendations();
           }}
           className="fixed right-0 bottom-12 z-40 flex items-center gap-1 pl-2.5 pr-2 py-3 rounded-l-2xl text-xs font-bold bg-pink-500 hover:bg-pink-600 active:bg-pink-700 text-white border-y border-l border-pink-500/20 shadow-lg shadow-pink-500/20 transition-all hover:pl-3.5 group cursor-pointer"
         >
@@ -331,12 +356,12 @@ export default function FeedContainer() {
                 {/* Refresh Button */}
                 <button
                   type="button"
-                  onClick={refresh}
-                  disabled={loading}
+                  onClick={fetchRecommendations}
+                  disabled={recomLoading}
                   className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-500 dark:text-white/70 transition disabled:opacity-50 cursor-pointer"
                   aria-label="Cập nhật đề xuất"
                 >
-                  <RotateCw size={16} className={loading ? "animate-spin" : ""} />
+                  <RotateCw size={16} className={recomLoading ? "animate-spin" : ""} />
                 </button>
                 {/* Close Button (X) */}
                 <button
@@ -374,7 +399,7 @@ export default function FeedContainer() {
                 </>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
-                  {items.slice(0, 10).map((item, idx) => {
+                  {recomItems.slice(0, 10).map((item, idx) => {
                     const video = item?.video ?? item;
                     const displayName = getUserDisplayName(video);
                     return (
