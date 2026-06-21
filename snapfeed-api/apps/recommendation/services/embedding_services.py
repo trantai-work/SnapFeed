@@ -60,15 +60,13 @@ def update_user_embedding(user: User, video: Video) -> None:
     video_embedding_obj = video.embedding
 
     view = VideoView.objects.filter(user=user, video=video).first()
-    if view is None:
-        logger.debug(
-            "No VideoView for user pk=%s video pk=%s, skipping user embedding update",
-            user.pk,
-            video.pk,
-        )
-        return
 
-    watch_ratio = _compute_watch_ratio(view.watch_time, video.duration)
+    has_reaction = VideoReaction.objects.filter(user=user, video=video).exists()
+    if has_reaction:
+        watch_ratio = 1.0
+    else:
+        watch_ratio = _compute_watch_ratio(view.watch_time, video.duration)
+
     if watch_ratio <= 0:
         logger.debug(
             "watch_ratio=%s (watch_time=%s duration=%s) user pk=%s video pk=%s, skipping user embedding update",

@@ -198,7 +198,20 @@ def get_personalized_feeds(user: User) -> QuerySet[Video]:
     user_embedding = user.embedding.embedding
 
     # 1. Retrieve 100 similar candidate videos based on embedding similarity
-    candidates_qs = get_similar_videos(user_embedding, seen_video_ids, limit=100)
+    similar_qs = get_similar_videos(user_embedding, seen_video_ids, limit=100)
+    similar_ids = list(similar_qs.values_list("id", flat=True))
+
+    if not similar_ids:
+        candidates_qs = Video.objects.none()
+    else:
+        subquery = (
+            VideoEmbedding.objects.filter(video_id=OuterRef("pk"))
+            .annotate(distance=CosineDistance("embedding", user_embedding))
+            .values("distance")[:1]
+        )
+        candidates_qs = Video.objects.filter(id__in=similar_ids).annotate(
+            distance=Subquery(subquery)
+        )
 
     # 2. Rerank candidates and select top 30
     top_30_similar_ids = rerank_videos_by_scores(candidates_qs, limit=30)

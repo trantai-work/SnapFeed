@@ -3,7 +3,7 @@ from django.db.models import F
 from django.db.models.functions import Greatest
 from safedelete.models import HARD_DELETE
 
-from apps.recommendation.services.embedding_services import update_user_embedding
+
 from apps.videos.constants import REACT_VIDEO_DEFAULT_LABEL, REACT_VIDEO_LABELS_MAP
 from apps.videos.models import Video, VideoReaction
 
@@ -55,7 +55,5 @@ def set_video_reaction(
             locked.refresh_from_db(fields=["reaction_count"])
             row = VideoReaction.objects.get(user=user, video_id=locked.pk)
             result = row, locked.reaction_count, True
-
-    update_user_embedding(user=user, video=video)
 
     return result

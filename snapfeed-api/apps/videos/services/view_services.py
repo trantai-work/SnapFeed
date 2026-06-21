@@ -2,7 +2,7 @@ from django.db import transaction
 from django.db.models import F
 
 from apps.recommendation.services.embedding_services import update_user_embedding
-from apps.videos.models import Video, VideoView
+from apps.videos.models import Video, VideoView, VideoReaction
 
 MIN_WATCH_TIME = 5  # seconds — for videos longer than this threshold
 SHORT_VIDEO_THRESHOLD = 5  # videos <= this duration use ratio-only check
@@ -32,12 +32,13 @@ def record_video_view(*, user, video: Video, watch_time: int) -> VideoView | Non
     """
     Upsert a VideoView for the given user and video.
 
-    - Returns None if watch_time does not meet the view threshold.
+    - Returns None if watch_time does not meet the view threshold and user has no reaction.
     - Creates a new VideoView and increments video.view_count on first valid view.
     - On subsequent views, updates watch_time to max(existing, new).
     """
 
-    if not is_valid_view(watch_time, video.duration):
+    has_reaction = VideoReaction.objects.filter(user=user, video=video).exists()
+    if not is_valid_view(watch_time, video.duration) and not has_reaction:
         return None
 
     with transaction.atomic():
