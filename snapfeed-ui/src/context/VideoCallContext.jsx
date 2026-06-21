@@ -228,8 +228,12 @@ export function VideoCallProvider({ children }) {
                   console.warn("[WebRTC] Đang sử dụng TURN SERVER để chuyển tiếp dữ liệu (Khác mạng + Tường lửa gắt).");
                 } else if (type === 'srflx') {
                   console.warn("[WebRTC] Đang kết nối P2P trực tiếp qua IP Public (STUN).");
-                } else {
+                } else if (type === 'prflx') {
+                  console.warn("[WebRTC] Đang kết nối P2P trực tiếp qua IP Public động (Peer-Reflexive).");
+                } else if (type === 'host') {
                   console.warn("[WebRTC] Đang kết nối nội bộ (Mạng LAN/WiFi).");
+                } else {
+                  console.warn(`[WebRTC] Kết nối qua đường truyền khác: ${type?.toUpperCase()}`);
                 }
               }
             }
@@ -770,7 +774,11 @@ export function VideoCallProvider({ children }) {
 
       while (pendingCandidates.current.length > 0) {
         const candidate = pendingCandidates.current.shift();
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {
+          console.error("[WebRTC] Lỗi nạp ICE Candidate tạm thời:", e);
+        }
       }
     } catch (err) {
       console.error("Failed to accept call:", err);
@@ -980,7 +988,11 @@ export function VideoCallProvider({ children }) {
             const candidates = pendingGroupCandidates.current[senderId] || [];
             while (candidates.length > 0) {
               const candidate = candidates.shift();
-              await pc.addIceCandidate(new RTCIceCandidate(candidate));
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate));
+              } catch (e) {
+                console.error("[WebRTC] Lỗi nạp Group ICE Candidate từ hàng đợi offer:", e);
+              }
             }
           }
           break;
@@ -993,7 +1005,11 @@ export function VideoCallProvider({ children }) {
             const candidates = pendingGroupCandidates.current[senderId] || [];
             while (candidates.length > 0) {
               const candidate = candidates.shift();
-              await pc.addIceCandidate(new RTCIceCandidate(candidate));
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate));
+              } catch (e) {
+                console.error("[WebRTC] Lỗi nạp Group ICE Candidate từ hàng đợi answer:", e);
+              }
             }
           }
           break;
@@ -1002,7 +1018,11 @@ export function VideoCallProvider({ children }) {
           {
             const pc = groupPCsRef.current[senderId];
             if (pc && pc.remoteDescription) {
-              await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+              } catch (e) {
+                console.error("[WebRTC] Lỗi nạp Group ICE Candidate trực tiếp:", e);
+              }
             } else {
               if (!pendingGroupCandidates.current[senderId]) {
                 pendingGroupCandidates.current[senderId] = [];
@@ -1085,12 +1105,26 @@ export function VideoCallProvider({ children }) {
             await pcRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
             setCallState('active');
             startTimeRef.current = Date.now();
+
+            // Sửa lỗi: Nạp các ICE candidate tạm thời đã nhận được trước khi set remote description thành công
+            while (pendingCandidates.current.length > 0) {
+              const candidate = pendingCandidates.current.shift();
+              try {
+                await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+              } catch (e) {
+                console.error("[WebRTC] Lỗi nạp ICE Candidate tạm thời:", e);
+              }
+            }
           }
           break;
 
         case 'candidate':
           if (pcRef.current && pcRef.current.remoteDescription) {
-            await pcRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+            try {
+              await pcRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+            } catch (e) {
+              console.error("[WebRTC] Lỗi nạp ICE Candidate trực tiếp:", e);
+            }
           } else {
             pendingCandidates.current.push(data.candidate);
           }
