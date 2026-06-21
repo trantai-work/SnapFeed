@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 import { useCurrentIndex } from "../../hooks/useCurrentIndex";
 import { useFeedStride } from "../../hooks/useFeedStride";
 import { useScrollSnapNavigation } from "../../hooks/useScrollSnapNavigation";
@@ -16,7 +16,7 @@ const FEED_INNER_COL_CLASS = [
   "items-stretch",
 ].join(" ");
 
-export function FeedList({
+export const FeedList = forwardRef(({
   items = [],
   onEndReached,
   onReactionUpdate,
@@ -25,7 +25,8 @@ export function FeedList({
   onShare,
   removingVideoIds,
   onFeedScroll,
-}) {
+  devMode = false,
+}, ref) => {
   const scrollRef = useRef(null);
   const endTriggeredForLengthRef = useRef(null);
 
@@ -33,7 +34,7 @@ export function FeedList({
   const currentIndex = useCurrentIndex(scrollRef, items.length, stride);
   const { start, end } = useVirtualList(currentIndex, items.length);
 
-  const { canScrollUp, canScrollDown, scrollFeed } = useScrollSnapNavigation(
+  const { canScrollUp, canScrollDown, scrollFeed, scrollToIndex } = useScrollSnapNavigation(
     scrollRef,
     items.length,
     stride
@@ -60,6 +61,12 @@ export function FeedList({
     endTriggeredForLengthRef.current = items.length;
     onEndReached();
   }, [currentIndex, items.length, onEndReached]);
+
+  useImperativeHandle(ref, () => ({
+    scrollToIndex: (index) => {
+      scrollToIndex(index);
+    }
+  }));
 
   return (
     <div className="relative box-border h-[min(100svh,100dvh)] max-h-[min(100svh,100dvh)] w-full min-w-0 max-w-full lg:h-auto lg:max-h-none lg:max-w-none">
@@ -103,6 +110,7 @@ export function FeedList({
                     onOpenComments={typeof onOpenComments === "function" ? onOpenComments : undefined}
                     onReport={typeof onReport === "function" ? onReport : undefined}
                     onShare={typeof onShare === "function" ? onShare : undefined}
+                    devMode={devMode}
                   />
                 </div>
               );
@@ -119,4 +127,4 @@ export function FeedList({
       />
     </div>
   );
-}
+});

@@ -133,14 +133,45 @@ def get_default_feeds() -> QuerySet[Video]:
     return feeds
 
 
+def calculate_video_scores(
+    video: Video, distance: float | None, current_time
+) -> tuple[float, float, float, float]:
+    """
+    Calculates similarity, engagement, recency and total score for a video.
+    Returns: (total_score, similarity_score, engagement_score, recency_score)
+    """
+    # 1. Similarity score: 1.0 - CosineDistance if similarity search distance is present, else 0.0
+    if distance is not None:
+        s_sim = max(0.0, min(1.0, 1.0 - distance))
+    else:
+        s_sim = 0.0
+
+    # 2. Engagement score: eng_raw / (eng_raw + 100.0)
+    total_watch_time = getattr(video, "total_watch_time", 0) or 0
+    view_count = video.view_count or 0
+    reaction_count = video.reaction_count or 0
+
+    eng_raw = reaction_count * 3 + total_watch_time * 0.5 + view_count * 0.2
+    s_eng = eng_raw / (eng_raw + 100.0) if eng_raw > 0 else 0.0
+
+    # 3. Recency score: 24.0 / (age_in_hours + 24.0)
+    age_in_hours = (current_time - video.created_at).total_seconds() / 3600.0
+    s_rec = 24.0 / (age_in_hours + 24.0) if age_in_hours >= 0 else 1.0
+
+    # Weighted score: 0.5 * Similarity + 0.3 * Engagement + 0.2 * Recency
+    score = 0.5 * s_sim + 0.3 * s_eng + 0.2 * s_rec
+    return score, s_sim, s_eng, s_rec
+
+
 def rerank_videos_by_scores(
     candidates_qs: QuerySet[Video], limit: int = 30
-) -> list[int]:
+) -> list[tuple[int, float, float, float, float]]:
     """
     Reranks candidate videos in memory based on a combined score:
       Score = 0.5 * Similarity + 0.3 * Engagement + 0.2 * Recency
 
-    Returns a list of video IDs sorted by score descending.
+    Returns a list of tuples: (video_id, total_score, similarity_score, engagement_score, recency_score)
+    sorted by score descending.
     """
     watch_time_subquery = (
         VideoView.objects.filter(video_id=OuterRef("pk"))
@@ -159,40 +190,24 @@ def rerank_videos_by_scores(
     scored_candidates = []
 
     for video in candidates:
-        # 1. Similarity score: 1.0 - CosineDistance
-        distance = (
-            video.distance if getattr(video, "distance", None) is not None else 1.0
+        distance = getattr(video, "distance", None)
+        score, s_sim, s_eng, s_rec = calculate_video_scores(
+            video, distance, current_time
         )
-        s_sim = max(0.0, min(1.0, 1.0 - distance))
-
-        # 2. Engagement score: eng_raw / (eng_raw + 100.0)
-        total_watch_time = getattr(video, "total_watch_time", 0) or 0
-        view_count = video.view_count or 0
-        reaction_count = video.reaction_count or 0
-
-        eng_raw = reaction_count * 3 + total_watch_time * 0.5 + view_count * 0.2
-        s_eng = eng_raw / (eng_raw + 100.0) if eng_raw > 0 else 0.0
-
-        # 3. Recency score: 24.0 / (age_in_hours + 24.0)
-        age_in_hours = (current_time - video.created_at).total_seconds() / 3600.0
-        s_rec = 24.0 / (age_in_hours + 24.0) if age_in_hours >= 0 else 1.0
-
-        # Weighted score
-        score = 0.5 * s_sim + 0.3 * s_eng + 0.2 * s_rec
-        scored_candidates.append((video.id, score))
+        scored_candidates.append((video.id, score, s_sim, s_eng, s_rec))
 
     scored_candidates.sort(key=lambda x: x[1], reverse=True)
-    return [vid for vid, _ in scored_candidates[:limit]]
+    return scored_candidates[:limit]
 
 
-def get_personalized_feeds(user: User) -> QuerySet[Video]:
+def get_personalized_feeds(user: User) -> tuple[QuerySet[Video], dict[int, dict]]:
     """
     Get personalized feeds for a logged-in user.
     Mixes similar videos (based on embedding, reranked by engagement & recency) and trending videos.
     """
 
     if not hasattr(user, "embedding"):
-        return get_default_feeds()
+        return get_default_feeds(), {}
 
     seen_video_ids = get_seen_video(user).values_list("id", flat=True)
     user_embedding = user.embedding.embedding
@@ -214,7 +229,17 @@ def get_personalized_feeds(user: User) -> QuerySet[Video]:
         )
 
     # 2. Rerank candidates and select top 30
-    top_30_similar_ids = rerank_videos_by_scores(candidates_qs, limit=30)
+    top_30_similar_data = rerank_videos_by_scores(candidates_qs, limit=30)
+    top_30_similar_ids = [item[0] for item in top_30_similar_data]
+
+    scores_map = {}
+    for vid, total_score, s_sim, s_eng, s_rec in top_30_similar_data:
+        scores_map[vid] = {
+            "total_score": total_score,
+            "similarity_score": s_sim,
+            "engagement_score": s_eng,
+            "recency_score": s_rec,
+        }
 
     # 3. Trending videos (limit 10, excluding seen and similar ones)
     exclude_ids = set(seen_video_ids) | set(top_30_similar_ids)
@@ -225,16 +250,41 @@ def get_personalized_feeds(user: User) -> QuerySet[Video]:
         if tid not in exclude_ids
     ][:10]
 
+    # Calculate actual scores for trending videos (similarity is 0.0)
+    if trending_ids:
+        current_time = now()
+        watch_time_subquery = (
+            VideoView.objects.filter(video_id=OuterRef("pk"))
+            .values("video_id")
+            .annotate(total=Sum("watch_time"))
+            .values("total")[:1]
+        )
+        trending_annotated = list(
+            Video.objects.filter(id__in=trending_ids).annotate(
+                total_watch_time=Coalesce(Subquery(watch_time_subquery), 0)
+            )
+        )
+        for video in trending_annotated:
+            score, s_sim, s_eng, s_rec = calculate_video_scores(
+                video, None, current_time
+            )
+            scores_map[video.id] = {
+                "total_score": score,
+                "similarity_score": s_sim,
+                "engagement_score": s_eng,
+                "recency_score": s_rec,
+            }
+
     # 4. Combine IDs and query queryset preserving order
     combined_ids = top_30_similar_ids + trending_ids
     if not combined_ids:
-        return Video.objects.none()
+        return Video.objects.none(), {}
 
     order = Case(
         *[When(pk=pk, then=Value(idx)) for idx, pk in enumerate(combined_ids)],
         output_field=IntegerField(),
     )
-    return Video.objects.filter(id__in=combined_ids).order_by(order)
+    return Video.objects.filter(id__in=combined_ids).order_by(order), scores_map
 
 
 def search_videos(

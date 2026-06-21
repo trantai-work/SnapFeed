@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Search, X, UserPlus, UserCheck } from "lucide-react";
 import { usersApi } from "../api";
 import { useAuth } from "../context/AuthContext";
+import { getUserAvatarUrl } from "../utils/feedItem";
 
 function classNames(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -146,7 +147,6 @@ export default function UserListModal({ open, onClose, userId, type, title }) {
                   `${u.firstName || u.first_name || ""} ${u.lastName || u.last_name || ""}`.trim() ||
                   u.username ||
                   "User";
-                const avatarUrl = u.avatarUrl || u.avatar_url || "";
                 const isFollowing = followStates[u.id] ?? false;
 
                 return (
@@ -161,16 +161,12 @@ export default function UserListModal({ open, onClose, userId, type, title }) {
                         onClose();
                       }}
                     >
-                      {avatarUrl ? (
-                        <img
-                          src={avatarUrl}
-                          alt=""
-                          className="h-12 w-12 shrink-0 rounded-full object-cover ring-1 ring-black/5 dark:ring-white/10"
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <div className="h-12 w-12 shrink-0 rounded-full bg-zinc-200 dark:bg-white/10" />
-                      )}
+                      <img
+                        src={getUserAvatarUrl(u)}
+                        alt=""
+                        className="h-12 w-12 shrink-0 rounded-full object-cover ring-1 ring-black/5 dark:ring-white/10"
+                        referrerPolicy="no-referrer"
+                      />
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-semibold text-zinc-900 dark:text-white">
                           {u.username}

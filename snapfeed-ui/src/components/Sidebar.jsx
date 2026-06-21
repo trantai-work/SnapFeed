@@ -544,16 +544,12 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => { } 
                     onMobileClose();
                   }}
                 >
-                  {user?.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.username || ""}
-                      className="h-9 w-9 shrink-0 rounded-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="h-9 w-9 shrink-0 rounded-full bg-gray-300 dark:bg-white/10" />
-                  )}
+                  <img
+                    src={getUserAvatarUrl(user)}
+                    alt={user?.username || ""}
+                    className="h-9 w-9 shrink-0 rounded-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-semibold">
                       {fullName(user)}

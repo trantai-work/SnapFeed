@@ -49,6 +49,23 @@ export function useScrollSnapNavigation(scrollRef, itemCount, stride) {
     [scrollRef, itemCount, stride, updateScrollButtons]
   );
 
+  const scrollToIndex = useCallback(
+    (index) => {
+      const el = scrollRef.current;
+      if (!el || stride <= 0 || itemCount === 0) return;
+      const targetIndex = Math.min(itemCount - 1, Math.max(0, index));
+      scrollAnimCancelRef.current();
+      const targetTop = targetIndex * stride;
+      scrollAnimCancelRef.current = animateScrollTop(
+        el,
+        targetTop,
+        SCROLL_ANIM_MS,
+        updateScrollButtons
+      );
+    },
+    [scrollRef, itemCount, stride, updateScrollButtons]
+  );
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -63,5 +80,5 @@ export function useScrollSnapNavigation(scrollRef, itemCount, stride) {
     };
   }, [itemCount, stride, updateScrollButtons, scrollRef]);
 
-  return { canScrollUp, canScrollDown, scrollFeed };
+  return { canScrollUp, canScrollDown, scrollFeed, scrollToIndex };
 }

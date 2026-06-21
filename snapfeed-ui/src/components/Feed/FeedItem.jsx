@@ -27,6 +27,7 @@ function FeedItemComponent({
   onReport,
   onFollowUpdate,
   onShare,
+  devMode = false,
 }) {
   const { isAuthenticated, user } = useAuth();
   const videoRef = useRef(null);
@@ -152,6 +153,39 @@ function FeedItemComponent({
       <div className="flex h-full min-h-0 w-full max-w-full items-stretch justify-center bg-white dark:bg-black max-lg:min-w-0 lg:bg-white dark:lg:bg-black">
         <div className="flex h-full min-h-0 max-h-full w-full min-w-0 max-w-full items-stretch lg:w-fit">
           <div className="feed-video-wrap group relative h-full min-h-0 w-full min-w-0 shrink overflow-visible rounded-none bg-white dark:bg-black lg:max-w-full lg:overflow-hidden lg:rounded-2xl lg:w-fit lg:bg-white dark:lg:bg-black">
+            
+            {devMode && (
+              <div className="absolute left-4 top-4 z-30 rounded-2xl border border-white/20 bg-black/60 p-3.5 text-xs text-white backdrop-blur-md shadow-lg select-none min-w-[200px]">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-zinc-300">Similarity:</span>
+                    <span className="font-mono font-bold text-emerald-400">
+                      {(item.similarityScore ?? 0).toFixed(4)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-zinc-300">Engagement:</span>
+                    <span className="font-mono font-bold text-sky-400">
+                      {(item.engagementScore ?? 0).toFixed(4)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-zinc-300">Recency:</span>
+                    <span className="font-mono font-bold text-amber-400">
+                      {(item.recencyScore ?? 0).toFixed(4)}
+                    </span>
+                  </div>
+                  <div className="h-[1px] bg-white/10 my-2" />
+                  <div className="flex justify-between gap-4 text-[13px] font-bold">
+                    <span className="text-pink-300">Total Score:</span>
+                    <span className="font-mono text-pink-400">
+                      {(item.totalScore ?? 0).toFixed(4)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {src ? (
               <HLSVideoPlayer
                 videoRef={videoRef}

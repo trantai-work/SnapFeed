@@ -79,11 +79,13 @@ class Command(BaseCommand):
             )
             return
 
-        users = list(User.objects.filter(is_superuser=False).order_by("id"))
+        users = list(
+            User.objects.filter(is_superuser=False, is_staff=False).order_by("id")
+        )
         if not users:
             self.stdout.write(
                 self.style.ERROR(
-                    "No non-superuser accounts found. Can't round-robin seed."
+                    "No non-superuser/non-staff accounts found. Can't round-robin seed."
                 )
             )
             return
