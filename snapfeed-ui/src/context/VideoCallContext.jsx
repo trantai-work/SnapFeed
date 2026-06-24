@@ -130,6 +130,22 @@ export function VideoCallProvider({ children }) {
     groupConversationRef.current = groupConversation;
   }, [groupConversation]);
 
+  const callStateRef = useRef(callState);
+  const groupCallStateRef = useRef(groupCallState);
+  const groupActiveMembersRef = useRef(groupActiveMembers);
+
+  useEffect(() => {
+    callStateRef.current = callState;
+  }, [callState]);
+
+  useEffect(() => {
+    groupCallStateRef.current = groupCallState;
+  }, [groupCallState]);
+
+  useEffect(() => {
+    groupActiveMembersRef.current = groupActiveMembers;
+  }, [groupActiveMembers]);
+
   const cleanup = useCallback(() => {
     if (pcRef.current) {
       pcRef.current.close();
@@ -859,8 +875,10 @@ export function VideoCallProvider({ children }) {
   useEffect(() => {
     const unsub = subscribe('call.signaling', async (payload) => {
       const { senderId, data } = payload;
+      const currentCallState = callStateRef.current;
+      const currentGroupCallState = groupCallStateRef.current;
 
-      if (groupCallState === 'active' && data?.type && data.type.startsWith('group-') && data.type !== 'group-call-leave' && data.type !== 'group-call-invite' && data.type !== 'group-call-query' && data.type !== 'group-call-active-reply') {
+      if (currentGroupCallState === 'active' && data?.type && data.type.startsWith('group-') && data.type !== 'group-call-leave' && data.type !== 'group-call-invite' && data.type !== 'group-call-query' && data.type !== 'group-call-active-reply') {
         setGroupActiveMembers(prev => {
           const sId = Number(senderId);
           if (prev.some(m => Number(m.id) === sId)) return prev;
@@ -873,10 +891,10 @@ export function VideoCallProvider({ children }) {
       switch (data.type) {
         // --- Group Call Cases ---
         case 'group-call-query':
-          if (groupCallState === 'active' && Number(activeConversationIdRef.current) === Number(data.conversationId)) {
+          if (currentGroupCallState === 'active' && Number(activeConversationIdRef.current) === Number(data.conversationId)) {
             const activeIds = Array.from(new Set([
               Number(me?.id),
-              ...groupActiveMembers.map(m => Number(m.id || m.user?.id))
+              ...groupActiveMembersRef.current.map(m => Number(m.id || m.user?.id))
             ].filter(Boolean)));
             send('call.signaling', {
               recipientId: senderId,
@@ -906,7 +924,7 @@ export function VideoCallProvider({ children }) {
             return prev;
           });
 
-          if (callState !== 'idle' || groupCallState !== 'idle') {
+          if (currentCallState !== 'idle' || currentGroupCallState !== 'idle') {
             // Already in a call, ignore
             return;
           }
@@ -930,7 +948,7 @@ export function VideoCallProvider({ children }) {
             };
           });
 
-          if (groupCallState === 'active' && localStreamRef.current) {
+          if (currentGroupCallState === 'active' && localStreamRef.current) {
             setGroupActiveMembers(prev => {
               const sId = Number(senderId);
               if (prev.some(m => Number(m.id) === sId)) return prev;
@@ -1086,7 +1104,7 @@ export function VideoCallProvider({ children }) {
 
         // --- Original 1-1 Cases ---
         case 'offer':
-          if (callState !== 'idle') {
+          if (currentCallState !== 'idle') {
             send('call.signaling', { recipientId: senderId, data: { type: 'busy' } });
             return;
           }
@@ -1167,7 +1185,7 @@ export function VideoCallProvider({ children }) {
     });
 
     return unsub;
-  }, [subscribe, callState, groupCallState, createPeerConnection, createGroupPeerConnection, send, cleanup, saveCallLog, me]);
+  }, [subscribe, createPeerConnection, createGroupPeerConnection, send, cleanup, saveCallLog, me]);
 
   useEffect(() => {
     if (callState !== 'idle' || groupCallState !== 'idle') {
@@ -1179,6 +1197,12 @@ export function VideoCallProvider({ children }) {
       });
     }
   }, [callState, groupCallState]);
+
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
 
   return (
     <VideoCallContext.Provider value={{

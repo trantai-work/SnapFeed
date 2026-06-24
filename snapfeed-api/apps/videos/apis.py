@@ -263,11 +263,16 @@ class VideoViewSet(
         """
 
         user = request.user
+        recommendation_scores = {}
+        is_default_feed = False
 
         if user.is_authenticated:
-            feeds = video_services.get_personalized_feeds(user)
+            feeds, recommendation_scores = video_services.get_personalized_feeds(user)
+            if not recommendation_scores:
+                is_default_feed = True
         else:
             feeds = video_services.get_default_feeds()
+            is_default_feed = True
 
         feeds = feeds.select_related("user", "music").prefetch_related("tags")
         if user.is_authenticated:
@@ -279,7 +284,16 @@ class VideoViewSet(
                 )
             )
 
-        return self.response_ok(self.get_serializer(feeds, many=True).data)
+        feeds_list = list(feeds)
+        for video in feeds_list:
+            scores = recommendation_scores.get(video.id, {})
+            video.similarity_score = scores.get("similarity_score", 0.0)
+            video.engagement_score = scores.get("engagement_score", 0.0)
+            video.recency_score = scores.get("recency_score", 0.0)
+            video.total_score = scores.get("total_score", 0.0)
+            video.is_default_feed = is_default_feed
+
+        return self.response_ok(self.get_serializer(feeds_list, many=True).data)
 
     @action(
         detail=False,

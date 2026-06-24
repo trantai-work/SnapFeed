@@ -1,3 +1,5 @@
+import defaultAvatar from "../assets/user.png";
+
 /**
  * Normalize API payloads to camelCase once at the boundary (feed fetch).
  */
@@ -23,20 +25,35 @@ export function normalizeFeedItem(raw) {
     hlsPlaylistKey: raw.hlsPlaylistKey ?? null,
     status: raw.status ?? null,
     createdAt: raw.createdAt ?? raw.created_at ?? null,
+    similarityScore: raw.similarityScore ?? raw.similarity_score ?? 0,
+    engagementScore: raw.engagementScore ?? raw.engagement_score ?? 0,
+    recencyScore: raw.recencyScore ?? raw.recency_score ?? 0,
+    totalScore: raw.totalScore ?? raw.total_score ?? 0,
+    isDefaultFeed: raw.isDefaultFeed ?? raw.is_default_feed ?? false,
   };
 }
 
 export function getUserDisplayName(item) {
-  const first = String(item.userFirstName ?? "").trim();
-  const last = String(item.userLastName ?? "").trim();
+  if (!item) return "";
+  const first = String(item.userFirstName ?? item.user_first_name ?? (typeof item.user === "object" ? (item.user?.firstName ?? item.user?.first_name) : "") ?? "").trim();
+  const last = String(item.userLastName ?? item.user_last_name ?? (typeof item.user === "object" ? (item.user?.lastName ?? item.user?.last_name) : "") ?? "").trim();
   const full = [first, last].filter(Boolean).join(" ");
   if (full) return full;
-  return `@user${item.user}`;
+  const username = typeof item.user === "object" ? (item.user?.username) : null;
+  if (username) return username;
+  const userId = typeof item.user === "object" ? item.user?.id : item.user;
+  return `@user${userId ?? ""}`;
 }
 
 export function getUserAvatarUrl(item) {
-  const url = item.userAvatar;
-  return typeof url === "string" && url.length > 0 ? url : null;
+  if (!item) return defaultAvatar;
+  const url = item.userAvatar ?? 
+              item.user_avatar ?? 
+              item.avatarUrl ?? 
+              item.avatar_url ?? 
+              item.avatar ?? 
+              (typeof item.user === "object" ? (item.user?.avatarUrl ?? item.user?.avatar_url ?? item.user?.avatar) : null);
+  return typeof url === "string" && url.length > 0 ? url : defaultAvatar;
 }
 
 /** Normalize PUT /videos/:id/react response (snake_case or camelCase). */

@@ -109,6 +109,7 @@ export function useFeedItems(resetKey = "") {
     updateFeedVideo,
     removeFeedVideo,
     removingVideoIds,
+    refresh: loadInitial,
   };
 }
 

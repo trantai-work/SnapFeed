@@ -8,6 +8,7 @@ import SupportResponseModal from "./SupportResponseModal";
 import RecordVideoModal from "./RecordVideoModal";
 import NotificationsPanel from "./NotificationsPanel";
 import logoNoText from "../assets/logo_no_text.png";
+import { getUserAvatarUrl } from "../utils/feedItem";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { authService } from "../services/auth.service";
@@ -389,16 +390,12 @@ export default function SimpleSideBar() {
                 aria-label="Tài khoản"
                 onClick={() => navigate("/profile")}
               >
-                {user?.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.username || ""}
-                    className="h-9 w-9 rounded-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="h-9 w-9 rounded-full bg-gray-300 dark:bg-white/10" />
-                )}
+                <img
+                  src={getUserAvatarUrl(user)}
+                  alt={user?.username || ""}
+                  className="h-9 w-9 rounded-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
               </button>
             </>
           ) : (

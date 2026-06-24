@@ -4,7 +4,7 @@ import ShareModal from "./chats/ShareModal";
 import CommentsPanel from "./CommentsPanel";
 import ReportVideoModal from "./ReportVideoModal";
 import { commentsApi } from "../api/comments.api";
-import { videosApi, isValidView } from "../api/video.api";
+import { videosApi } from "../api/video.api";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { buildVideoSrc } from "../utils/feedVideo";
 import { formatCount, formatRelativeTimeVi } from "../utils/format";
@@ -49,6 +49,7 @@ export default function VideoViewerPanel({
   const composerRef = useRef(null);
   const videoRef = useRef(null);
   const maxWatchTimeRef = useRef(0);
+  const wasOpenedRef = useRef(false);
 
   const videoId = videoState?.id ?? video?.id ?? null;
 
@@ -64,18 +65,18 @@ export default function VideoViewerPanel({
     return () => v.removeEventListener("timeupdate", onTimeUpdate);
   });
 
-  // Report watch time when panel closes
   useEffect(() => {
     if (open) {
+      wasOpenedRef.current = true;
       maxWatchTimeRef.current = 0;
       return;
     }
-    if (!isAuthenticated || !videoId || maxWatchTimeRef.current <= 0) return;
+    if (!wasOpenedRef.current) return;
+    if (!isAuthenticated || !videoId) return;
     const watchTime = maxWatchTimeRef.current;
-    const duration = videoState?.duration ?? video?.duration ?? 0;
-    if (!isValidView(watchTime, duration)) return;
     const id = videoId;
     videosApi.recordView({ videoId: id, watchTime }).catch(() => {});
+    wasOpenedRef.current = false;
   }, [open, videoId, isAuthenticated]);
 
   const src = useMemo(
