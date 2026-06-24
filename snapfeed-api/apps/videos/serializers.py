@@ -26,6 +26,11 @@ class VideoSerializer(serializers.ModelSerializer):
         allow_null=True,
         write_only=True,
     )
+    similarity_score = serializers.FloatField(read_only=True, default=0.0)
+    engagement_score = serializers.FloatField(read_only=True, default=0.0)
+    recency_score = serializers.FloatField(read_only=True, default=0.0)
+    total_score = serializers.FloatField(read_only=True, default=0.0)
+    is_default_feed = serializers.BooleanField(read_only=True, default=False)
 
     class Meta:
         model = Video
@@ -52,6 +57,11 @@ class VideoSerializer(serializers.ModelSerializer):
             "hls_playlist_key",
             "status",
             "created_at",
+            "similarity_score",
+            "engagement_score",
+            "recency_score",
+            "total_score",
+            "is_default_feed",
         ]
         read_only_fields = [
             "id",
@@ -64,6 +74,11 @@ class VideoSerializer(serializers.ModelSerializer):
             "hls_playlist_key",
             "status",
             "created_at",
+            "similarity_score",
+            "engagement_score",
+            "recency_score",
+            "total_score",
+            "is_default_feed",
         ]
 
     def get_my_reaction(self, obj):
