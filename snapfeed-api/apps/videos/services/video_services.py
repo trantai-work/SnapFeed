@@ -304,11 +304,24 @@ def search_videos(
     s = (
         VideoDocument.search()
         .query(
-            "multi_match",
-            query=keyword,
-            fields=["title^3", "description", "tags^2"],
-            type="best_fields",
-            operator="and",
+            "bool",
+            should=[
+                {
+                    "multi_match": {
+                        "query": keyword,
+                        "fields": ["title^3", "description"],
+                        "type": "phrase_prefix",
+                    }
+                },
+                {
+                    "prefix": {
+                        "tags": {
+                            "value": keyword.lower(),
+                            "boost": 2,
+                        }
+                    }
+                },
+            ],
         )
         .sort({"_score": "desc"}, {"id": "desc"})
         .extra(size=size)

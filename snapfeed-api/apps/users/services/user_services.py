@@ -115,8 +115,7 @@ def search_users(
             "multi_match",
             query=keyword,
             fields=["username^3", "first_name^2", "last_name^2"],
-            type="best_fields",
-            operator="or",
+            type="phrase_prefix",
         )
         # Stable sort + tie-breaker for search_after.
         .sort({"_score": "desc"}, {"id": "desc"})
