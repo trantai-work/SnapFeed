@@ -293,8 +293,8 @@ export default function ChatsPage() {
   };
 
   return (
-    <div className="flex h-[100dvh] min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-black md:flex-row">
-      <aside className="flex w-full shrink-0 flex-col border-b border-gray-200 bg-white dark:border-white/10 dark:bg-black md:h-full md:w-[min(22rem,92vw)] md:border-b-0 md:border-r sm:md:w-[min(24rem,92vw)]">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-black md:flex-row">
+      <aside className="flex w-full h-full shrink-0 flex-col border-b border-gray-200 bg-white dark:border-white/10 dark:bg-black md:border-b-0 md:border-r md:w-[min(22rem,92vw)] sm:md:w-[min(24rem,92vw)]">
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-zinc-100 dark:border-white/5 md:border-b-0 md:px-4 md:py-4">
           <div className="text-base md:text-lg font-bold text-zinc-950 dark:text-white">Tin nhắn</div>
           <button 
