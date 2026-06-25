@@ -304,3 +304,19 @@ class UserViewSet(BaseAPIViewSet):
             serializer_class=UserSerializer,
             pagination_class=UserFollowPagination,
         )
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="reset-recommendations",
+    )
+    def reset_recommendations(self, request):
+        """
+        Reset recommendation preferences for the current user.
+        Deletes UserEmbedding and VideoViews.
+        """
+        user = request.user
+        user_services.reset_user_recommendations(user)
+        return self.response_ok(
+            message="Recommendation preferences reset successfully."
+        )

@@ -103,4 +103,10 @@ export const usersApi = {
       results: rawResults.filter(Boolean),
     };
   },
+
+  /** POST /users/reset-recommendations */
+  resetRecommendations: async () => {
+    const data = await api.post("/users/reset-recommendations");
+    return data;
+  },
 };
