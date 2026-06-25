@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { Grid3X3, Heart, MessageCircle, Play, Send, UserPlus, UserCheck, Users } from "lucide-react";
+import { Grid3X3, Heart, MessageCircle, Play, Send, UserPlus, UserCheck, Users, RotateCcw, X, Loader2, AlertTriangle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { conversationsApi, usersApi } from "../api";
 import { formatCount } from "../utils/format";
@@ -45,6 +45,8 @@ export default function ProfilePage() {
   const [profileError, setProfileError] = useState("");
   const [userListModal, setUserListModal] = useState({ open: false, type: null });
   const [followLoading, setFollowLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   const routeUserId = useMemo(() => {
     const raw = params?.id;
@@ -115,6 +117,27 @@ export default function ProfilePage() {
       await loadProfileUser();
     } finally {
       setFollowLoading(false);
+    }
+  };
+
+  const handleResetRecommendations = async () => {
+    setResetLoading(true);
+    try {
+      await usersApi.resetRecommendations();
+      show({
+        status: "success",
+        title: "Reset thành công",
+        message: "Thuật toán gợi ý của bạn đã được khởi tạo lại.",
+      });
+      setConfirmResetOpen(false);
+    } catch (err) {
+      show({
+        status: "error",
+        title: "Thất bại",
+        message: err?.message || "Không thể reset gợi ý. Vui lòng thử lại sau.",
+      });
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -385,7 +408,24 @@ export default function ProfilePage() {
               {dmStarting ? "Đang mở…" : "Nhắn tin"}
             </button>
           </div>
-        ) : null}
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirmResetOpen(true)}
+              className={classNames(
+                "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition",
+                "cursor-pointer",
+                "bg-pink-600 text-white hover:bg-pink-500 active:bg-pink-700",
+                "disabled:cursor-not-allowed disabled:opacity-70"
+              )}
+              aria-label="Cài đặt lại đề xuất"
+            >
+              <RotateCcw size={16} strokeWidth={2} aria-hidden />
+              Reset đề xuất
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 border-b border-zinc-200 dark:border-white/10">
@@ -730,6 +770,69 @@ export default function ProfilePage() {
           );
         }}
       />
+
+      {confirmResetOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/55 backdrop-blur-[1px] cursor-default"
+            aria-label="Đóng xác nhận"
+            onClick={() => {
+              if (!resetLoading) setConfirmResetOpen(false);
+            }}
+          />
+
+          <div className="relative z-10 w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/10 dark:bg-zinc-950 dark:ring-white/10 animate-[messagebox-in_240ms_ease-out] p-6">
+            <button
+              type="button"
+              className="absolute right-4 top-4 grid h-8 w-8 cursor-pointer place-items-center rounded-full text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-white transition"
+              onClick={() => {
+                if (!resetLoading) setConfirmResetOpen(false);
+              }}
+              aria-label="Đóng"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="flex flex-col items-center text-center mt-2">
+              <h3 className="text-base font-bold text-zinc-900 dark:text-white mb-2">
+                Bạn có chắc chắn muốn đặt lại?
+              </h3>
+              
+              <p className="text-sm leading-relaxed text-zinc-500 dark:text-white/60 px-2">
+                Hành động này sẽ xóa dữ liệu sở thích (embedding) và lịch sử xem của bạn để khởi tạo lại thuật toán gợi ý từ đầu.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                type="button"
+                className="h-10 cursor-pointer rounded-xl px-4 text-sm font-bold text-zinc-700 hover:bg-zinc-100 dark:text-white/75 dark:hover:bg-white/10"
+                onClick={() => {
+                  if (!resetLoading) setConfirmResetOpen(false);
+                }}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={resetLoading}
+                className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-pink-600 px-4 text-sm font-bold text-white hover:bg-pink-500 active:bg-pink-700 disabled:cursor-not-allowed disabled:opacity-60 transition"
+                onClick={handleResetRecommendations}
+              >
+                {resetLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Đang xử lý...
+                  </>
+                ) : (
+                  "Xác nhận reset"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
