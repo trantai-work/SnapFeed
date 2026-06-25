@@ -11,6 +11,10 @@ from typing import Tuple
 from django.db.models import QuerySet, Case, IntegerField, Value, When
 
 from apps.users.documents import UserDocument
+from django.db import transaction
+from safedelete import HARD_DELETE
+from apps.recommendation.models import UserEmbedding
+from apps.videos.models import VideoView
 from utils.search_cursor import decode_search_after_cursor, encode_search_after_cursor
 
 
@@ -147,3 +151,12 @@ def search_users(
             next_cursor = encode_search_after_cursor(list(sort_values))
 
     return qs, next_cursor
+
+
+def reset_user_recommendations(user: User) -> None:
+    """
+    Reset user embedding and delete all of their video views to reset recommendation feeds.
+    """
+    with transaction.atomic():
+        UserEmbedding.all_objects.filter(user=user).delete(force_policy=HARD_DELETE)
+        VideoView.all_objects.filter(user=user).delete(force_policy=HARD_DELETE)
