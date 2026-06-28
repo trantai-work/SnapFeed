@@ -1,3 +1,4 @@
+from django.shortcuts import redirect
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
@@ -13,6 +14,7 @@ from core.serializers import EmptySerializer
 from apps.oauth.constants import OAuth2Providers
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+from utils import http
 import logging
 
 
@@ -90,6 +92,11 @@ class OAuthViewSet(BaseAPIViewSet):
             payload.get("picture") or None,
         )
 
+        if not user.is_active:
+            response = redirect(f"{settings.CLIENT_HOMEPAGE_URL}?error=banned")
+            http.clear_auth_cookies(response)
+            return response
+
         return oauth_services.build_oauth_login_response(user)
 
     @transaction.atomic()
@@ -141,5 +148,10 @@ class OAuthViewSet(BaseAPIViewSet):
             user_data.get("last_name") or "",
             avatar_url,
         )
+
+        if not user.is_active:
+            response = redirect(f"{settings.CLIENT_HOMEPAGE_URL}?error=banned")
+            http.clear_auth_cookies(response)
+            return response
 
         return oauth_services.build_oauth_login_response(user)

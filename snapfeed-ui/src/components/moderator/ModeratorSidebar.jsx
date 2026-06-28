@@ -127,6 +127,19 @@ export default function ModeratorSidebar({ user, reportsCount, supportCount, onL
           <Sparkles className="h-4 w-4" />
           Sở thích gợi ý
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("users")}
+          className={classNames(
+            "flex h-11 w-full cursor-pointer items-center gap-3 rounded-full px-4 text-sm font-medium transition",
+            activeTab === "users"
+              ? "bg-[#292524] text-white"
+              : "text-[#4e4e4e] hover:bg-[#f0efed] hover:text-[#0c0a09]"
+          )}
+        >
+          <UserRound className="h-4 w-4" />
+          Quản lý User
+        </button>
       </nav>
 
       <div className="mt-auto rounded-3xl border border-[#e7e5e4] bg-white p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">

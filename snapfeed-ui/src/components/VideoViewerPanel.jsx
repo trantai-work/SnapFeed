@@ -438,9 +438,20 @@ export default function VideoViewerPanel({
                         </span>
                       ))}
                       {tags.length > 6 ? (
-                        <span className="rounded-full bg-zinc-100 px-2 py-1 text-[11px] font-semibold text-zinc-800 dark:bg-white/10 dark:text-white/85">
-                          +{tags.length - 6}
-                        </span>
+                        <div className="relative group cursor-help">
+                          <span className="rounded-full bg-zinc-100 px-2 py-1 text-[11px] font-semibold text-zinc-800 dark:bg-white/10 dark:text-white/85">
+                            +{tags.length - 6}
+                          </span>
+                          <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2.5 w-max max-w-[200px] -translate-x-1/2 rounded-xl bg-zinc-950 px-3 py-2 text-[11px] font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:opacity-100 flex flex-wrap gap-1 border border-zinc-200/10 dark:border-white/10 dark:bg-zinc-900">
+                            {tags.slice(6).map((t) => (
+                              <span key={t} className="text-white/90">
+                                #{t}
+                              </span>
+                            ))}
+                            {/* Tooltip arrow */}
+                            <div className="absolute top-full left-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1 rotate-45 bg-zinc-950 border-r border-b border-zinc-200/10 dark:border-white/10 dark:bg-zinc-900" />
+                          </div>
+                        </div>
                       ) : null}
                     </div>
                   </div>

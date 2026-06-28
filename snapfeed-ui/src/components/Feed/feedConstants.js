@@ -5,3 +5,5 @@ export const SLIDE_HEIGHT_CLASS =
 export const FEED_SCROLL_GAP_CLASS = "gap-0 sm:gap-16 md:gap-24 lg:gap-36";
 
 export const LONG_DESCRIPTION_CHARS = 96;
+export const LONG_TITLE_CHARS = 45;
+

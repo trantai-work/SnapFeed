@@ -86,3 +86,12 @@ class UserSerializer(serializers.ModelSerializer):
         if obj.is_superuser:
             return True
         return obj.groups.filter(name=Groups.ADMIN.value).exists()
+
+
+class ModeratorUserSerializer(UserSerializer):
+    class Meta(UserSerializer.Meta):
+        fields = UserSerializer.Meta.fields + ["is_active", "date_joined"]
+        read_only_fields = UserSerializer.Meta.read_only_fields + [
+            "is_active",
+            "date_joined",
+        ]

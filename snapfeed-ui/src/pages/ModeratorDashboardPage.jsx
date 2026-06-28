@@ -18,6 +18,7 @@ import SupportQueue from "../components/moderator/SupportQueue";
 import SupportDetailPanel from "../components/moderator/SupportDetailPanel";
 import MusicManagement from "../components/moderator/MusicManagement";
 import UserPreferences from "../components/moderator/UserPreferences";
+import UsersManagement from "../components/moderator/UsersManagement";
 import { classNames } from "../components/moderator/moderatorHelpers";
 
 function canModerate(user) {
@@ -313,13 +314,14 @@ export default function ModeratorDashboardPage() {
     return <Navigate to="/moderator/login" replace />;
   }
 
-  const updateReportStatus = async (status, moderatorNote = note) => {
+  const updateReportStatus = async (status, moderatorNote = note, extra = {}) => {
     if (!selectedReport || saving) return;
     setSaving(true);
     try {
       const updated = await reportsApi.updateVideoReport(selectedReport.id, {
         status,
         moderatorNote,
+        ...extra,
       });
       setReports((prev) =>
         prev.map((report) => (report.id === updated.id ? updated : report))
@@ -327,7 +329,12 @@ export default function ModeratorDashboardPage() {
       show({
         status: "success",
         title: "Đã cập nhật báo cáo",
-        message: status === "dismissed" ? "Báo cáo đã được bỏ qua." : "Báo cáo đã được đánh dấu xử lý.",
+        message:
+          status === "dismissed"
+            ? "Báo cáo đã được bỏ qua."
+            : status === "pending"
+            ? "Báo cáo đã được chuyển về danh sách chờ duyệt."
+            : "Báo cáo đã được đánh dấu xử lý.",
       });
       setActiveStatus(status);
       setSelectedId(updated.id);
@@ -504,6 +511,10 @@ export default function ModeratorDashboardPage() {
           ) : activeTab === "preferences" ? (
             <main className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
               <UserPreferences />
+            </main>
+          ) : activeTab === "users" ? (
+            <main className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+              <UsersManagement />
             </main>
           ) : (
             <main className="grid min-h-0 flex-1 gap-5 overflow-hidden px-4 py-5 sm:px-6 xl:grid-cols-[minmax(30rem,40%)_minmax(0,1fr)]">
