@@ -194,12 +194,10 @@ export default function VideoUploadPage() {
       });
 
       let fileToUpload = videoFile;
-      if (selectedMusic?.audioFile) {
-        try {
-          fileToUpload = await mergeVideoAndMusic(videoFile, selectedMusic.audioFile);
-        } catch (mergeErr) {
-          console.error("Failed to merge background music on client, using raw video:", mergeErr);
-        }
+      try {
+        fileToUpload = await mergeVideoAndMusic(videoFile, selectedMusic?.audioFile);
+      } catch (mergeErr) {
+        console.error("Failed to process video with FFmpeg, uploading raw file:", mergeErr);
       }
 
       const [videoKey, duration, thumbnailFile] = await Promise.all([

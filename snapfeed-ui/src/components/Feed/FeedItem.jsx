@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { formatCount, formatRelativeTimeVi } from "../../utils/format";
 import { buildVideoSrc } from "../../utils/feedVideo";
 import {
@@ -12,6 +12,7 @@ import { useAutoPlayVideo } from "../../hooks/useAutoPlayVideo";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { FeedActions } from "./FeedActions";
 import { FeedDescription } from "./FeedDescription";
+import { FeedTitle } from "./FeedTitle";
 import { FeedVideoMobileBar } from "./FeedVideoMobileBar";
 import { openAuthModal } from "../../utils/authModalBus";
 import HLSVideoPlayer from "../HLSVideoPlayer";
@@ -32,6 +33,7 @@ function FeedItemComponent({
   const { isAuthenticated, user } = useAuth();
   const videoRef = useRef(null);
   const reactInFlightRef = useRef(false);
+  const [showTooltip, setShowTooltip] = useState(false);
   
   // Use HLS URL if available and status is ready, otherwise fallback to direct mp4
   const hlsUrl = item.status === "ready" && item.hlsPlaylistKey 
@@ -216,17 +218,16 @@ function FeedItemComponent({
                   <span className="font-medium text-white/80"> · {createdAtLabel}</span>
                 ) : null}
               </p>
-              {item.title ? (
-                <p className="mt-0.5 line-clamp-1 text-sm font-extrabold text-white drop-shadow">
-                  {item.title}
-                </p>
-              ) : null}
+              <FeedTitle
+                text={item.title}
+                videoItemId={item.id}
+              />
               <FeedDescription
                 text={item.description}
                 videoItemId={item.id}
               />
               {tags.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap gap-2 pointer-events-auto">
                   {tags.slice(0, 2).map((t) => (
                     <span
                       key={t}
@@ -236,9 +237,24 @@ function FeedItemComponent({
                     </span>
                   ))}
                   {tags.length > 2 ? (
-                    <span className="rounded-full bg-black/45 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-[1px]">
-                      +{tags.length - 2}
-                    </span>
+                    <div 
+                      className="relative cursor-help"
+                      onMouseEnter={() => setShowTooltip(true)}
+                      onMouseLeave={() => setShowTooltip(false)}
+                    >
+                      <span className="rounded-full bg-black/45 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-[1px]">
+                        +{tags.length - 2}
+                      </span>
+                      <div className={`pointer-events-none absolute bottom-full left-1/2 z-20 mb-2.5 w-max max-w-[200px] -translate-x-1/2 rounded-xl bg-black/90 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-md transition-all duration-200 flex flex-wrap gap-1.5 border border-white/10 ${showTooltip ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}>
+                        {tags.slice(2).map((t) => (
+                          <span key={t} className="text-white/90">
+                            #{t}
+                          </span>
+                        ))}
+                        {/* Tooltip arrow */}
+                        <div className="absolute top-full left-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1 rotate-45 bg-black/90 border-r border-b border-white/10" />
+                      </div>
+                    </div>
                   ) : null}
                 </div>
               ) : null}

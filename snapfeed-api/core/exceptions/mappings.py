@@ -45,7 +45,12 @@ FRAMEWORK_EXCEPTION_MESSAGES = {
         "status_code": status.HTTP_401_UNAUTHORIZED,
     },
     AuthenticationFailed: lambda exc, resp: {
-        "message": ERROR_MESSAGES["common"]["invalid_basic_auth"],
+        "message": (
+            ERROR_MESSAGES["common"]["account_disabled"]
+            if getattr(exc, "detail", None)
+            and getattr(exc.detail, "code", None) == "user_inactive"
+            else ERROR_MESSAGES["common"]["invalid_basic_auth"]
+        ),
         "data": None,
         "status_code": status.HTTP_401_UNAUTHORIZED,
     },

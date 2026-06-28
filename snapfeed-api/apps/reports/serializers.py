@@ -36,6 +36,7 @@ class VideoReportSerializer(serializers.ModelSerializer):
 
     video_title = serializers.CharField(source="video.title", read_only=True)
     video_user = serializers.IntegerField(source="video.user_id", read_only=True)
+    ban_user = serializers.BooleanField(write_only=True, required=False, default=False)
 
     class Meta:
         model = VideoReport
@@ -59,6 +60,7 @@ class VideoReportSerializer(serializers.ModelSerializer):
             "handled_at",
             "created_at",
             "updated_at",
+            "ban_user",
         ]
         read_only_fields = [
             "id",

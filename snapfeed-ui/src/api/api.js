@@ -47,6 +47,24 @@ api.interceptors.response.use(
     const { status, data } = error.response;
     const config = error.config;
 
+    if (
+      status === 401 &&
+      (data?.message === "Tài khoản đã bị vô hiệu hóa." ||
+        data?.message === "Account disabled.")
+    ) {
+      axios
+        .post(
+          `${import.meta.env.VITE_API_URL}/auth/logout`,
+          {},
+          { withCredentials: true }
+        )
+        .catch(() => {})
+        .finally(() => {
+          window.location.href = "/?error=banned";
+        });
+      return Promise.reject(error);
+    }
+
     // =======================
     // Handle 401
     // =======================
