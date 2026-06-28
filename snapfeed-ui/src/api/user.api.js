@@ -109,4 +109,21 @@ export const usersApi = {
     const data = await api.post("/users/reset-recommendations");
     return data;
   },
+
+  /** GET /moderator/users */
+  listModeratorUsers: async ({ page = 1, pageSize = 50, q = "" } = {}) => {
+    const params = { page, page_size: pageSize };
+    if (q) params.q = q;
+    const data = await api.get("/moderator/users", { params });
+    const rawResults = Array.isArray(data?.results) ? data.results : [];
+    return {
+      count: data?.count ?? rawResults.length,
+      results: rawResults.filter(Boolean),
+    };
+  },
+
+  /** POST /moderator/users/:id/toggle-active */
+  toggleUserActiveStatus: async (userId) => {
+    return await api.post(`/moderator/users/${userId}/toggle-active`);
+  },
 };

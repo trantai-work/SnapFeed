@@ -35,6 +35,7 @@ class VideoReportViewSet(
     ).order_by("-created_at", "-id")
 
     def perform_update(self, serializer):
+        ban_user = serializer.validated_data.pop("ban_user", False)
         report = serializer.save(
             handled_by=self.request.user,
             handled_at=timezone.now(),
@@ -44,6 +45,10 @@ class VideoReportViewSet(
         if report.status == ReportStatus.ACTION_TAKEN.value and report.video_id:
             was_deleted = getattr(report.video, "deleted", None) is not None
             report.video.delete()
+
+            if ban_user and report.video.user:
+                report.video.user.is_active = False
+                report.video.user.save()
 
             # Send notification if it wasn't already deleted
             if not was_deleted and report.video.user_id:
@@ -55,12 +60,18 @@ class VideoReportViewSet(
                     recipient_users=[report.video.user],
                     target=report.video,
                 )
-        elif report.status == ReportStatus.DISMISSED.value and report.video_id:
+        elif (
+            report.status in (ReportStatus.DISMISSED.value, ReportStatus.PENDING.value)
+            and report.video_id
+        ):
             if getattr(report.video, "deleted", None):
                 report.video.undelete()
 
                 # Send notification that video was restored
-                if report.video.user_id:
+                if (
+                    report.status == ReportStatus.DISMISSED.value
+                    and report.video.user_id
+                ):
                     notify_system(
                         title=VIDEO_RESTORED_NOTIFICATION_TITLE,
                         message=SUCCESS_MESSAGES["video_restored"].format(

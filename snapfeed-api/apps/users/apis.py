@@ -14,6 +14,7 @@ from apps.videos.permissions import ViewVideoPermissions
 from apps.videos.serializers import VideoSerializer
 from core.apis import BaseAPIViewSet
 from core.permissions import IsUserAuthenticated
+from apps.permissions.constants import Groups
 
 
 @extend_schema(tags=["users"])
@@ -181,8 +182,17 @@ class UserViewSet(BaseAPIViewSet):
             except ValueError:
                 size = USER_SEARCH_DEFAULT_SIZE
 
+        base_qs = (
+            self.get_queryset()
+            .filter(
+                is_superuser=False,
+                is_staff=False,
+            )
+            .exclude(groups__name__in=[Groups.ADMIN.value, Groups.MODERATOR.value])
+        )
+
         qs, next_cursor = user_services.search_users(
-            keyword=keyword, base_qs=self.get_queryset(), size=size, cursor=cursor
+            keyword=keyword, base_qs=base_qs, size=size, cursor=cursor
         )
         return self.response_ok(
             {
@@ -319,4 +329,48 @@ class UserViewSet(BaseAPIViewSet):
         user_services.reset_user_recommendations(user)
         return self.response_ok(
             message="Recommendation preferences reset successfully."
+        )
+
+
+from rest_framework import mixins
+from apps.reports.permissions import IsModerator
+from apps.users.serializers import ModeratorUserSerializer
+
+
+class ModeratorUserViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    BaseAPIViewSet,
+):
+    permission_classes = [IsModerator]
+    queryset = User.objects.all().order_by("-date_joined", "-id")
+    serializer_class = ModeratorUserSerializer
+
+    def get_queryset(self):
+        qs = (
+            User.objects.filter(is_superuser=False, is_staff=False)
+            .exclude(groups__name__in=[Groups.ADMIN.value, Groups.MODERATOR.value])
+            .order_by("-date_joined", "-id")
+        )
+
+        q = self.request.query_params.get("q", "").strip()
+        if q:
+            from django.db.models import Q
+
+            qs = qs.filter(
+                Q(username__icontains=q)
+                | Q(email__icontains=q)
+                | Q(first_name__icontains=q)
+                | Q(last_name__icontains=q)
+            )
+        return qs
+
+    @action(detail=True, methods=["post"], url_path="toggle-active")
+    def toggle_active(self, request, pk=None):
+        user = self.get_object()
+        user.is_active = not user.is_active
+        user.save()
+        return self.response_ok(
+            data={"is_active": user.is_active},
+            message=f"User @{user.username} {'activated' if user.is_active else 'deactivated'} successfully.",
         )

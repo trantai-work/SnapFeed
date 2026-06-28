@@ -70,7 +70,7 @@ export function RealtimeSocketProvider({ children }) {
         }
       },
       onClose: () => {
-        wsRef.current = null;
+        console.warn("[RealtimeSocket] Connection closed temporarily, waiting for auto-reconnect...");
       },
       onError: (e) => console.error("[RealtimeSocket] ws error", e),
     });

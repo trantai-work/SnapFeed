@@ -10,6 +10,7 @@ function getGoogleAuthUrl() {
     redirect_uri: redirectUri,
     response_type: "code",
     scope: "openid email profile",
+    prompt: "select_account",
   });
   return `${baseUrl}?${qs}`;
 }

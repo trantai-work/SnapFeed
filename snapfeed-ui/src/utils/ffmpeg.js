@@ -60,39 +60,47 @@ export async function mergeVideoAndMusic(videoFile, musicUrl) {
     console.warn("Failed to sniff video file header:", e);
   }
 
-  const musicExt = musicUrl.split("?")[0].split(".").pop() || "mp3";
-  
   const videoName = `input.${inputExt}`;
-  const musicName = `music.${musicExt}`;
   const outputName = "output.mp4";
   
-  const absoluteMusicUrl = resolveMusicUrl(musicUrl);
-  console.log("Loading files into FFmpeg.wasm filesystem...", {
+  console.log("Loading file into FFmpeg.wasm filesystem...", {
     video: videoFile.name,
     sniffedExt: inputExt,
-    music: absoluteMusicUrl
+    music: musicUrl || "none (remuxing)"
   });
 
-  // Write files
+  // Write video file
   await ff.writeFile(videoName, await fetchFile(videoFile));
-  await ff.writeFile(musicName, await fetchFile(absoluteMusicUrl));
-  
-  console.log("Running FFmpeg processing...");
-  // -map 0:v:0 maps the video track of the video file
-  // -map 1:a:0 maps the audio track of the music file
-  // -c:v copy copies the video frames without transcoding
-  // -c:a aac encodes the music track as aac
-  // -shortest cuts the audio off at the end of the video
-  await ff.exec([
-    "-i", videoName,
-    "-i", musicName,
-    "-map", "0:v:0",
-    "-map", "1:a:0",
-    "-c:v", "copy",
-    "-c:a", "aac",
-    "-shortest",
-    outputName
-  ]);
+
+  let musicName = "";
+  if (musicUrl) {
+    const musicExt = musicUrl.split("?")[0].split(".").pop() || "mp3";
+    musicName = `music.${musicExt}`;
+    const absoluteMusicUrl = resolveMusicUrl(musicUrl);
+    await ff.writeFile(musicName, await fetchFile(absoluteMusicUrl));
+    
+    console.log("Running FFmpeg processing (merge video and music)...");
+    await ff.exec([
+      "-i", videoName,
+      "-i", musicName,
+      "-map", "0:v:0",
+      "-map", "1:a:0",
+      "-c:v", "copy",
+      "-c:a", "aac",
+      "-shortest",
+      outputName
+    ]);
+  } else {
+    console.log("Running FFmpeg processing (remuxing raw video)...");
+    await ff.exec([
+      "-i", videoName,
+      "-c:v", "copy",
+      "-c:a", "aac",
+      "-map", "0:v:0",
+      "-map", "0:a?",
+      outputName
+    ]);
+  }
   
   console.log("FFmpeg processing done, reading output file...");
   // Read output
@@ -101,7 +109,9 @@ export async function mergeVideoAndMusic(videoFile, musicUrl) {
   // Cleanup virtual filesystem
   try {
     await ff.deleteFile(videoName);
-    await ff.deleteFile(musicName);
+    if (musicName) {
+      await ff.deleteFile(musicName);
+    }
     await ff.deleteFile(outputName);
   } catch (err) {
     console.error("Cleanup error in virtual files:", err);

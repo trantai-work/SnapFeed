@@ -7,7 +7,7 @@ from apps.recommendation.apis import (
     ModeratorUserPreferenceViewSet,
 )
 from apps.reports.apis import VideoReportViewSet
-from apps.users.apis import UserViewSet
+from apps.users.apis import UserViewSet, ModeratorUserViewSet
 from apps.videos.apis import VideoViewSet
 from apps.comments.apis import VideoCommentViewSet
 from apps.chats.apis import ConversationViewSet, MessageViewSet
@@ -41,6 +41,11 @@ api_router.register(
     r"moderator/user-preferences",
     ModeratorUserPreferenceViewSet,
     basename="moderator-user-preference",
+)
+api_router.register(
+    r"moderator/users",
+    ModeratorUserViewSet,
+    basename="moderator-user",
 )
 
 # Add api router urls

@@ -29,6 +29,9 @@ class CookieTokenObtainPairView(TokenObtainPairView):
 
 
 class CookieTokenBlacklistView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
     def post(self, request, *args, **kwargs):  # noqa
         refresh = request.COOKIES.get("refreshToken")
 
@@ -41,10 +44,9 @@ class CookieTokenBlacklistView(APIView):
         else:
             try:
                 token = RefreshToken(refresh)
-            except TokenError:
-                raise InvalidToken("Invalid refresh token")
-
-            token.blacklist()
+                token.blacklist()
+            except Exception:
+                pass
 
             res = api_builder.build_response(
                 message=SUCCESS_MESSAGES["common"]["logout_success"],

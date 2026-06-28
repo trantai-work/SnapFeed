@@ -1,31 +1,51 @@
-import { useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Menu } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import SimpleSideBar from "../components/SimpleSideBar";
 import DraggableMenuButton from "../components/DraggableMenuButton";
+import { useMessageBox } from "../components/MessageBox";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 
 export default function Home() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { show } = useMessageBox();
+  const { pathname } = location;
   const isChatPage = pathname.startsWith("/chats");
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("error") === "banned") {
+      show({
+        status: "error",
+        title: "Tài khoản bị khóa",
+        message: "Tài khoản của bạn đã bị khóa do vi phạm tiêu chuẩn cộng đồng.",
+        duration: 8000,
+      });
+      navigate(pathname, { replace: true });
+    }
+  }, [location.search, pathname, navigate, show]);
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-white text-gray-900 transition-colors dark:bg-black dark:text-white">
       {isChatPage ? (
-        <>
-          {/* Desktop chat nav */}
+        isDesktop ? (
+          /* Desktop chat nav */
           <div className="hidden md:block">
             <SimpleSideBar />
           </div>
-          {/* Mobile chat nav uses the full Sidebar (drawer) */}
+        ) : (
+          /* Mobile chat nav uses the full Sidebar (drawer) */
           <div className="md:hidden">
             <Sidebar
               mobileOpen={mobileNavOpen}
               onMobileClose={() => setMobileNavOpen(false)}
             />
           </div>
-        </>
+        )
       ) : (
         <Sidebar mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} />
       )}
