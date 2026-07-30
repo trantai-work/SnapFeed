@@ -33,22 +33,18 @@ jobs:
           docker push "$IMAGE:$TAG"
           docker push "$IMAGE:latest"
 
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.SNAPFEED_EC2_WORKER_HOST }}
-          username: ${{ secrets.SNAPFEED_EC2_WORKER_USERNAME }}
-          key: ${{ secrets.SNAPFEED_EC2_WORKER_KEY }}
-          script: |
-            cd /home/ec2-user/Worker
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-1
 
-            echo "Deploying worker-ai (${{ github.ref_name }} → Docker Hub :latest on EC2)"
-            echo "Compose service name must match EC2."
+      - name: Update Kubeconfig
+        run: |
+          aws eks update-kubeconfig --name sp --region ap-southeast-1
 
-            docker-compose pull videomae-worker
-
-            docker-compose up -d --force-recreate videomae-worker
-
-            echo "==== Containers status ===="
-            docker ps
-            docker-compose logs videomae-worker --tail=50
+      - name: Deploy Worker AI with Helm
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          helm upgrade snapfeed ./helm/snapfeed -n snapfeed --reuse-values --set workerAi.image.tag=$TAG

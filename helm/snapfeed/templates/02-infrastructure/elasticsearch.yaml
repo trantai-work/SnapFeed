@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: elasticsearch
+    {{- include "snapfeed.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+      - name: elasticsearch
+        image: {{ .Values.elasticsearch.image }}
+        ports:
+        - containerPort: {{ .Values.elasticsearch.port }}
+        env:
+        - name: discovery.type
+          value: "single-node"
+        - name: xpack.security.enabled
+          value: "false"
+        - name: ES_JAVA_OPTS
+          value: {{ .Values.elasticsearch.javaOpts | quote }}
+        resources:
+          {{- toYaml .Values.elasticsearch.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: elasticsearch
+    {{- include "snapfeed.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: elasticsearch
+  ports:
+  - port: {{ .Values.elasticsearch.port }}
+    targetPort: {{ .Values.elasticsearch.port }}
