@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snapfeed-ai-worker
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: snapfeed-ai-worker
+    {{- include "snapfeed.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.workerAi.replicas }}
+  selector:
+    matchLabels:
+      app: snapfeed-ai-worker
+  template:
+    metadata:
+      labels:
+        app: snapfeed-ai-worker
+    spec:
+      {{- if .Values.serviceAccount.worker.create }}
+      serviceAccountName: {{ .Values.serviceAccount.worker.name }}
+      {{- end }}
+      containers:
+      - name: ai-worker
+        image: "{{ .Values.workerAi.image.repository }}:{{ .Values.workerAi.image.tag }}"
+        imagePullPolicy: {{ .Values.workerAi.image.pullPolicy }}
+        env:
+        - name: HF_HOME
+          value: "/tmp/hf"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        envFrom:
+        - configMapRef:
+            name: snapfeed-worker-config
+        - secretRef:
+            name: snapfeed-worker-secret
+        resources:
+          {{- toYaml .Values.workerAi.resources | nindent 10 }}

@@ -6,9 +6,13 @@
 .DS_Store
 Thumbs.db
 
-# Environment
+# Environment & Helm Secrets
 .env
 .env.local
+.app.env
+.worker.env
+helm/**/values-secrets.yaml
+values-secrets.yaml
 
 # Test
 test-page/
