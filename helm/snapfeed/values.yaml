@@ -22,7 +22,7 @@ api:
   secretKey: "CHANGE_ME_IN_PRODUCTION"
   debug: "1"
   allowedHosts: "*"
-  corsAllowedOrigins: "*"
+  corsAllowedOrigins: "https://snapfeed.cloud"
   basicAuthUsername: "snapfeed"
   basicAuthPassword: "CHANGE_ME_IN_PRODUCTION"
   superAdminUsername: "snapfeedadmin"
