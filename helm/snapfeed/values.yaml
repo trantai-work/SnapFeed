@@ -1,0 +1,140 @@
+# Centralized Configuration for SnapFeed Application
+
+global:
+  namespace: snapfeed
+  domain: "snapfeed.cloud"
+  awsRegion: "ap-southeast-1"
+  clientHomepageUrl: "https://snapfeed.cloud/"
+
+# Dedicated ServiceAccounts for AWS IAM IRSA Integration
+serviceAccount:
+  api:
+    create: true
+    name: "snapfeed-api-sa"
+    roleArn: "arn:aws:iam::568137441159:role/SQS_S3_FullAccess"
+  worker:
+    create: true
+    name: "snapfeed-worker-sa"
+    roleArn: "arn:aws:iam::568137441159:role/SQS_S3_FullAccess"
+
+# Backend API Configuration (Django / Daphne)
+api:
+  secretKey: "CHANGE_ME_IN_PRODUCTION"
+  debug: "1"
+  allowedHosts: "*"
+  corsAllowedOrigins: "*"
+  basicAuthUsername: "snapfeed"
+  basicAuthPassword: "CHANGE_ME_IN_PRODUCTION"
+  superAdminUsername: "snapfeedadmin"
+  superAdminPassword: "CHANGE_ME_IN_PRODUCTION"
+  appName: "SnapFeed"
+  apiKey: "CHANGE_ME_IN_PRODUCTION"
+  
+  # OAuth2 Credentials & Endpoints
+  googleClientId: ""
+  googleClientSecret: ""
+  googleRedirectUri: "https://snapfeed.cloud/api/v1/auth/google/callback"
+  
+  facebookAppId: ""
+  facebookAppSecret: ""
+  facebookRedirectUri: "https://snapfeed.cloud/api/v1/auth/facebook/callback"
+
+  # AWS Cloud Integration (S3 & SQS)
+  s3BucketName: "snapfeed-production-568137441159-ap-southeast-1-an"
+  sqsQueueUrl: "https://sqs.ap-southeast-1.amazonaws.com/568137441159/SQSProduction"
+
+  image:
+    repository: bintolo1b/snapfeed-api
+    tag: latest
+    pullPolicy: Always
+  replicas: 2
+  port: 8000
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+# OAuth2 Provider Endpoints
+oauth:
+  google:
+    tokenUrl: "https://oauth2.googleapis.com/token"
+  facebook:
+    tokenUrl: "https://graph.facebook.com/v18.0/oauth/access_token"
+    userInfoUrl: "https://graph.facebook.com/me"
+
+# Frontend UI Configuration (React / Nginx)
+ui:
+  image:
+    repository: bintolo1b/snapfeed-ui
+    tag: latest
+    pullPolicy: Always
+  replicas: 1
+  port: 80
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+# AI Worker Configuration
+workerAi:
+  image:
+    repository: bintolo1b/snapfeed-ai-worker
+    tag: latest
+    pullPolicy: Always
+  replicas: 1
+  modelName: "MCG-NJU/videomae-base-finetuned-kinetics"
+  textModelName: "paraphrase-multilingual-mpnet-base-v2"
+  downloadDir: "./videos"
+  createEmbeddingUrl: "https://snapfeed.cloud/api/v1/video-embeddings"
+  updateStatusUrl: "https://snapfeed.cloud/api/v1/videos/update-status-by-key"
+  getVideoUrl: "https://snapfeed.cloud/api/v1/videos/metadata-by-key"
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"
+      memory: "3Gi"
+
+# Database Configuration (AWS RDS PostgreSQL)
+postgres:
+  host: "snapfeed.cn42eu6cyh3d.ap-southeast-1.rds.amazonaws.com"
+  dbName: "snapfeed"
+  dbUser: "bintolo1b"
+  dbPassword: "CHANGE_ME_IN_PRODUCTION"
+  port: 5432
+
+# Redis Cache Configuration
+redis:
+  image: redis:7-alpine
+  host: "redis-service"
+  port: 6379
+  url: "redis://redis-service:6379/0"
+
+# Elasticsearch Configuration
+elasticsearch:
+  image: docker.elastic.co/elasticsearch/elasticsearch:9.3.0
+  host: "elasticsearch-service"
+  port: 9200
+  url: "http://elasticsearch-service:9200"
+  javaOpts: "-Xms1g -Xmx1g"
+  resources:
+    requests:
+      memory: "1Gi"
+    limits:
+      memory: "2Gi"
+
+# Ingress Configuration (Routing Traffic)
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"

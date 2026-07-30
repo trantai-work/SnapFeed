@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.urls import path, include
+from django.http import HttpResponse
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
@@ -19,7 +20,13 @@ from apps.reports.apis import (
     ModeratorVideoCommentViewSet,
 )
 
+
+def health_check(request):
+    return HttpResponse("OK", content_type="text/plain")
+
+
 urlpatterns = [
+    path("healthz", health_check, name="health_check"),
     path("api/v1/auth/refresh", CookieTokenRefreshView.as_view(), name="token_refresh"),
     path("api/v1/auth/logout", CookieTokenBlacklistView.as_view(), name="logout"),
     path(

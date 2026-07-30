@@ -1,0 +1,41 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: snapfeed-ingress
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "snapfeed.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  rules:
+  - http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: snapfeed-api-service
+            port:
+              number: {{ .Values.api.port }}
+      - path: /ws
+        pathType: Prefix
+        backend:
+          service:
+            name: snapfeed-api-service
+            port:
+              number: {{ .Values.api.port }}
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: snapfeed-ui-service
+            port:
+              number: {{ .Values.ui.port }}
+{{- end }}
